@@ -1,0 +1,17 @@
+# Copyright (c) Team CharLS.
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Ignore build output
+build/
+bin/
+TestResults/
+*.opensdf
+*.sdf
+
+# Ignore files created by Visual Studio
+.vs/
+.vscode/
+**/Properties/launchSettings.json
+
+# Ignore files created by MSBuild
+*.binlog
