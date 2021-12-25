@@ -35,7 +35,7 @@ internal class JpegStreamReader
         for (;;)
         {
             var markerCode = ReadNextMarkerCode();
-            //validate_marker_code(marker_code);
+            //validate_marker_code(markerCode);
 
             if (markerCode == JpegMarkerCode.StartOfScan)
             {
@@ -43,27 +43,28 @@ internal class JpegStreamReader
                 return;
             }
 
-            //const int32_t segment_size{ read_segment_size()};
-            //int bytes_read;
-            //switch (state_)
-            //{
-            //    case state::spiff_header_section:
-            //        bytes_read = read_spiff_directory_entry(marker_code, segment_size - 2) + 2;
-            //        break;
+            int segmentSize = ReadSegmentSize();
 
-            //    default:
-            //        bytes_read = read_marker_segment(marker_code, segment_size - 2, header, spiff_header_found) + 2;
-            //        break;
-            //}
+            int bytes_read;
+            switch (_state)
+            {
+                case State.SpiffHeaderSection:
+                    bytes_read = 0; //read_spiff_directory_entry(markerCode, segment_size - 2) + 2;
+                    break;
 
-            //const int padding_to_read{ segment_size - bytes_read};
-            //if (padding_to_read < 0)
-            //    throw_jpegls_error(jpegls_errc::invalid_marker_segment_size);
+                default:
+                    bytes_read = ReadMarkerSegment(markerCode, segmentSize - 2) + 2;
+                    break;
+            }
 
-            //for (int i{ }; i != padding_to_read; ++i)
-            //{
-            //    skip_byte();
-            //}
+            int padding_to_read = segmentSize - bytes_read;
+            if (padding_to_read < 0)
+                throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+            for (int i = 0; i != padding_to_read; ++i)
+            {
+                SkipByte();
+            }
 
             //if (state_ == state::header_section && spiff_header_found && *spiff_header_found)
             //{
@@ -80,13 +81,28 @@ internal class JpegStreamReader
             : throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
     }
 
+    private void SkipByte()
+    {
+        if (_index == Source.Span.Length)
+            throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
+
+        _index++;
+    }
+
+    private int ReadUint16()
+    {
+        int value = ReadByte() * 256;
+        return value + ReadByte();
+    }
+
+
     private JpegMarkerCode ReadNextMarkerCode()
     {
         const byte jpegMarkerStartByte = 0xFF;
 
         byte value = ReadByte();
         if (value != jpegMarkerStartByte)
-            throw Util.CreateInvalidDataException(JpegLSError.StartOfImageMarkerNotFound);
+            throw Util.CreateInvalidDataException(JpegLSError.JpegMarkerStartByteNotFound);
 
         // Read all preceding 0xFF fill values until a non 0xFF value has been found. (see T.81, B.1.1.2)
         do
@@ -96,4 +112,52 @@ internal class JpegStreamReader
 
         return (JpegMarkerCode) value;
     }
+
+    private int ReadSegmentSize()
+    {
+        int segmentSize = ReadUint16();
+        return segmentSize < 2 ? throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize) : segmentSize;
+    }
+
+    private int ReadMarkerSegment(JpegMarkerCode markerCode, int segment_size)
+    {
+        switch (markerCode)
+        {
+            //case JpegMarkerCode.start_of_frame_jpegls:
+            //    //return read_start_of_frame_segment(segment_size);
+
+            //case JpegMarkerCode.comment:
+            //    //return read_comment(segment_size);
+
+            //case JpegMarkerCode.jpegls_preset_parameters:
+            //    //return read_preset_parameters_segment(segment_size);
+
+            //case JpegMarkerCode.define_restart_interval:
+            //    //return read_define_restart_interval(segment_size);
+
+            case JpegMarkerCode.ApplicationData0:
+            case JpegMarkerCode.ApplicationData1:
+            case JpegMarkerCode.ApplicationData2:
+            case JpegMarkerCode.ApplicationData3:
+            case JpegMarkerCode.ApplicationData4:
+            case JpegMarkerCode.ApplicationData5:
+            case JpegMarkerCode.ApplicationData6:
+            case JpegMarkerCode.ApplicationData7:
+            case JpegMarkerCode.ApplicationData9:
+            case JpegMarkerCode.ApplicationData10:
+            case JpegMarkerCode.ApplicationData11:
+            case JpegMarkerCode.ApplicationData12:
+            case JpegMarkerCode.ApplicationData13:
+            case JpegMarkerCode.ApplicationData14:
+            case JpegMarkerCode.ApplicationData15:
+                return 0;
+
+            case JpegMarkerCode.ApplicationData8:
+                return 0;
+            default: // Other tags not supported (among which DNL DRI)
+                return 0;
+                ////return try_read_ApplicationData8_segment(segment_size, header, spiff_header_found);
+        }
+    }
+
 }
