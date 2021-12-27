@@ -72,6 +72,19 @@ public class JpegStreamReaderTest
         ReadHeaderWithApplicationDataImpl(15);
     }
 
+    [Fact]
+    public void ReadHeaderWithJpeglSExtendedFrameShouldThrow()
+    {
+        // 0xF9 = SOF_57: Marks the start of a JPEG-LS extended (ISO/IEC 14495-2) encoded frame.
+        byte[] buffer = { 0xFF, 0xD8, 0xFF, 0xF9 };
+
+        var reader = new JpegStreamReader { Source = buffer };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.EncodingNotSupported, exception.Data[nameof(JpegLSError)]);
+    }
+
     private static void ReadHeaderWithApplicationDataImpl(byte dataNumber)
     {
         JpegTestStreamWriter writer = new();

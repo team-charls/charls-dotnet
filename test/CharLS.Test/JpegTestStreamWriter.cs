@@ -34,7 +34,7 @@ internal class JpegTestStreamWriter
     public void WriteStartOfFrameSegment(int width, int height, int bitsPerSample, int componentCount)
     {
         // Create a Frame Header as defined in T.87, C.2.2 and T.81, B.2.2
-        WriteSegmentStart(JpegMarkerCode.StartOfScan, 6 + (componentCount * 4));
+        WriteSegmentStart(JpegMarkerCode.StartOfFrameJpegLS, 6 + (componentCount * 3));
 
         WriteByte((byte)bitsPerSample); // P = Sample precision
         WriteUint16((ushort)height);    // Y = Number of lines
@@ -42,35 +42,26 @@ internal class JpegTestStreamWriter
 
         // Components
         WriteByte((byte)componentCount); // Nf = Number of image components in frame
-        for (int componentId = 0; componentId < componentCount; ++componentId)
+        for (int componentId = 0; componentId < componentCount; componentId++)
         {
-              // Component Specification parameters
-              if (ComponentIdOverride == 0)
-              {
-                  WriteByte((byte)componentId); // Ci = Component identifier
-              }
-              else
-              {
-                  WriteByte((byte)ComponentIdOverride); // Ci = Component identifier
-
-              }
-
-              WriteByte(0x11); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
-              WriteByte(0); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
+            // Component Specification parameters
+            WriteByte(ComponentIdOverride == 0 ? (byte)componentId : (byte)ComponentIdOverride); // Ci = Component identifier
+            WriteByte(0x11); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
+            WriteByte(0); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
         }
     }
 
     public void WriteStartOfScanSegment(int componentId, int componentCount, int nearLossless, InterleaveMode interleaveMode)
     {
         //// Create a Scan Header as defined in T.87, C.2.3 and T.81, B.2.3
-        WriteSegmentStart(JpegMarkerCode.StartOfFrameJpegLS, 1 + (componentCount * 2));
+        WriteSegmentStart(JpegMarkerCode.StartOfScan, 1 + (componentCount * 2) + 3);
 
         WriteByte((byte)componentCount); // Nf = Number of components in scan
-        for (int i = 0; i < componentCount; ++i)
+        for (int i = 0; i < componentCount; i++)
         {
             WriteByte((byte)componentId);
-            ++componentId;
             WriteByte(0); // Mapping table selector (0 = no table)
+            componentId++;
         }
 
         WriteByte((byte)nearLossless);// NEAR parameter

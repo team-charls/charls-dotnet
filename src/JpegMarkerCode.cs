@@ -18,9 +18,24 @@ internal enum JpegMarkerCode
     StartOfScan = 0xDA,           // SOS: Marks the start of scan.
     DefineRestartInterval = 0xDD, // DRI: Defines the restart interval used in succeeding scans.
 
+    // The following markers are defined in ISO/IEC 10918-1 | ITU T.81.
+    StartOfFrameBaselineJpeg = 0xC0,       // SOF_0:  Marks the start of a baseline jpeg encoded frame.
+    StartOfFrameExtendedSequential = 0xC1, // SOF_1:  Marks the start of a extended sequential Huffman encoded frame.
+    StartOfFrameProgressive = 0xC2,         // SOF_2:  Marks the start of a progressive Huffman encoded frame.
+    StartOfFrameLossless = 0xC3,            // SOF_3:  Marks the start of a lossless Huffman encoded frame.
+    StartOfFrameDifferentialSequential =
+        0xC5, // SOF_5:  Marks the start of a differential sequential Huffman encoded frame.
+    StartOfFrameDifferentialProgressive =
+        0xC6, // SOF_6:  Marks the start of a differential progressive Huffman encoded frame.
+    StartOfFrameDifferentialLossless = 0xC7, // SOF_7:  Marks the start of a differential lossless Huffman encoded frame.
+    StartOfFrameExtendedArithmetic = 0xC9, // SOF_9:  Marks the start of a extended sequential arithmetic encoded frame.
+    StartOfFrameProgressiveArithmetic = 0xCA, // SOF_10: Marks the start of a progressive arithmetic encoded frame.
+    StartOfFrameLosslessArithmetic = 0xCB,    // SOF_11: Marks the start of a lossless arithmetic encoded frame.
+
     // The following markers are defined in ISO/IEC 14495-1 | ITU T.87.
     StartOfFrameJpegLS = 0xF7,       // SOF_55: Marks the start of a JPEG-LS encoded frame.
     JpegLSPresetParameters = 0xF8,   // LSE:    Marks the start of a JPEG-LS preset parameters segment.
+    StartOfFrameJpeglSExtended = 0xF9, // SOF_57: Marks the start of a JPEG-LS extended (ISO/IEC 14495-2) encoded frame.
 
     ApplicationData0 = 0xE0,  // APP0:  Application data 0: used for JFIF header.
     ApplicationData1 = 0xE1,  // APP1:  Application data 1: used for EXIF or XMP header.
@@ -38,4 +53,5 @@ internal enum JpegMarkerCode
     ApplicationData13 = 0xED, // APP13: Application data 13: used by PhotoShop IRB
     ApplicationData14 = 0xEE, // APP14: Application data 14: used by Adobe
     ApplicationData15 = 0xEF, // APP15: Application data 15.
+    Comment = 0xFE            // COM:   Comment block.
 }
