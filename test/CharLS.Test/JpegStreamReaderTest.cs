@@ -85,6 +85,31 @@ public class JpegStreamReaderTest
         Assert.Equal(JpegLSError.EncodingNotSupported, exception.Data[nameof(JpegLSError)]);
     }
 
+    [Fact]
+    public void ReadHeaderJpegLSPresetParameterSegment()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+
+        JpegLSPresetCodingParameters presets = new(1, 2, 3, 4, 5);
+        writer.WriteJpegLSPresetParametersSegment(presets);
+        writer.WriteStartOfFrameSegment(1, 1, 2, 1);
+        writer.WriteStartOfScanSegment(1, 0, 0, InterleaveMode.None);
+
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        reader.ReadHeader();
+
+        JpegLSPresetCodingParameters? actual = reader.JpegLSPresetCodingParameters;
+        Assert.NotNull(actual);
+
+        Assert.Equal(presets.MaximumSampleValue, actual!.MaximumSampleValue);
+        Assert.Equal(presets.ResetValue, actual.ResetValue);
+        Assert.Equal(presets.Threshold1, actual.Threshold1);
+        Assert.Equal(presets.Threshold2, actual.Threshold2);
+        Assert.Equal(presets.Threshold3, actual.Threshold3);
+    }
+
     private static void ReadHeaderWithApplicationDataImpl(byte dataNumber)
     {
         JpegTestStreamWriter writer = new();

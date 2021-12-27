@@ -14,7 +14,7 @@ internal class JpegTestStreamWriter
         _buffer.Add(value);
     }
 
-    public void WriteUint16(ushort value)
+    public void WriteUint16(int value)
     {
         WriteByte((byte)(value / 0x100));
         WriteByte((byte)(value % 0x100));
@@ -67,6 +67,18 @@ internal class JpegTestStreamWriter
         WriteByte((byte)nearLossless);// NEAR parameter
         WriteByte((byte)interleaveMode);// ILV parameter
         WriteByte(0); // transformation
+    }
+
+    internal void WriteJpegLSPresetParametersSegment(JpegLSPresetCodingParameters presetCodingParameters)
+    {
+        WriteSegmentStart(JpegMarkerCode.JpegLSPresetParameters, 11);
+
+        WriteByte((byte)JpegLSPresetParametersType.PresetCodingParameters);
+        WriteUint16(presetCodingParameters.MaximumSampleValue);
+        WriteUint16(presetCodingParameters.Threshold1);
+        WriteUint16(presetCodingParameters.Threshold2);
+        WriteUint16(presetCodingParameters.Threshold3);
+        WriteUint16(presetCodingParameters.ResetValue);
     }
 
     public ReadOnlyMemory<byte> GetBuffer()

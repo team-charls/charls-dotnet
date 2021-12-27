@@ -27,6 +27,8 @@ internal class JpegStreamReader
 
     public ReadOnlyMemory<byte> Source { get; set; }
 
+    public JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
+
     internal void ReadHeader()
     {
         Debug.Assert(_state != State.ScanSection);
@@ -126,7 +128,7 @@ internal class JpegStreamReader
         return segmentSize < 2 ? throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize) : segmentSize;
     }
 
-    private int ReadMarkerSegment(JpegMarkerCode markerCode, int segment_size)
+    private int ReadMarkerSegment(JpegMarkerCode markerCode, int segmentSize)
     {
         switch (markerCode)
         {
@@ -138,8 +140,8 @@ internal class JpegStreamReader
             //case JpegMarkerCode.comment:
             //    //return read_comment(segment_size);
 
-            //case JpegMarkerCode.jpegls_preset_parameters:
-            //    //return read_preset_parameters_segment(segment_size);
+            case JpegMarkerCode.JpegLSPresetParameters:
+                return ReadPresetParametersSegment(segmentSize);
 
             //case JpegMarkerCode.define_restart_interval:
             //    //return read_define_restart_interval(segment_size);
@@ -240,5 +242,49 @@ internal class JpegStreamReader
     {
         return (int)markerCode is >= JpegRestartMarkerBase and
                < JpegRestartMarkerBase + JpegRestartMarkerRange;
+    }
+
+    private int ReadPresetParametersSegment(int segmentSize)
+    {
+        if (segmentSize< 1)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        var type = (JpegLSPresetParametersType)ReadByte();
+        switch (type)
+        {
+        case JpegLSPresetParametersType.PresetCodingParameters:
+            const int coding_parameter_segment_size = 11;
+            if (segmentSize != coding_parameter_segment_size)
+                throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+            // Note: validation will be done, just before decoding as more info is needed for validation.
+            JpegLSPresetCodingParameters = new JpegLSPresetCodingParameters
+            {
+                MaximumSampleValue = ReadUint16(),
+                Threshold1 = ReadUint16(),
+                Threshold2 = ReadUint16(),
+                Threshold3 = ReadUint16(),
+                ResetValue = ReadUint16(),
+            };
+
+            return coding_parameter_segment_size;
+
+            case JpegLSPresetParametersType.MappingTableSpecification:
+            case JpegLSPresetParametersType.MappingTableContinuation:
+            case JpegLSPresetParametersType.ExtendedWidthAndHeight:
+                throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+            case JpegLSPresetParametersType.CodingMethodSpecification:
+            case JpegLSPresetParametersType.NearLosslessErrorReSpecification:
+            case JpegLSPresetParametersType.VisuallyOrientedQuantizationSpecification:
+            case JpegLSPresetParametersType.ExtendedPredictionSpecification:
+            case JpegLSPresetParametersType.StartOfFixedLengthCoding:
+            case JpegLSPresetParametersType.EndOfFixedLengthCoding:
+            case JpegLSPresetParametersType.ExtendedPresetCodingParameters:
+            case JpegLSPresetParametersType.InverseColorTransformSpecification:
+                throw Util.CreateInvalidDataException(JpegLSError.JpeglsPresetExtendedParameterTypeNotSupported);
+        }
+
+        throw Util.CreateInvalidDataException(JpegLSError.InvalidJpegLSPresetParameterType);
     }
 }
