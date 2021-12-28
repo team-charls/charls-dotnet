@@ -29,6 +29,8 @@ internal class JpegStreamReader
 
     public JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
 
+    public FrameInfo? FrameInfo { get; private set; }
+
     internal void ReadHeader()
     {
         Debug.Assert(_state != State.ScanSection);
@@ -133,9 +135,7 @@ internal class JpegStreamReader
         switch (markerCode)
         {
             case JpegMarkerCode.StartOfFrameJpegLS:
-                //    //return read_start_of_frame_segment(segment_size);
-                _state = State.ScanSection;
-                return 0;
+                return ReadStartOfFrameSegment(segmentSize);
 
             //case JpegMarkerCode.comment:
             //    //return read_comment(segment_size);
@@ -244,30 +244,75 @@ internal class JpegStreamReader
                < JpegRestartMarkerBase + JpegRestartMarkerRange;
     }
 
+    private int ReadStartOfFrameSegment(int segmentSize)
+    {
+        // A JPEG-LS Start of Frame (SOF) segment is documented in ISO/IEC 14495-1, C.2.2
+        // This section references ISO/IEC 10918-1, B.2.2, which defines the normal JPEG SOF,
+        // with some modifications.
+
+        if (segmentSize < 6)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        FrameInfo = new FrameInfo
+        {
+            BitsPerSample = ReadByte(),
+            Height = ReadUint16(),
+            Width = ReadUint16(),
+            ComponentCount = ReadByte()
+        };
+
+        if (!Validation.IsBitsPerSampleValid(FrameInfo.BitsPerSample))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterBitsPerSample);
+
+        if (FrameInfo.Height < 1 || FrameInfo.Width < 1)
+            throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+        if (FrameInfo.ComponentCount < 1)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterComponentCount);
+
+        if (segmentSize != 6 + (FrameInfo.ComponentCount * 3))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        for (int i = 0; i != FrameInfo.ComponentCount; i++)
+        {
+            // Component specification parameters
+            add_component(ReadByte()); // Ci = Component identifier
+            byte horizontal_vertical_sampling_factor = ReadByte(); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
+            if (horizontal_vertical_sampling_factor != 0x11)
+                throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+            SkipByte(); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
+        }
+
+        _state = State.ScanSection;
+
+        return segmentSize;
+    }
+
     private int ReadPresetParametersSegment(int segmentSize)
     {
-        if (segmentSize< 1)
+        if (segmentSize < 1)
             throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
 
         var type = (JpegLSPresetParametersType)ReadByte();
         switch (type)
         {
-        case JpegLSPresetParametersType.PresetCodingParameters:
-            const int coding_parameter_segment_size = 11;
-            if (segmentSize != coding_parameter_segment_size)
-                throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+            case JpegLSPresetParametersType.PresetCodingParameters:
+                const int coding_parameter_segment_size = 11;
+                if (segmentSize != coding_parameter_segment_size)
+                    throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
 
-            // Note: validation will be done, just before decoding as more info is needed for validation.
-            JpegLSPresetCodingParameters = new JpegLSPresetCodingParameters
-            {
-                MaximumSampleValue = ReadUint16(),
-                Threshold1 = ReadUint16(),
-                Threshold2 = ReadUint16(),
-                Threshold3 = ReadUint16(),
-                ResetValue = ReadUint16(),
-            };
+                // Note: validation will be done, just before decoding as more info is needed for validation.
+                JpegLSPresetCodingParameters = new JpegLSPresetCodingParameters
+                {
+                    MaximumSampleValue = ReadUint16(),
+                    Threshold1 = ReadUint16(),
+                    Threshold2 = ReadUint16(),
+                    Threshold3 = ReadUint16(),
+                    ResetValue = ReadUint16(),
+                };
 
-            return coding_parameter_segment_size;
+                return coding_parameter_segment_size;
 
             case JpegLSPresetParametersType.MappingTableSpecification:
             case JpegLSPresetParametersType.MappingTableContinuation:
@@ -287,4 +332,14 @@ internal class JpegStreamReader
 
         throw Util.CreateInvalidDataException(JpegLSError.InvalidJpegLSPresetParameterType);
     }
+
+    private void add_component(int component_id)
+    {
+        //if (find(component_ids_.cbegin(), component_ids_.cend(), component_id) != component_ids_.cend())
+        //    throw_jpegls_error(jpegls_errc::duplicate_component_id_in_sof_segment);
+
+        //component_ids_.push_back(component_id);
+    }
+
+
 }
