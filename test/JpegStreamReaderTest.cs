@@ -32,7 +32,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfFrameSegment(1, 1, 2, 1);
 
         writer.WriteByte(extraStartByte);
-        writer.WriteStartOfScanSegment(0, 1, 128, InterleaveMode.None);
+        writer.WriteStartOfScanSegment(0, 1, 128, JpegLSInterleaveMode.None);
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
@@ -94,7 +94,7 @@ public class JpegStreamReaderTest
         JpegLSPresetCodingParameters presets = new(1, 2, 3, 4, 5);
         writer.WriteJpegLSPresetParametersSegment(presets);
         writer.WriteStartOfFrameSegment(1, 1, 2, 1);
-        writer.WriteStartOfScanSegment(1, 0, 0, InterleaveMode.None);
+        writer.WriteStartOfScanSegment(1, 0, 0, JpegLSInterleaveMode.None);
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
@@ -602,7 +602,7 @@ public class JpegStreamReaderTest
         writer.WriteByte(0x02);
 
         writer.WriteStartOfFrameSegment(1, 1, 2, 1);
-        writer.WriteStartOfScanSegment(0, 1, 128, InterleaveMode.None);
+        writer.WriteStartOfScanSegment(0, 1, 128, JpegLSInterleaveMode.None);
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
