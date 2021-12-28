@@ -1,6 +1,8 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Diagnostics;
+
 namespace CharLS.JpegLS;
 
 internal class JpegStreamReader
@@ -16,14 +18,23 @@ internal class JpegStreamReader
         BitStreamSection
     }
 
+    private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0..D7)
+    private const int JpegRestartMarkerRange = 8;
+
     private State _state;
     private SpiffHeader spiffHeader;
     private int _index;
 
     public ReadOnlyMemory<byte> Source { get; set; }
 
+    public JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
+
+    public FrameInfo? FrameInfo { get; private set; }
+
     internal void ReadHeader()
     {
+        Debug.Assert(_state != State.ScanSection);
+
         if (_state == State.BeforeStartOfImage)
         {
             if (ReadNextMarkerCode() != JpegMarkerCode.StartOfImage)
@@ -32,10 +43,10 @@ internal class JpegStreamReader
             _state = State.HeaderSection;
         }
 
-        for (;;)
+        for (; ; )
         {
             var markerCode = ReadNextMarkerCode();
-            //validate_marker_code(markerCode);
+            ValidateMarkerCode(markerCode);
 
             if (markerCode == JpegMarkerCode.StartOfScan)
             {
@@ -45,23 +56,23 @@ internal class JpegStreamReader
 
             int segmentSize = ReadSegmentSize();
 
-            int bytes_read;
+            int bytesRead;
             switch (_state)
             {
                 case State.SpiffHeaderSection:
-                    bytes_read = 0; //read_spiff_directory_entry(markerCode, segment_size - 2) + 2;
+                    bytesRead = 0; //read_spiff_directory_entry(markerCode, segment_size - 2) + 2;
                     break;
 
                 default:
-                    bytes_read = ReadMarkerSegment(markerCode, segmentSize - 2) + 2;
+                    bytesRead = ReadMarkerSegment(markerCode, segmentSize - 2) + 2;
                     break;
             }
 
-            int padding_to_read = segmentSize - bytes_read;
-            if (padding_to_read < 0)
+            int paddingToRead = segmentSize - bytesRead;
+            if (paddingToRead < 0)
                 throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
 
-            for (int i = 0; i != padding_to_read; ++i)
+            for (int i = 0; i != paddingToRead; ++i)
             {
                 SkipByte();
             }
@@ -110,7 +121,7 @@ internal class JpegStreamReader
             value = ReadByte();
         } while (value == jpegMarkerStartByte);
 
-        return (JpegMarkerCode) value;
+        return (JpegMarkerCode)value;
     }
 
     private int ReadSegmentSize()
@@ -119,18 +130,18 @@ internal class JpegStreamReader
         return segmentSize < 2 ? throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize) : segmentSize;
     }
 
-    private int ReadMarkerSegment(JpegMarkerCode markerCode, int segment_size)
+    private int ReadMarkerSegment(JpegMarkerCode markerCode, int segmentSize)
     {
         switch (markerCode)
         {
-            //case JpegMarkerCode.start_of_frame_jpegls:
-            //    //return read_start_of_frame_segment(segment_size);
+            case JpegMarkerCode.StartOfFrameJpegLS:
+                return ReadStartOfFrameSegment(segmentSize);
 
             //case JpegMarkerCode.comment:
             //    //return read_comment(segment_size);
 
-            //case JpegMarkerCode.jpegls_preset_parameters:
-            //    //return read_preset_parameters_segment(segment_size);
+            case JpegMarkerCode.JpegLSPresetParameters:
+                return ReadPresetParametersSegment(segmentSize);
 
             //case JpegMarkerCode.define_restart_interval:
             //    //return read_define_restart_interval(segment_size);
@@ -159,5 +170,176 @@ internal class JpegStreamReader
                 ////return try_read_ApplicationData8_segment(segment_size, header, spiff_header_found);
         }
     }
+
+    private void ValidateMarkerCode(JpegMarkerCode markerCode)
+    {
+        // ISO/IEC 14495-1, C.1.1. defines the following markers as valid for a JPEG-LS byte stream:
+        // SOF55, LSE, SOI, EOI, SOS, DNL, DRI, RSTm, APPn and COM.
+        // All other markers shall not be present.
+        switch (markerCode)
+        {
+            case JpegMarkerCode.StartOfScan:
+                if (_state != State.ScanSection)
+                    throw Util.CreateInvalidDataException(JpegLSError.UnexpectedMarkerFound);
+
+                return;
+
+            case JpegMarkerCode.StartOfFrameJpegLS:
+                if (_state == State.ScanSection)
+                    throw Util.CreateInvalidDataException(JpegLSError.DuplicateStartOfFrameMarker);
+
+                return;
+
+            case JpegMarkerCode.DefineRestartInterval:
+            case JpegMarkerCode.JpegLSPresetParameters:
+            case JpegMarkerCode.Comment:
+            case JpegMarkerCode.ApplicationData0:
+            case JpegMarkerCode.ApplicationData1:
+            case JpegMarkerCode.ApplicationData2:
+            case JpegMarkerCode.ApplicationData3:
+            case JpegMarkerCode.ApplicationData4:
+            case JpegMarkerCode.ApplicationData5:
+            case JpegMarkerCode.ApplicationData6:
+            case JpegMarkerCode.ApplicationData7:
+            case JpegMarkerCode.ApplicationData8:
+            case JpegMarkerCode.ApplicationData9:
+            case JpegMarkerCode.ApplicationData10:
+            case JpegMarkerCode.ApplicationData11:
+            case JpegMarkerCode.ApplicationData12:
+            case JpegMarkerCode.ApplicationData13:
+            case JpegMarkerCode.ApplicationData14:
+            case JpegMarkerCode.ApplicationData15:
+                return;
+
+            // Check explicit for one of the other common JPEG encodings.
+            case JpegMarkerCode.StartOfFrameBaselineJpeg:
+            case JpegMarkerCode.StartOfFrameExtendedSequential:
+            case JpegMarkerCode.StartOfFrameProgressive:
+            case JpegMarkerCode.StartOfFrameLossless:
+            case JpegMarkerCode.StartOfFrameDifferentialSequential:
+            case JpegMarkerCode.StartOfFrameDifferentialProgressive:
+            case JpegMarkerCode.StartOfFrameDifferentialLossless:
+            case JpegMarkerCode.StartOfFrameExtendedArithmetic:
+            case JpegMarkerCode.StartOfFrameProgressiveArithmetic:
+            case JpegMarkerCode.StartOfFrameLosslessArithmetic:
+            case JpegMarkerCode.StartOfFrameJpeglSExtended:
+                throw Util.CreateInvalidDataException(JpegLSError.EncodingNotSupported);
+
+            case JpegMarkerCode.StartOfImage:
+                throw Util.CreateInvalidDataException(JpegLSError.DuplicateStartOfImageMarker);
+
+            case JpegMarkerCode.EndOfImage:
+                throw Util.CreateInvalidDataException(JpegLSError.UnexpectedEndOfImageMarker);
+        }
+
+        if (IsRestartMarkerCode(markerCode))
+            throw Util.CreateInvalidDataException(JpegLSError.UnexpectedRestartMarker);
+
+        throw Util.CreateInvalidDataException(JpegLSError.UnknownJpegMarkerFound);
+    }
+
+    private static bool IsRestartMarkerCode(JpegMarkerCode markerCode)
+    {
+        return (int)markerCode is >= JpegRestartMarkerBase and
+               < JpegRestartMarkerBase + JpegRestartMarkerRange;
+    }
+
+    private int ReadStartOfFrameSegment(int segmentSize)
+    {
+        // A JPEG-LS Start of Frame (SOF) segment is documented in ISO/IEC 14495-1, C.2.2
+        // This section references ISO/IEC 10918-1, B.2.2, which defines the normal JPEG SOF,
+        // with some modifications.
+
+        if (segmentSize < 6)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        FrameInfo = new FrameInfo
+        {
+            BitsPerSample = ReadByte(),
+            Height = ReadUint16(),
+            Width = ReadUint16(),
+            ComponentCount = ReadByte()
+        };
+
+        if (!Validation.IsBitsPerSampleValid(FrameInfo.BitsPerSample))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterBitsPerSample);
+
+        if (FrameInfo.Height < 1 || FrameInfo.Width < 1)
+            throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+        if (FrameInfo.ComponentCount < 1)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterComponentCount);
+
+        if (segmentSize != 6 + (FrameInfo.ComponentCount * 3))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        for (int i = 0; i != FrameInfo.ComponentCount; i++)
+        {
+            // Component specification parameters
+            add_component(ReadByte()); // Ci = Component identifier
+            byte horizontal_vertical_sampling_factor = ReadByte(); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
+            if (horizontal_vertical_sampling_factor != 0x11)
+                throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+            SkipByte(); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
+        }
+
+        _state = State.ScanSection;
+
+        return segmentSize;
+    }
+
+    private int ReadPresetParametersSegment(int segmentSize)
+    {
+        if (segmentSize < 1)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        var type = (JpegLSPresetParametersType)ReadByte();
+        switch (type)
+        {
+            case JpegLSPresetParametersType.PresetCodingParameters:
+                const int coding_parameter_segment_size = 11;
+                if (segmentSize != coding_parameter_segment_size)
+                    throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+                // Note: validation will be done, just before decoding as more info is needed for validation.
+                JpegLSPresetCodingParameters = new JpegLSPresetCodingParameters
+                {
+                    MaximumSampleValue = ReadUint16(),
+                    Threshold1 = ReadUint16(),
+                    Threshold2 = ReadUint16(),
+                    Threshold3 = ReadUint16(),
+                    ResetValue = ReadUint16(),
+                };
+
+                return coding_parameter_segment_size;
+
+            case JpegLSPresetParametersType.MappingTableSpecification:
+            case JpegLSPresetParametersType.MappingTableContinuation:
+            case JpegLSPresetParametersType.ExtendedWidthAndHeight:
+                throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+            case JpegLSPresetParametersType.CodingMethodSpecification:
+            case JpegLSPresetParametersType.NearLosslessErrorReSpecification:
+            case JpegLSPresetParametersType.VisuallyOrientedQuantizationSpecification:
+            case JpegLSPresetParametersType.ExtendedPredictionSpecification:
+            case JpegLSPresetParametersType.StartOfFixedLengthCoding:
+            case JpegLSPresetParametersType.EndOfFixedLengthCoding:
+            case JpegLSPresetParametersType.ExtendedPresetCodingParameters:
+            case JpegLSPresetParametersType.InverseColorTransformSpecification:
+                throw Util.CreateInvalidDataException(JpegLSError.JpeglsPresetExtendedParameterTypeNotSupported);
+        }
+
+        throw Util.CreateInvalidDataException(JpegLSError.InvalidJpegLSPresetParameterType);
+    }
+
+    private void add_component(int component_id)
+    {
+        //if (find(component_ids_.cbegin(), component_ids_.cend(), component_id) != component_ids_.cend())
+        //    throw_jpegls_error(jpegls_errc::duplicate_component_id_in_sof_segment);
+
+        //component_ids_.push_back(component_id);
+    }
+
 
 }

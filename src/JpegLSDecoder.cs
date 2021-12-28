@@ -1,9 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace CharLS.JpegLS;
 
@@ -15,8 +13,20 @@ public sealed class JpegLSDecoder
     private FrameInfo? _frameInfo;
     private int? _nearLossless;
     private JpegLSInterleaveMode? _interleaveMode;
-    private ReadOnlyMemory<byte> _source;
-    private MemoryHandle _sourcePin;
+    private JpegStreamReader _reader = new();
+
+    private enum State
+    {
+        Initial,
+        SourceSet,
+        SpiffHeaderRead,
+        SpiffHeaderNotFound,
+        HeaderRead,
+        Completed
+    };
+
+    private State _state = State.Initial;
+
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JpegLSDecoder"/> class.
@@ -33,7 +43,11 @@ public sealed class JpegLSDecoder
     /// <exception cref="InvalidDataException">Thrown when the JPEG-LS stream is not valid.</exception>
     public JpegLSDecoder(ReadOnlyMemory<byte> source, bool readHeader = true)
     {
-        throw new NotImplementedException();
+        Source = source;
+        if (readHeader)
+        {
+            ReadHeader();
+        }
     }
 
     /// <summary>
@@ -42,14 +56,18 @@ public sealed class JpegLSDecoder
     /// <value>
     /// A region of memory that contains an encoded JPEG-LS image.
     /// </value>
-    /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when this property set twice./>.</exception>
     public ReadOnlyMemory<byte> Source
     {
-        get => _source;
+        get => _reader.Source;
 
         set
         {
-            _source = value;
+            if (_state != State.Initial)
+                throw new InvalidOperationException("Source is already set.");
+
+            _reader.Source = value;
+            _state = State.SourceSet;
         }
     }
 
@@ -70,21 +88,8 @@ public sealed class JpegLSDecoder
     /// <value>
     /// The frame information of the parsed JPEG-LS image.
     /// </value>
-    /// <exception cref="OverflowException">Thrown when the native result doesn't fit in an Int32.</exception>
-    /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public FrameInfo FrameInfo
-    {
-        get
-        {
-            if (_frameInfo is null)
-            {
-                _frameInfo = new();
-            }
-
-            return _frameInfo;
-        }
-    }
+    public FrameInfo FrameInfo => _reader.FrameInfo ?? throw new InvalidOperationException("Incorrect state. ReadHeader has not called.");
 
     /// <summary>
     /// Gets the near lossless parameter used to encode the JPEG-LS stream.
@@ -139,13 +144,7 @@ public sealed class JpegLSDecoder
     /// The preset coding parameters.
     /// </value>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public JpegLSPresetCodingParameters PresetCodingParameters
-    {
-        get
-        {
-            return new(native);
-        }
-    }
+    public JpegLSPresetCodingParameters PresetCodingParameters => _reader.JpegLSPresetCodingParameters ?? new JpegLSPresetCodingParameters();
 
     /// <summary>
     /// Gets the required size of the destination buffer.
@@ -156,29 +155,50 @@ public sealed class JpegLSDecoder
     /// <exception cref="InvalidOperationException">Thrown when this method is called before <see cref="ReadHeader(bool)"/>.</exception>
     public int GetDestinationSize(int stride = 0)
     {
-        return Convert.ToInt32(1);
-    }
+        if (_state < State.HeaderRead)
+            throw new InvalidOperationException("Source is not set.");
 
-    /// <summary>
-    /// Reads the SPIFF (Still Picture Interchange File Format) header.
-    /// </summary>
-    /// <param name="spiffHeader">The header or null when no valid header was found.</param>
-    /// <returns>true if a SPIFF header was present and could be read.</returns>
-    /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
-    public bool TryReadSpiffHeader(out SpiffHeader? spiffHeader)
-    {
-        bool found = headerFound != 0;
-        if (found)
+        if (stride == 0)
         {
-            found = SpiffHeader.TryCreate(headerNative, out spiffHeader);
-        }
-        else
-        {
-            spiffHeader = default;
+            return FrameInfo.ComponentCount * FrameInfo.Height * FrameInfo.Width *
+                   BitToByteCount(FrameInfo.BitsPerSample);
         }
 
-        return found;
+        switch (InterleaveMode)
+        {
+            case JpegLSInterleaveMode.None:
+                return stride * FrameInfo.ComponentCount * FrameInfo.Height;
+
+            case JpegLSInterleaveMode.Line:
+            case JpegLSInterleaveMode.Sample:
+                return stride * FrameInfo.Height;
+
+            default:
+                Debug.Assert(false);
+                return 0;
+        }
     }
+
+///// <summary>
+///// Reads the SPIFF (Still Picture Interchange File Format) header.
+///// </summary>
+///// <param name="spiffHeader">The header or null when no valid header was found.</param>
+///// <returns>true if a SPIFF header was present and could be read.</returns>
+///// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
+//public bool TryReadSpiffHeader(out SpiffHeader? spiffHeader)
+//{
+//    bool found = headerFound != 0;
+//    if (found)
+//    {
+//        found = SpiffHeader.TryCreate(headerNative, out spiffHeader);
+//    }
+//    else
+//    {
+//        spiffHeader = default;
+//    }
+
+//    return found;
+//}
 
     /// <summary>
     /// Reads the header of the JPEG-LS stream.
@@ -186,13 +206,17 @@ public sealed class JpegLSDecoder
     /// </summary>
     /// <param name="tryReadSpiffHeader">if set to <c>true</c> try to read the SPIFF header first.</param>
     /// <exception cref="InvalidDataException">Thrown when the JPEG-LS stream is not valid.</exception>
-    /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     public void ReadHeader(bool tryReadSpiffHeader = true)
     {
-        if (tryReadSpiffHeader && TryReadSpiffHeader(out SpiffHeader? spiffHeader))
-        {
-            SpiffHeader = spiffHeader;
-        }
+        if (_state != State.SourceSet)
+            throw new InvalidOperationException("Source is not set.");
+
+        _reader.ReadHeader();
+        _state = State.HeaderRead;
+        //if (tryReadSpiffHeader && TryReadSpiffHeader(out SpiffHeader? spiffHeader))
+        //{
+        //    SpiffHeader = spiffHeader;
+        //}
     }
 
     /// <summary>
@@ -220,4 +244,13 @@ public sealed class JpegLSDecoder
     public void Decode(Span<byte> destination, int stride = 0)
     {
     }
+
+    /// <summary>
+    /// Computes how many bytes are needed to hold the number of bits.
+    /// </summary>
+    private static int BitToByteCount(int bitCount)
+    {
+        return (bitCount + 7) / 8;
+    }
+
 }

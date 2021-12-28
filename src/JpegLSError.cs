@@ -21,7 +21,7 @@ internal static class Util
             case JpegLSError.UnknownJpegMarkerFound:
             case JpegLSError.JpegMarkerStartByteNotFound:
             case JpegLSError.StartOfImageMarkerNotFound:
-            case JpegLSError.StartOfFrameMarkerNotFound:
+            case JpegLSError.UnexpectedMarkerFound:
             case JpegLSError.InvalidMarkerSegmentSize:
             case JpegLSError.DuplicateStartOfImageMarker:
             case JpegLSError.DuplicateStartOfFrameMarker:
@@ -137,9 +137,9 @@ public enum JpegLSError
     StartOfImageMarkerNotFound = 15,
 
     /// <summary>
-    /// This error is returned when the SOF JPEG marker is not found before the SOS (Start of Scan) marker.
+    /// This error is returned when a JPEG marker is found that is not valid for the current state.
     /// </summary>
-    StartOfFrameMarkerNotFound = 16,
+    UnexpectedMarkerFound = 16,
 
     /// <summary>
     /// This error is returned when the segment size of a marker segment is invalid.
@@ -180,6 +180,17 @@ public enum JpegLSError
     /// This error is returned when the stream contains a SPIFF header but not an SPIFF end-of-directory entry.
     /// </summary>
     MissingEndOfSpiffDirectory = 24,
+
+    /// <summary>
+    /// This error is returned when a restart marker is found outside the encoded entropy data.
+    /// </summary>
+    UnexpectedRestartMarker = 25,
+
+    /// <summary>
+    /// This error is returned when an expected restart marker is not found. It may indicate data corruption in the JPEG-LS
+    /// byte stream.
+    /// </summary>
+    RestartMarkerNotFound = 26,
 
     /// <summary>
     /// The argument for the width parameter is outside the range [1, 65535].

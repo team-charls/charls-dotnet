@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="JpegLSDecoder.cs" />
     <Compile Remove="JpegLSEncoder.cs" />
   </ItemGroup>
 
