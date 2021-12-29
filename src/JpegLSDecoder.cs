@@ -108,7 +108,7 @@ public sealed class JpegLSDecoder
         {
             if (!_nearLossless.HasValue)
             {
-                _nearLossless = 1;
+                _nearLossless = 0;
             }
 
             return _nearLossless.Value;
