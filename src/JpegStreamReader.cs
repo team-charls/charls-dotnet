@@ -23,9 +23,12 @@ internal class JpegStreamReader
 
     private State _state;
     private SpiffHeader spiffHeader;
-    private int _index;
+    private int _nearLossless;
+    private JpegLSInterleaveMode _interleaveMode;
 
-    public ReadOnlyMemory<byte> Source { get; set; }
+    internal ReadOnlyMemory<byte> Source { get; set; }
+
+    internal int Position { get; private set; }
 
     public JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
 
@@ -87,17 +90,17 @@ internal class JpegStreamReader
 
     private byte ReadByte()
     {
-        return _index < Source.Span.Length
-            ? Source.Span[_index++]
+        return Position < Source.Span.Length
+            ? Source.Span[Position++]
             : throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
     }
 
     private void SkipByte()
     {
-        if (_index == Source.Span.Length)
+        if (Position == Source.Span.Length)
             throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
 
-        _index++;
+        Position++;
     }
 
     private int ReadUint16()
@@ -331,6 +334,41 @@ internal class JpegStreamReader
         }
 
         throw Util.CreateInvalidDataException(JpegLSError.InvalidJpegLSPresetParameterType);
+    }
+
+    internal void ReadStartOfScan()
+    {
+        int segmentSize = ReadSegmentSize();
+        if (segmentSize < 3)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        int componentCountInScan = ReadByte();
+        if (componentCountInScan != 1 && componentCountInScan != FrameInfo!.ComponentCount)
+            throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+        if (segmentSize != 6 + (2 * componentCountInScan))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        for (int i = 0; i != componentCountInScan; i++)
+        {
+            SkipByte(); // Skip scan component selector
+            int mapping_table_selector = ReadByte();
+            if (mapping_table_selector != 0)
+                throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+        }
+
+        _nearLossless = ReadByte(); // Read NEAR parameter
+        //if (parameters_.near_lossless > compute_maximum_near_lossless(static_cast<int>(maximum_sample_value())))
+        //    throw_jpegls_error(jpegls_errc::invalid_parameter_near_lossless);
+
+        _interleaveMode = (JpegLSInterleaveMode)ReadByte(); // Read ILV parameter
+        //check_interleave_mode(mode);
+        //parameters_.interleave_mode = mode;
+
+        if ((ReadByte() & 0xFU) != 0) // Read Ah (no meaning) and Al (point transform).
+            throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+        _state = State.BitStreamSection;
     }
 
     private void add_component(int component_id)

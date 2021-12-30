@@ -179,26 +179,26 @@ public sealed class JpegLSDecoder
         }
     }
 
-///// <summary>
-///// Reads the SPIFF (Still Picture Interchange File Format) header.
-///// </summary>
-///// <param name="spiffHeader">The header or null when no valid header was found.</param>
-///// <returns>true if a SPIFF header was present and could be read.</returns>
-///// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
-//public bool TryReadSpiffHeader(out SpiffHeader? spiffHeader)
-//{
-//    bool found = headerFound != 0;
-//    if (found)
-//    {
-//        found = SpiffHeader.TryCreate(headerNative, out spiffHeader);
-//    }
-//    else
-//    {
-//        spiffHeader = default;
-//    }
+    ///// <summary>
+    ///// Reads the SPIFF (Still Picture Interchange File Format) header.
+    ///// </summary>
+    ///// <param name="spiffHeader">The header or null when no valid header was found.</param>
+    ///// <returns>true if a SPIFF header was present and could be read.</returns>
+    ///// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
+    //public bool TryReadSpiffHeader(out SpiffHeader? spiffHeader)
+    //{
+    //    bool found = headerFound != 0;
+    //    if (found)
+    //    {
+    //        found = SpiffHeader.TryCreate(headerNative, out spiffHeader);
+    //    }
+    //    else
+    //    {
+    //        spiffHeader = default;
+    //    }
 
-//    return found;
-//}
+    //    return found;
+    //}
 
     /// <summary>
     /// Reads the header of the JPEG-LS stream.
@@ -208,10 +208,10 @@ public sealed class JpegLSDecoder
     /// <exception cref="InvalidDataException">Thrown when the JPEG-LS stream is not valid.</exception>
     public void ReadHeader(bool tryReadSpiffHeader = true)
     {
-        if (_state != State.SourceSet)
-            throw new InvalidOperationException("Source is not set.");
+        CheckOperation(_state is >= State.SourceSet and < State.HeaderRead);
 
         _reader.ReadHeader();
+        _reader.ReadStartOfScan();
         _state = State.HeaderRead;
         //if (tryReadSpiffHeader && TryReadSpiffHeader(out SpiffHeader? spiffHeader))
         //{
@@ -243,6 +243,44 @@ public sealed class JpegLSDecoder
     /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     public void Decode(Span<byte> destination, int stride = 0)
     {
+
+        if (stride == 0)
+        {
+            int width = FrameInfo.Width;
+            int componentCount = InterleaveMode == JpegLSInterleaveMode.None ? 1 : FrameInfo.ComponentCount;
+            stride = componentCount * width * (FrameInfo.BitsPerSample + 7) / 8;
+        }
+
+        int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * BitToByteCount(FrameInfo.BitsPerSample);
+
+        if (destination.Length < bytesPerPlane * FrameInfo.ComponentCount)
+            throw Util.CreateInvalidDataException(JpegLSError.DestinationBufferTooSmall);
+
+        int componentIndex = 0;
+        while (componentIndex < FrameInfo.ComponentCount)
+        {
+            var decoder = new Decoder(FrameInfo, InterleaveMode, Source[_reader.Position..]);
+            _ = decoder.DecodeScan(destination);
+
+        //    if (state_ == state::scan_section)
+        //    {
+        //        read_next_start_of_scan();
+        //    }
+
+        //    const unique_ptr<decoder_strategy> codec{
+        //        jls_codec_factory<decoder_strategy>().create_codec(
+        //            frame_info_, parameters_, get_validated_preset_coding_parameters())};
+        //    unique_ptr<process_line> process_line(codec->create_process_line(destination, stride));
+        //    codec->decode_scan(move(process_line), rect_, source_);
+        //    skip_bytes(destination, static_cast<size_t>(bytes_per_plane));
+        //    state_ = state::scan_section;
+
+        //    if (parameters_.interleave_mode != interleave_mode::none)
+        //        return;
+
+            componentIndex++;
+        }
+
     }
 
     /// <summary>
@@ -252,5 +290,14 @@ public sealed class JpegLSDecoder
     {
         return (bitCount + 7) / 8;
     }
+
+    private static void CheckOperation(bool expression)
+    {
+        if (!expression)
+        {
+            throw new InvalidOperationException("JPEGLS Decoder in the incorrect state.");
+        }
+    }
+
 
 }
