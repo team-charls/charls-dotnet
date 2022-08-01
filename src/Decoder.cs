@@ -26,6 +26,11 @@ internal class Decoder
     int _t2;
     int _t3;
 
+    private readonly int[] _j = {
+        0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2,  2,  3,  3,  3,  3,
+        4, 4, 5, 5, 6, 6, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+
     internal Decoder(FrameInfo frameInfo, JpegLSInterleaveMode interleaveMode, ReadOnlyMemory<byte> source)
     {
         _frameInfo = frameInfo;
@@ -58,13 +63,13 @@ internal class Decoder
         int componentCount = _interleaveMode == JpegLSInterleaveMode.Line ? _frameInfo.ComponentCount : 1;
 
         var line_buffer = new byte[2 * componentCount * pixel_stride];
-        var run_index  = new int[_frameInfo.ComponentCount];
+        var run_index = new int[_frameInfo.ComponentCount];
 
-        for (int line = 0 ; ;)
+        for (int line = 0; ;)
         {
             int lines_in_interval = Math.Min(_frameInfo.Height - line, _restartInterval);
 
-            for (int mcu =0 ; mcu < lines_in_interval; ++mcu, ++line)
+            for (int mcu = 0; mcu < lines_in_interval; ++mcu, ++line)
             {
                 _previousLine = line_buffer[1..];
                 _currentLine = line_buffer[(1 + (componentCount * pixel_stride))..];
@@ -171,21 +176,57 @@ internal class Decoder
 
     int DoRunMode(int startIndex)
     {
-        ////const pixel_type ra{current_line_[start_index - 1]};
+        byte ra = _currentLine.Span[startIndex - 1];
 
-        ////const int32_t run_length{decode_run_pixels(ra, current_line_ + start_index, width_ - start_index)};
-        ////const uint32_t end_index{static_cast<uint32_t>(start_index + run_length)};
+        int runLength = DecodeRunPixels(ra, startIndex, _frameInfo.Width - startIndex);
+        int endIndex = startIndex + runLength;
 
-        ////if (end_index == width_)
-        ////    return end_index - start_index;
+        if (endIndex == _frameInfo.Width)
+            return endIndex - startIndex;
 
-        ////// run interruption
-        ////const pixel_type rb{previous_line_[end_index]};
-        ////current_line_[end_index] = decode_run_interruption_pixel(ra, rb);
-        ////decrement_run_index();
-        ////return end_index - start_index + 1;
+        // run interruption
+        byte rb = _previousLine.Span[endIndex];
+        _currentLine.Span[endIndex] = decode_run_interruption_pixel(ra, rb);
+        DecrementRunIndex();
+        return endIndex - startIndex + 1;
         return 0; // dummy value.
     }
+
+    int DecodeRunPixels(byte ra, int start_pos, int pixel_count)
+    {
+        int index = 0;
+        while (ReadBit())
+        {
+            int count = Math.Min(1 << _j[_run_index], pixel_count - index);
+            index += count;
+            Debug.Assert(index <= pixel_count);
+
+            if (count == (1 << _j[_run_index]))
+            {
+                IncrementRunIndex();
+            }
+
+            if (index == pixel_count)
+                break;
+        }
+
+        if (index != pixel_count)
+        {
+            // incomplete run.
+            index += (_j[_run_index] > 0) ? read_value(_j[_run_index]) : 0;
+        }
+
+        if (index > pixel_count)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
+
+        for (int i = 0; i < index; ++i)
+        {
+            _currentLine.Span[start_pos + i] = ra;
+        }
+
+        return index;
+    }
+
 
     private void MakeValid()
     {
@@ -237,11 +278,11 @@ internal class Decoder
         // Easy & fast: if there is no 0xFF byte in sight, we can read without bit stuffing
         if (_position < _nextFFposition - (sizeof(ulong) - 1))
         {
-            
+
             _readCache |= Read(_source[_position..].Span) >> _validBits;
             int bytesToRead = (ulongBitCount - _validBits) >> 3;
             _position += bytesToRead;
-            _validBits += bytesToRead* 8;
+            _validBits += bytesToRead * 8;
 
             Debug.Assert(_validBits >= ulongBitCount - 8);
             return true;
@@ -251,7 +292,7 @@ internal class Decoder
 
     private int FindNextFF()
     {
-        int positionNextFF  = _position;
+        int positionNextFF = _position;
 
         ReadOnlySpan<byte> source = _source.Span;
         while (positionNextFF < _endPosition)
@@ -263,6 +304,28 @@ internal class Decoder
         }
 
         return positionNextFF;
+    }
+
+    private bool ReadBit()
+    {
+        if (_validBits <= 0)
+        {
+            MakeValid();
+        }
+
+        bool set = (_readCache & ((ulong)1 << (ulongBitCount - 1))) != 0;
+        ////skip(1);
+        return set;
+    }
+
+    private void IncrementRunIndex()
+    {
+        _run_index = Math.Min(31, _run_index + 1);
+    }
+
+    void DecrementRunIndex()
+    {
+        _run_index = Math.Max(0, _run_index - 1);
     }
 
     public static ulong Read(ReadOnlySpan<byte> bytes)
@@ -287,15 +350,15 @@ internal class Decoder
             return -3;
         if (di <= -_t1)
             return -2;
-        if (di< -traitsNearLossless)
+        if (di < -traitsNearLossless)
             return -1;
         if (di <= traitsNearLossless)
             return 0;
-        if (di<_t1)
+        if (di < _t1)
             return 1;
-        if (di<_t2)
+        if (di < _t2)
             return 2;
-        if (di<_t3)
+        if (di < _t3)
             return 3;
 
         return 4;
