@@ -13,6 +13,7 @@
     <Configurations>Debug;Release</Configurations>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio><!-- Enable faster builds in Visual Studio 2022 17.5 and newer. -->
 
     <!-- Build -->
     <!-- Build to a folder outside the source folders, making it easier to clean. -->

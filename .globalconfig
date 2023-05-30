@@ -44,3 +44,7 @@ dotnet_diagnostic.IDE0055.severity = none
 # IDE0130: Namespace "CharLS.Native" does not match folder structure, expected "CharLS.Native."
 # Rational: False warning
 dotnet_diagnostic.IDE0130.severity = none
+
+# CS0649: Field '' is never assigned to, and will always have its default value 0
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.CS0649.severity = none

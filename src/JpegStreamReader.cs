@@ -15,14 +15,14 @@ internal class JpegStreamReader
         ImageSection,
         FrameSection,
         ScanSection,
-        BitStreamSection
+        BitStreamSection 
     }
 
     private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0..D7)
     private const int JpegRestartMarkerRange = 8;
 
     private State _state;
-    private SpiffHeader spiffHeader;
+    ////private SpiffHeader spiffHeader;
     private int _nearLossless;
     private JpegLSInterleaveMode _interleaveMode;
 

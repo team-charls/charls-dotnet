@@ -186,10 +186,10 @@ internal class Decoder
 
         // run interruption
         byte rb = _previousLine.Span[endIndex];
-        _currentLine.Span[endIndex] = decode_run_interruption_pixel(ra, rb);
+        ////_currentLine.Span[endIndex] = decode_run_interruption_pixel(ra, rb);
         DecrementRunIndex();
         return endIndex - startIndex + 1;
-        return 0; // dummy value.
+        ////return 0; // dummy value.
     }
 
     int DecodeRunPixels(byte ra, int start_pos, int pixel_count)
@@ -213,7 +213,7 @@ internal class Decoder
         if (index != pixel_count)
         {
             // incomplete run.
-            index += (_j[_run_index] > 0) ? read_value(_j[_run_index]) : 0;
+            ////index += (_j[_run_index] > 0) ? read_value(_j[_run_index]) : 0;
         }
 
         if (index > pixel_count)
