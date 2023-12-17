@@ -279,7 +279,7 @@ internal class JpegStreamReader
         for (int i = 0; i != FrameInfo.ComponentCount; i++)
         {
             // Component specification parameters
-            add_component(ReadByte()); // Ci = Component identifier
+            AddComponent(ReadByte()); // Ci = Component identifier
             byte horizontal_vertical_sampling_factor = ReadByte(); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
             if (horizontal_vertical_sampling_factor != 0x11)
                 throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
@@ -371,7 +371,7 @@ internal class JpegStreamReader
         _state = State.BitStreamSection;
     }
 
-    private void add_component(int component_id)
+    private void AddComponent(int component_id)
     {
         //if (find(component_ids_.cbegin(), component_ids_.cend(), component_id) != component_ids_.cend())
         //    throw_jpegls_error(jpegls_errc::duplicate_component_id_in_sof_segment);

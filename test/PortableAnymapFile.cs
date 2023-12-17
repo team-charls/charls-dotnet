@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CharLS.JpegLS.Test;
 
-internal class PortableAnymapFile
+internal sealed class PortableAnymapFile
 {
     internal int ComponentCount { get; set; }
     internal int Width { get; set; }
@@ -40,7 +40,7 @@ internal class PortableAnymapFile
 
     private static List<int> ReadHeader(Stream pnmFile)
     {
-        List<int> result = new();
+        List<int> result = [];
 
         byte first = (byte)pnmFile.ReadByte();
 
@@ -76,24 +76,17 @@ internal class PortableAnymapFile
         return x;
     }
 
-    private sealed class UnbufferedStreamReader : TextReader
+    private sealed class UnbufferedStreamReader(Stream stream) : TextReader
     {
-        private readonly Stream _s;
-        
-        public UnbufferedStreamReader(Stream stream)
-        {
-            _s = stream;
-        }
-
         // This method assumes lines end with a line feed.
         // You may need to modify this method if your stream
         // follows the Windows convention of \r\n or some other 
         // convention that isn't just \n
         public override string ReadLine()
         {
-            List<byte> bytes = new();
+            List<byte> bytes = [];
             int current;
-            while ((current = Read()) != -1 && current != (int)'\n')
+            while ((current = Read()) != -1 && current != '\n')
             {
                 byte b = (byte)current;
                 bytes.Add(b);
@@ -105,7 +98,7 @@ internal class PortableAnymapFile
         // TextReader. It reads the next BYTE rather than the next character
         public override int Read()
         {
-            return _s.ReadByte();
+            return stream.ReadByte();
         }
 
         public override void Close()
@@ -114,6 +107,12 @@ internal class PortableAnymapFile
 
         protected override void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+                stream.Dispose();
+            }
+
+            base.Dispose(disposing);
         }
 
         public override int Peek()

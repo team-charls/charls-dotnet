@@ -6,7 +6,7 @@ using Xunit;
 
 namespace CharLS.JpegLS.Test;
 
-internal class Util
+internal sealed class Util
 {
     private static string DataFileDirectory
     {

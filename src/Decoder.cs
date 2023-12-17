@@ -14,21 +14,21 @@ internal class Decoder
     private const int ulongBitCount = sizeof(ulong) * 8;
     private int _endPosition;
     private int _nextFFposition;
-    int _restartInterval;
+    private int _restartInterval;
 
     private FrameInfo _frameInfo;
     private JpegLSInterleaveMode _interleaveMode;
     private Memory<byte> _previousLine;
     private Memory<byte> _currentLine;
-    int _run_index;
+    private int _run_index;
 
-    int _t1;
-    int _t2;
-    int _t3;
+    private int _t1;
+    private int _t2;
+    private int _t3;
 
-    private readonly int[] _j = {
+    private readonly int[] _j = [
         0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2,  2,  3,  3,  3,  3,
-        4, 4, 5, 5, 6, 6, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+        4, 4, 5, 5, 6, 6, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 
     internal Decoder(FrameInfo frameInfo, JpegLSInterleaveMode interleaveMode, ReadOnlyMemory<byte> source)
@@ -71,8 +71,8 @@ internal class Decoder
 
             for (int mcu = 0; mcu < lines_in_interval; ++mcu, ++line)
             {
-                _previousLine = line_buffer[1..];
-                _currentLine = line_buffer[(1 + (componentCount * pixel_stride))..];
+                _previousLine = line_buffer.AsMemory()[1..];
+                _currentLine = line_buffer.AsMemory()[(1 + (componentCount * pixel_stride))..];
                 if ((line & 1) == 1)
                 {
                     //std::swap(previous_line_, current_line_);
@@ -89,8 +89,8 @@ internal class Decoder
                     DoLine();
 
                     run_index[component] = _run_index;
-                    _previousLine = line_buffer[(1 + pixel_stride)..];
-                    _currentLine = line_buffer[(1 + (componentCount * pixel_stride * 2))..];
+                    _previousLine = line_buffer.AsMemory()[(1 + pixel_stride)..];
+                    _currentLine = line_buffer.AsMemory()[(1 + (componentCount * pixel_stride * 2))..];
                 }
 
                 //on_line_end(current_line_ + - (static_cast<size_t>(component_count) * pixel_stride),
@@ -143,7 +143,7 @@ internal class Decoder
         }
     }
 
-    byte DoRegular(int qs, int predicted)
+    private byte DoRegular(int qs, int predicted)
     {
         ////const int32_t sign = bit_wise_sign(qs);
         ////jls_context& context = contexts_[apply_sign(qs, sign)];
@@ -174,7 +174,7 @@ internal class Decoder
         return 0; // dummy value.
     }
 
-    int DoRunMode(int startIndex)
+    private int DoRunMode(int startIndex)
     {
         byte ra = _currentLine.Span[startIndex - 1];
 
@@ -192,7 +192,7 @@ internal class Decoder
         ////return 0; // dummy value.
     }
 
-    int DecodeRunPixels(byte ra, int start_pos, int pixel_count)
+    private int DecodeRunPixels(byte ra, int start_pos, int pixel_count)
     {
         int index = 0;
         while (ReadBit())
@@ -323,7 +323,7 @@ internal class Decoder
         _run_index = Math.Min(31, _run_index + 1);
     }
 
-    void DecrementRunIndex()
+    private void DecrementRunIndex()
     {
         _run_index = Math.Max(0, _run_index - 1);
     }

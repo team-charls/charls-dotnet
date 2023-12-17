@@ -3,9 +3,9 @@
 
 namespace CharLS.JpegLS.Test;
 
-internal class JpegTestStreamWriter
+internal sealed class JpegTestStreamWriter
 {
-    private readonly List<byte> _buffer = new();
+    private readonly List<byte> _buffer = [];
 
     public int ComponentIdOverride { get; set; }
 
