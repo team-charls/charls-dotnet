@@ -73,10 +73,10 @@ public class ComplianceTest
     //    }
 
     [Fact]
-    public void LenaMonochrome8BitLosslessUbc()
+    public void TulipsMonochrome8BitLosslessHp()
     {
-        // Additional, Lena compressed with other codec (UBC)
-        DecompressFile("test-images/lena8b.jls", "test-images/lena8b.pgm");
+        // Additional, Tulips encoded with HP 1.0BETA encoder.
+        DecompressFile("test-images/tulips-gray-8bit-512-512-hp-encoder.jls", "test-images/tulips-gray-8bit-512-512.pgm");
     }
 
     //    TEST_METHOD(decompress_color_8_bit_interleave_none_lossless_restart_7) // NOLINT
