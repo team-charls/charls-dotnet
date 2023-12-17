@@ -101,20 +101,6 @@ internal sealed class PortableAnymapFile
             return stream.ReadByte();
         }
 
-        public override void Close()
-        {
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                stream.Dispose();
-            }
-
-            base.Dispose(disposing);
-        }
-
         public override int Peek()
         {
             throw new NotImplementedException();
