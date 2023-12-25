@@ -12,8 +12,8 @@ public sealed class JpegLSDecoder
 {
     private FrameInfo? _frameInfo;
     private int? _nearLossless;
-    private JpegLSInterleaveMode? _interleaveMode;
-    private JpegStreamReader _reader = new();
+    //private JpegLSInterleaveMode? _interleaveMode;
+    private readonly JpegStreamReader _reader = new();
 
     private enum State
     {
@@ -100,12 +100,12 @@ public sealed class JpegLSDecoder
     /// <value>
     /// The near lossless parameter. A value of 0 means that the image is lossless encoded.
     /// </value>
-    /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
     public int NearLossless
     {
         get
         {
+            CheckHeaderRead();
             if (!_nearLossless.HasValue)
             {
                 _nearLossless = 0;
@@ -122,18 +122,13 @@ public sealed class JpegLSDecoder
     /// Property should be obtained after calling <see cref="ReadHeader"/>".
     /// </remarks>
     /// <returns>The result of the operation: success or a failure code.</returns>
-    /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
     public JpegLSInterleaveMode InterleaveMode
     {
         get
         {
-            if (!_interleaveMode.HasValue)
-            {
-                _interleaveMode = JpegLSInterleaveMode.None;
-            }
-
-            return _interleaveMode.Value;
+            CheckHeaderRead();
+            return _reader.InterleaveMode;
         }
     }
 
@@ -243,24 +238,56 @@ public sealed class JpegLSDecoder
     /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     public void Decode(Span<byte> destination, int stride = 0)
     {
+        Check.Operation(_state == State.HeaderRead);
 
-        if (stride == 0)
+        // Compute the stride for the uncompressed destination buffer.
+        int minimumStride = CalculateMinimumStride();
+        if (stride == Constants.AutoCalculateStride)
         {
-            int width = FrameInfo.Width;
-            int componentCount = InterleaveMode == JpegLSInterleaveMode.None ? 1 : FrameInfo.ComponentCount;
-            stride = componentCount * width * (FrameInfo.BitsPerSample + 7) / 8;
+            stride = minimumStride;
+        }
+        else
+        {
+            if (stride < minimumStride)
+                throw new ArgumentException("stride < minimumStride", nameof(stride));
         }
 
+        // Compute the layout of the destination buffer.
         int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * BitToByteCount(FrameInfo.BitsPerSample);
+        int planeCount = _reader.InterleaveMode == JpegLSInterleaveMode.None ? FrameInfo.ComponentCount : 1;
+        int minimumDestinationSize = (bytesPerPlane * planeCount) - (stride - minimumStride);
 
-        if (destination.Length < bytesPerPlane * FrameInfo.ComponentCount)
-            throw Util.CreateInvalidDataException(JpegLSError.DestinationBufferTooSmall);
+        if (destination.Length < minimumDestinationSize)
+            throw new ArgumentException("destination buffer too small", nameof(destination));
 
-        int componentIndex = 0;
-        while (componentIndex < FrameInfo.ComponentCount)
+
+        for (int plane = 0; ;)
         {
-            var decoder = new Decoder(FrameInfo, InterleaveMode, Source[_reader.Position..]);
-            _ = decoder.DecodeScan(destination);
+            var scanDecoder = ScanCodecFactory.CreateScanDecoder(FrameInfo, InterleaveMode, Source);
+
+            ////const size_t bytes_read{ scan_codec->decode_scan(reader_.remaining_source(), destination.data(), stride)};
+            int bytesRead = scanDecoder.DecodeScan(destination);
+
+            _reader.AdvancePosition(bytesRead);
+
+            ++plane;
+            if (plane == planeCount)
+                break;
+
+            ////_reader.read_next_start_of_scan();
+            ////destination = destination.subspan(bytes_per_plane);
+        }
+
+        _reader.ReadEndOfImage();
+        _state = State.Completed;
+
+
+
+        //int componentIndex = 0;
+        //while (componentIndex < FrameInfo.ComponentCount)
+        //{
+        //    var decoder = new Decoder(FrameInfo, InterleaveMode, Source[_reader.Position..]);
+        //    _ = decoder.DecodeScan(destination);
 
         //    if (state_ == state::scan_section)
         //    {
@@ -277,9 +304,8 @@ public sealed class JpegLSDecoder
 
         //    if (parameters_.interleave_mode != interleave_mode::none)
         //        return;
-
-            componentIndex++;
-        }
+        //    componentIndex++;
+        //}
 
     }
 
@@ -295,9 +321,21 @@ public sealed class JpegLSDecoder
     {
         if (!expression)
         {
-            throw new InvalidOperationException("JPEGLS Decoder in the incorrect state.");
+            throw new InvalidOperationException("JPEG-LS Decoder in the incorrect state.");
         }
     }
 
+    private void CheckHeaderRead()
+    {
+        Check.Operation(_state >= State.HeaderRead);
+    }
 
+    private int CalculateMinimumStride()
+    {
+        int componentsInPlaneCount = 
+            _reader.InterleaveMode == JpegLSInterleaveMode.None
+            ? 1
+            : FrameInfo.ComponentCount;
+        return componentsInPlaneCount * FrameInfo.Width * Util.BitToByteCount(FrameInfo.BitsPerSample);
+    }
 }

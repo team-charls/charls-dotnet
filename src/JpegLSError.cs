@@ -49,6 +49,23 @@ internal static class Util
         exception.Data.Add(nameof(JpegLSError), error);
         return exception;
     }
+
+    /// <summary>
+    /// Computes how many bytes are needed to hold the number of bits.
+    /// </summary>
+    internal static int BitToByteCount(int bitCount)
+    {
+        return (bitCount + 7) / 8;
+    }
+}
+
+internal static class Check
+{
+    internal static void Operation(bool expression)
+    {
+        if (!expression)
+            throw new InvalidOperationException();
+    }
 }
 
 /// <summary>
@@ -191,6 +208,11 @@ public enum JpegLSError
     /// byte stream.
     /// </summary>
     RestartMarkerNotFound = 26,
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    EndOfImageMarkerNotFound = 28,
 
     /// <summary>
     /// The argument for the width parameter is outside the range [1, 65535].

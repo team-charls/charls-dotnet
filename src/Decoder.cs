@@ -44,6 +44,12 @@ internal class Decoder
 
     internal int DecodeScan(Span<byte> destination)
     {
+        //process_line_ = create_process_line(destination, stride);
+
+        int scanBegin = _position;
+
+        //initialize(source);
+
         // Process images without a restart interval, as 1 large restart interval.
         if (_restartInterval == 0)
         {
@@ -51,6 +57,7 @@ internal class Decoder
         }
 
         DecodeLines();
+        EndScan();
 
         //skip_bytes(compressed_data, static_cast<size_t>(Strategy::get_cur_byte_pos() - compressed_bytes));
 
@@ -391,5 +398,20 @@ internal class Decoder
         return i >> (int32_t_bit_count - 1);
     }
 
+    private void EndScan()
+    {
+        if (_position >= _endPosition)
+            throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
 
+        if (_source.Span[_position] != Constants.JpegMarkerStartByte)
+        {
+            _ = ReadBit();
+
+            if (_source.Span[_position] != Constants.JpegMarkerStartByte)
+                throw Util.CreateInvalidDataException(JpegLSError.TooMuchEncodedData);
+        }
+
+        if (_readCache != 0)
+            throw Util.CreateInvalidDataException(JpegLSError.TooMuchEncodedData);
+    }
 }

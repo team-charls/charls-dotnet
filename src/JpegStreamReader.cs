@@ -24,7 +24,6 @@ internal class JpegStreamReader
     private State _state;
     ////private SpiffHeader spiffHeader;
     private int _nearLossless;
-    private JpegLSInterleaveMode _interleaveMode;
 
     internal ReadOnlyMemory<byte> Source { get; set; }
 
@@ -33,6 +32,14 @@ internal class JpegStreamReader
     public JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
 
     public FrameInfo? FrameInfo { get; private set; }
+
+    internal JpegLSInterleaveMode InterleaveMode { get; private set; }
+
+    internal void AdvancePosition(int count)
+    {
+        //Debug.Assert(Position + count <= /*end_position_*/ );
+        Position += count;
+    }
 
     internal void ReadHeader()
     {
@@ -112,17 +119,15 @@ internal class JpegStreamReader
 
     private JpegMarkerCode ReadNextMarkerCode()
     {
-        const byte jpegMarkerStartByte = 0xFF;
-
         byte value = ReadByte();
-        if (value != jpegMarkerStartByte)
+        if (value != Constants.JpegMarkerStartByte)
             throw Util.CreateInvalidDataException(JpegLSError.JpegMarkerStartByteNotFound);
 
         // Read all preceding 0xFF fill values until a non 0xFF value has been found. (see T.81, B.1.1.2)
         do
         {
             value = ReadByte();
-        } while (value == jpegMarkerStartByte);
+        } while (value == Constants.JpegMarkerStartByte);
 
         return (JpegMarkerCode)value;
     }
@@ -280,8 +285,8 @@ internal class JpegStreamReader
         {
             // Component specification parameters
             AddComponent(ReadByte()); // Ci = Component identifier
-            byte horizontal_vertical_sampling_factor = ReadByte(); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
-            if (horizontal_vertical_sampling_factor != 0x11)
+            byte horizontalVerticalSamplingFactor = ReadByte(); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
+            if (horizontalVerticalSamplingFactor != 0x11)
                 throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
 
             SkipByte(); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
@@ -301,8 +306,8 @@ internal class JpegStreamReader
         switch (type)
         {
             case JpegLSPresetParametersType.PresetCodingParameters:
-                const int coding_parameter_segment_size = 11;
-                if (segmentSize != coding_parameter_segment_size)
+                const int codingParameterSegmentSize = 11;
+                if (segmentSize != codingParameterSegmentSize)
                     throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
 
                 // Note: validation will be done, just before decoding as more info is needed for validation.
@@ -315,7 +320,7 @@ internal class JpegStreamReader
                     ResetValue = ReadUint16(),
                 };
 
-                return coding_parameter_segment_size;
+                return codingParameterSegmentSize;
 
             case JpegLSPresetParametersType.MappingTableSpecification:
             case JpegLSPresetParametersType.MappingTableContinuation:
@@ -352,8 +357,8 @@ internal class JpegStreamReader
         for (int i = 0; i != componentCountInScan; i++)
         {
             SkipByte(); // Skip scan component selector
-            int mapping_table_selector = ReadByte();
-            if (mapping_table_selector != 0)
+            int mappingTableSelector = ReadByte();
+            if (mappingTableSelector != 0)
                 throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
         }
 
@@ -361,7 +366,7 @@ internal class JpegStreamReader
         //if (parameters_.near_lossless > compute_maximum_near_lossless(static_cast<int>(maximum_sample_value())))
         //    throw_jpegls_error(jpegls_errc::invalid_parameter_near_lossless);
 
-        _interleaveMode = (JpegLSInterleaveMode)ReadByte(); // Read ILV parameter
+        InterleaveMode = (JpegLSInterleaveMode)ReadByte(); // Read ILV parameter
         //check_interleave_mode(mode);
         //parameters_.interleave_mode = mode;
 
@@ -369,6 +374,20 @@ internal class JpegStreamReader
             throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
 
         _state = State.BitStreamSection;
+    }
+
+    internal void ReadEndOfImage()
+    {
+        Debug.Assert(_state == State.BitStreamSection);
+
+        var markerCode = ReadNextMarkerCode();
+
+        if (markerCode != JpegMarkerCode.EndOfImage)
+            throw Util.CreateInvalidDataException(JpegLSError.EndOfImageMarkerNotFound);
+
+//#ifdef DEBUG
+//        state_ = state::after_end_of_image;
+//#endif
     }
 
     private void AddComponent(int component_id)
