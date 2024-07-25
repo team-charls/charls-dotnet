@@ -15,21 +15,44 @@ internal class JpegStreamReader
         ImageSection,
         FrameSection,
         ScanSection,
-        BitStreamSection
+        BitStreamSection 
     }
 
     private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0..D7)
     private const int JpegRestartMarkerRange = 8;
 
     private State _state;
-    private SpiffHeader spiffHeader;
-    private int _index;
+    ////private SpiffHeader spiffHeader;
+    private int _nearLossless;
 
-    public ReadOnlyMemory<byte> Source { get; set; }
+    internal ReadOnlyMemory<byte> Source { get; set; }
+
+    internal int Position { get; private set; }
 
     public JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
 
     public FrameInfo? FrameInfo { get; private set; }
+
+    internal JpegLSInterleaveMode InterleaveMode { get; private set; }
+
+    internal void AdvancePosition(int count)
+    {
+        //Debug.Assert(Position + count <= /*end_position_*/ );
+        Position += count;
+    }
+
+    internal uint MaximumSampleValue
+    {
+        get
+        {
+            if (JpegLSPresetCodingParameters != null && JpegLSPresetCodingParameters.MaximumSampleValue != 0)
+            {
+                return (uint)JpegLSPresetCodingParameters.MaximumSampleValue;
+            }
+
+            return (uint)Util.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
+        }
+    }
 
     internal void ReadHeader()
     {
@@ -48,13 +71,7 @@ internal class JpegStreamReader
             var markerCode = ReadNextMarkerCode();
             ValidateMarkerCode(markerCode);
 
-            if (markerCode == JpegMarkerCode.StartOfScan)
-            {
-                _state = State.ScanSection;
-                return;
-            }
-
-            int segmentSize = ReadSegmentSize();
+            int segmentSize = ReadSegmentSize(); // TODO update to C++ pattern
 
             int bytesRead;
             switch (_state)
@@ -82,22 +99,29 @@ internal class JpegStreamReader
             //    state_ = state::spiff_header_section;
             //    return;
             //}
+
+            if (_state == State.BitStreamSection)
+            {
+                //check_frame_info();
+                //check_coding_parameters();
+                return;
+            }
         }
     }
 
     private byte ReadByte()
     {
-        return _index < Source.Span.Length
-            ? Source.Span[_index++]
+        return Position < Source.Span.Length
+            ? Source.Span[Position++]
             : throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
     }
 
     private void SkipByte()
     {
-        if (_index == Source.Span.Length)
+        if (Position == Source.Span.Length)
             throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
 
-        _index++;
+        Position++;
     }
 
     private int ReadUint16()
@@ -109,17 +133,15 @@ internal class JpegStreamReader
 
     private JpegMarkerCode ReadNextMarkerCode()
     {
-        const byte jpegMarkerStartByte = 0xFF;
-
         byte value = ReadByte();
-        if (value != jpegMarkerStartByte)
+        if (value != Constants.JpegMarkerStartByte)
             throw Util.CreateInvalidDataException(JpegLSError.JpegMarkerStartByteNotFound);
 
         // Read all preceding 0xFF fill values until a non 0xFF value has been found. (see T.81, B.1.1.2)
         do
         {
             value = ReadByte();
-        } while (value == jpegMarkerStartByte);
+        } while (value == Constants.JpegMarkerStartByte);
 
         return (JpegMarkerCode)value;
     }
@@ -136,6 +158,10 @@ internal class JpegStreamReader
         {
             case JpegMarkerCode.StartOfFrameJpegLS:
                 return ReadStartOfFrameSegment(segmentSize);
+
+            case JpegMarkerCode.StartOfScan:
+                ReadStartOfScan();
+                return 0;
 
             //case JpegMarkerCode.comment:
             //    //return read_comment(segment_size);
@@ -276,9 +302,9 @@ internal class JpegStreamReader
         for (int i = 0; i != FrameInfo.ComponentCount; i++)
         {
             // Component specification parameters
-            add_component(ReadByte()); // Ci = Component identifier
-            byte horizontal_vertical_sampling_factor = ReadByte(); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
-            if (horizontal_vertical_sampling_factor != 0x11)
+            AddComponent(ReadByte()); // Ci = Component identifier
+            byte horizontalVerticalSamplingFactor = ReadByte(); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
+            if (horizontalVerticalSamplingFactor != 0x11)
                 throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
 
             SkipByte(); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
@@ -298,8 +324,8 @@ internal class JpegStreamReader
         switch (type)
         {
             case JpegLSPresetParametersType.PresetCodingParameters:
-                const int coding_parameter_segment_size = 11;
-                if (segmentSize != coding_parameter_segment_size)
+                const int codingParameterSegmentSize = 11;
+                if (segmentSize != codingParameterSegmentSize)
                     throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
 
                 // Note: validation will be done, just before decoding as more info is needed for validation.
@@ -312,7 +338,7 @@ internal class JpegStreamReader
                     ResetValue = ReadUint16(),
                 };
 
-                return coding_parameter_segment_size;
+                return codingParameterSegmentSize;
 
             case JpegLSPresetParametersType.MappingTableSpecification:
             case JpegLSPresetParametersType.MappingTableContinuation:
@@ -333,7 +359,56 @@ internal class JpegStreamReader
         throw Util.CreateInvalidDataException(JpegLSError.InvalidJpegLSPresetParameterType);
     }
 
-    private void add_component(int component_id)
+    internal void ReadStartOfScan()
+    {
+        int segmentSize = ReadSegmentSize();
+        if (segmentSize < 3)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        int componentCountInScan = ReadByte();
+        if (componentCountInScan != 1 && componentCountInScan != FrameInfo!.ComponentCount)
+            throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+        if (segmentSize != 6 + (2 * componentCountInScan))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+
+        for (int i = 0; i != componentCountInScan; i++)
+        {
+            SkipByte(); // Skip scan component selector
+            int mappingTableSelector = ReadByte();
+            if (mappingTableSelector != 0)
+                throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+        }
+
+        _nearLossless = ReadByte(); // Read NEAR parameter
+        if (_nearLossless > Util.ComputeMaximumNearLossless((int)(MaximumSampleValue)))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterNearLossless);
+
+        InterleaveMode = (JpegLSInterleaveMode)ReadByte(); // Read ILV parameter
+        //check_interleave_mode(mode);
+        //parameters_.interleave_mode = mode;
+
+        if ((ReadByte() & 0xFU) != 0) // Read Ah (no meaning) and Al (point transform).
+            throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+
+        _state = State.BitStreamSection;
+    }
+
+    internal void ReadEndOfImage()
+    {
+        Debug.Assert(_state == State.BitStreamSection);
+
+        var markerCode = ReadNextMarkerCode();
+
+        if (markerCode != JpegMarkerCode.EndOfImage)
+            throw Util.CreateInvalidDataException(JpegLSError.EndOfImageMarkerNotFound);
+
+//#ifdef DEBUG
+//        state_ = state::after_end_of_image;
+//#endif
+    }
+
+    private void AddComponent(int component_id)
     {
         //if (find(component_ids_.cbegin(), component_ids_.cend(), component_id) != component_ids_.cend())
         //    throw_jpegls_error(jpegls_errc::duplicate_component_id_in_sof_segment);

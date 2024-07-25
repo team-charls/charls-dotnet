@@ -12,8 +12,8 @@ public sealed class JpegLSDecoder
 {
     private FrameInfo? _frameInfo;
     private int? _nearLossless;
-    private JpegLSInterleaveMode? _interleaveMode;
-    private JpegStreamReader _reader = new();
+    //private JpegLSInterleaveMode? _interleaveMode;
+    private readonly JpegStreamReader _reader = new();
 
     private enum State
     {
@@ -100,15 +100,15 @@ public sealed class JpegLSDecoder
     /// <value>
     /// The near lossless parameter. A value of 0 means that the image is lossless encoded.
     /// </value>
-    /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
     public int NearLossless
     {
         get
         {
+            CheckHeaderRead();
             if (!_nearLossless.HasValue)
             {
-                _nearLossless = 1;
+                _nearLossless = 0;
             }
 
             return _nearLossless.Value;
@@ -122,18 +122,13 @@ public sealed class JpegLSDecoder
     /// Property should be obtained after calling <see cref="ReadHeader"/>".
     /// </remarks>
     /// <returns>The result of the operation: success or a failure code.</returns>
-    /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
     public JpegLSInterleaveMode InterleaveMode
     {
         get
         {
-            if (!_interleaveMode.HasValue)
-            {
-                _interleaveMode = JpegLSInterleaveMode.None;
-            }
-
-            return _interleaveMode.Value;
+            CheckHeaderRead();
+            return _reader.InterleaveMode;
         }
     }
 
@@ -179,26 +174,26 @@ public sealed class JpegLSDecoder
         }
     }
 
-///// <summary>
-///// Reads the SPIFF (Still Picture Interchange File Format) header.
-///// </summary>
-///// <param name="spiffHeader">The header or null when no valid header was found.</param>
-///// <returns>true if a SPIFF header was present and could be read.</returns>
-///// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
-//public bool TryReadSpiffHeader(out SpiffHeader? spiffHeader)
-//{
-//    bool found = headerFound != 0;
-//    if (found)
-//    {
-//        found = SpiffHeader.TryCreate(headerNative, out spiffHeader);
-//    }
-//    else
-//    {
-//        spiffHeader = default;
-//    }
+    ///// <summary>
+    ///// Reads the SPIFF (Still Picture Interchange File Format) header.
+    ///// </summary>
+    ///// <param name="spiffHeader">The header or null when no valid header was found.</param>
+    ///// <returns>true if a SPIFF header was present and could be read.</returns>
+    ///// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
+    //public bool TryReadSpiffHeader(out SpiffHeader? spiffHeader)
+    //{
+    //    bool found = headerFound != 0;
+    //    if (found)
+    //    {
+    //        found = SpiffHeader.TryCreate(headerNative, out spiffHeader);
+    //    }
+    //    else
+    //    {
+    //        spiffHeader = default;
+    //    }
 
-//    return found;
-//}
+    //    return found;
+    //}
 
     /// <summary>
     /// Reads the header of the JPEG-LS stream.
@@ -208,10 +203,10 @@ public sealed class JpegLSDecoder
     /// <exception cref="InvalidDataException">Thrown when the JPEG-LS stream is not valid.</exception>
     public void ReadHeader(bool tryReadSpiffHeader = true)
     {
-        if (_state != State.SourceSet)
-            throw new InvalidOperationException("Source is not set.");
+        CheckOperation(_state is >= State.SourceSet and < State.HeaderRead);
 
         _reader.ReadHeader();
+        _reader.ReadStartOfScan();
         _state = State.HeaderRead;
         //if (tryReadSpiffHeader && TryReadSpiffHeader(out SpiffHeader? spiffHeader))
         //{
@@ -243,6 +238,75 @@ public sealed class JpegLSDecoder
     /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     public void Decode(Span<byte> destination, int stride = 0)
     {
+        Check.Operation(_state == State.HeaderRead);
+
+        // Compute the stride for the uncompressed destination buffer.
+        int minimumStride = CalculateMinimumStride();
+        if (stride == Constants.AutoCalculateStride)
+        {
+            stride = minimumStride;
+        }
+        else
+        {
+            if (stride < minimumStride)
+                throw new ArgumentException("stride < minimumStride", nameof(stride));
+        }
+
+        // Compute the layout of the destination buffer.
+        int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * BitToByteCount(FrameInfo.BitsPerSample);
+        int planeCount = _reader.InterleaveMode == JpegLSInterleaveMode.None ? FrameInfo.ComponentCount : 1;
+        int minimumDestinationSize = (bytesPerPlane * planeCount) - (stride - minimumStride);
+
+        if (destination.Length < minimumDestinationSize)
+            throw new ArgumentException("destination buffer too small", nameof(destination));
+
+
+        for (int plane = 0; ;)
+        {
+            var scanDecoder = ScanCodecFactory.CreateScanDecoder(FrameInfo, InterleaveMode, Source);
+
+            ////const size_t bytes_read{ scan_codec->decode_scan(reader_.remaining_source(), destination.data(), stride)};
+            int bytesRead = scanDecoder.DecodeScan(destination);
+
+            _reader.AdvancePosition(bytesRead);
+
+            ++plane;
+            if (plane == planeCount)
+                break;
+
+            ////_reader.read_next_start_of_scan();
+            ////destination = destination.subspan(bytes_per_plane);
+        }
+
+        _reader.ReadEndOfImage();
+        _state = State.Completed;
+
+
+
+        //int componentIndex = 0;
+        //while (componentIndex < FrameInfo.ComponentCount)
+        //{
+        //    var decoder = new Decoder(FrameInfo, InterleaveMode, Source[_reader.Position..]);
+        //    _ = decoder.DecodeScan(destination);
+
+        //    if (state_ == state::scan_section)
+        //    {
+        //        read_next_start_of_scan();
+        //    }
+
+        //    const unique_ptr<decoder_strategy> codec{
+        //        jls_codec_factory<decoder_strategy>().create_codec(
+        //            frame_info_, parameters_, get_validated_preset_coding_parameters())};
+        //    unique_ptr<process_line> process_line(codec->create_process_line(destination, stride));
+        //    codec->decode_scan(move(process_line), rect_, source_);
+        //    skip_bytes(destination, static_cast<size_t>(bytes_per_plane));
+        //    state_ = state::scan_section;
+
+        //    if (parameters_.interleave_mode != interleave_mode::none)
+        //        return;
+        //    componentIndex++;
+        //}
+
     }
 
     /// <summary>
@@ -253,4 +317,25 @@ public sealed class JpegLSDecoder
         return (bitCount + 7) / 8;
     }
 
+    private static void CheckOperation(bool expression)
+    {
+        if (!expression)
+        {
+            throw new InvalidOperationException("JPEG-LS Decoder in the incorrect state.");
+        }
+    }
+
+    private void CheckHeaderRead()
+    {
+        Check.Operation(_state >= State.HeaderRead);
+    }
+
+    private int CalculateMinimumStride()
+    {
+        int componentsInPlaneCount = 
+            _reader.InterleaveMode == JpegLSInterleaveMode.None
+            ? 1
+            : FrameInfo.ComponentCount;
+        return componentsInPlaneCount * FrameInfo.Width * Util.BitToByteCount(FrameInfo.BitsPerSample);
+    }
 }

@@ -3,51 +3,12 @@
 
 namespace CharLS.JpegLS;
 
-internal static class Util
+internal static class Check
 {
-    internal static InvalidDataException CreateInvalidDataException(JpegLSError error)
+    internal static void Operation(bool expression)
     {
-        InvalidDataException exception;
-
-        switch (error)
-        {
-            case JpegLSError.TooMuchEncodedData:
-            case JpegLSError.ParameterValueNotSupported:
-            case JpegLSError.InvalidEncodedData:
-            case JpegLSError.SourceBufferTooSmall:
-            case JpegLSError.BitDepthForTransformNotSupported:
-            case JpegLSError.ColorTransformNotSupported:
-            case JpegLSError.EncodingNotSupported:
-            case JpegLSError.UnknownJpegMarkerFound:
-            case JpegLSError.JpegMarkerStartByteNotFound:
-            case JpegLSError.StartOfImageMarkerNotFound:
-            case JpegLSError.UnexpectedMarkerFound:
-            case JpegLSError.InvalidMarkerSegmentSize:
-            case JpegLSError.DuplicateStartOfImageMarker:
-            case JpegLSError.DuplicateStartOfFrameMarker:
-            case JpegLSError.DuplicateComponentIdInStartOfFrameSegment:
-            case JpegLSError.UnexpectedEndOfImageMarker:
-            case JpegLSError.InvalidJpegLSPresetParameterType:
-            case JpegLSError.JpeglsPresetExtendedParameterTypeNotSupported:
-            case JpegLSError.MissingEndOfSpiffDirectory:
-            case JpegLSError.InvalidParameterWidth:
-            case JpegLSError.InvalidParameterHeight:
-            case JpegLSError.InvalidParameterComponentCount:
-            case JpegLSError.InvalidParameterBitsPerSample:
-            case JpegLSError.InvalidParameterInterleaveMode:
-            case JpegLSError.InvalidParameterNearLossless:
-            case JpegLSError.InvalidParameterJpeglsPresetCodingParameters:
-            case JpegLSError.UnexpectedFailure:
-            case JpegLSError.NotEnoughMemory:
-                exception = new InvalidDataException("TODO");
-                break;
-
-            default:
-                throw new ArgumentOutOfRangeException(nameof(error), error, null);
-        }
-
-        exception.Data.Add(nameof(JpegLSError), error);
-        return exception;
+        if (!expression)
+            throw new InvalidOperationException();
     }
 }
 
@@ -191,6 +152,11 @@ public enum JpegLSError
     /// byte stream.
     /// </summary>
     RestartMarkerNotFound = 26,
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    EndOfImageMarkerNotFound = 28,
 
     /// <summary>
     /// The argument for the width parameter is outside the range [1, 65535].

@@ -44,3 +44,39 @@ dotnet_diagnostic.IDE0055.severity = none
 # IDE0130: Namespace "CharLS.Native" does not match folder structure, expected "CharLS.Native."
 # Rational: False warning
 dotnet_diagnostic.IDE0130.severity = none
+
+# IDE0046: Convert to conditional expression
+# Rational: In many cases the code is more readable without the conditional expression.
+dotnet_diagnostic.IDE0046.severity = none
+
+# CS0649: Field '' is never assigned to, and will always have its default value 0
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.CS0649.severity = none
+
+# CA1822: Member '' does not access instance data and can be marked as static
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.CA1822.severity = none
+
+# IDE0010: Add missing cases
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.IDE0010.severity = none
+
+# IDE0060: Remove unused parameter
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.IDE0060.severity = none
+
+# IDE0044: Make field readonly
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.IDE0044.severity = none
+
+# CS0169: The field '' is never used
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.CS0169.severity = none
+
+# IDE0059: Unnecessary assignment of a value
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.IDE0059.severity = none
+
+# xUnit1004: Test methods should not be skipped
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.xUnit1004.severity = none

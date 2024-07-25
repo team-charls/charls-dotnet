@@ -6,13 +6,14 @@
 <Project>
   <PropertyGroup>
     <!-- General -->
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <LangVersion>latest</LangVersion><!-- Use the latest released C# language version -->
     <Features>strict</Features>
     <Platforms>AnyCPU</Platforms>
     <Configurations>Debug;Release</Configurations>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio><!-- Enable faster builds in Visual Studio 2022 17.5 and newer. -->
 
     <!-- Build -->
     <!-- Build to a folder outside the source folders, making it easier to clean. -->
@@ -24,7 +25,7 @@
     <!--<AnalysisLevel>latest</AnalysisLevel> --> <!-- Use the latest analysis leve (.NET 5.0 and newer feature) -->
     <!-- <AnalysisMode>AllEnabledByDefault</AnalysisMode> --> <!-- Enable all CAxxx code quality rules -->
     <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
-    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild> <!--Enable when development is far enough -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors> <!--Enable when development is far enough -->
     <WarningLevel>5</WarningLevel> <!-- Use the highest warning level (4 is default) -->
   </PropertyGroup>
