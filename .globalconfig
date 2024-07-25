@@ -76,3 +76,7 @@ dotnet_diagnostic.CS0169.severity = none
 # IDE0059: Unnecessary assignment of a value
 # Rational: Enable when implementation is complete
 dotnet_diagnostic.IDE0059.severity = none
+
+# xUnit1004: Test methods should not be skipped
+# Rational: Enable when implementation is complete
+dotnet_diagnostic.xUnit1004.severity = none

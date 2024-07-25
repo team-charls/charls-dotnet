@@ -41,6 +41,19 @@ internal class JpegStreamReader
         Position += count;
     }
 
+    internal uint MaximumSampleValue
+    {
+        get
+        {
+            if (JpegLSPresetCodingParameters != null && JpegLSPresetCodingParameters.MaximumSampleValue != 0)
+            {
+                return (uint)JpegLSPresetCodingParameters.MaximumSampleValue;
+            }
+
+            return (uint)Util.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
+        }
+    }
+
     internal void ReadHeader()
     {
         Debug.Assert(_state != State.ScanSection);
@@ -58,13 +71,7 @@ internal class JpegStreamReader
             var markerCode = ReadNextMarkerCode();
             ValidateMarkerCode(markerCode);
 
-            if (markerCode == JpegMarkerCode.StartOfScan)
-            {
-                _state = State.ScanSection;
-                return;
-            }
-
-            int segmentSize = ReadSegmentSize();
+            int segmentSize = ReadSegmentSize(); // TODO update to C++ pattern
 
             int bytesRead;
             switch (_state)
@@ -92,6 +99,13 @@ internal class JpegStreamReader
             //    state_ = state::spiff_header_section;
             //    return;
             //}
+
+            if (_state == State.BitStreamSection)
+            {
+                //check_frame_info();
+                //check_coding_parameters();
+                return;
+            }
         }
     }
 
@@ -144,6 +158,10 @@ internal class JpegStreamReader
         {
             case JpegMarkerCode.StartOfFrameJpegLS:
                 return ReadStartOfFrameSegment(segmentSize);
+
+            case JpegMarkerCode.StartOfScan:
+                ReadStartOfScan();
+                return 0;
 
             //case JpegMarkerCode.comment:
             //    //return read_comment(segment_size);
@@ -363,8 +381,8 @@ internal class JpegStreamReader
         }
 
         _nearLossless = ReadByte(); // Read NEAR parameter
-        //if (parameters_.near_lossless > compute_maximum_near_lossless(static_cast<int>(maximum_sample_value())))
-        //    throw_jpegls_error(jpegls_errc::invalid_parameter_near_lossless);
+        if (_nearLossless > Util.ComputeMaximumNearLossless((int)(MaximumSampleValue)))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterNearLossless);
 
         InterleaveMode = (JpegLSInterleaveMode)ReadByte(); // Read ILV parameter
         //check_interleave_mode(mode);

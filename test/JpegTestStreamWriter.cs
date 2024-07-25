@@ -86,6 +86,11 @@ internal sealed class JpegTestStreamWriter
         return _buffer.ToArray();
     }
 
+    public List<byte> GetModifiableBuffer()
+    {
+        return _buffer;
+    }
+
     private void WriteMarker(JpegMarkerCode markerCode)
     {
         WriteByte(0xFF);
