@@ -203,11 +203,11 @@ public sealed class JpegLSDecoder
     /// <exception cref="InvalidDataException">Thrown when the JPEG-LS stream is not valid.</exception>
     public void ReadHeader(bool tryReadSpiffHeader = true)
     {
-        CheckOperation(_state is >= State.SourceSet and < State.HeaderRead);
+        CheckOperation(_state == State.SourceSet);
 
         _reader.ReadHeader();
-        _reader.ReadStartOfScan();
         _state = State.HeaderRead;
+
         //if (tryReadSpiffHeader && TryReadSpiffHeader(out SpiffHeader? spiffHeader))
         //{
         //    SpiffHeader = spiffHeader;

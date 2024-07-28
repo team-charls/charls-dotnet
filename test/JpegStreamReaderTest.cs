@@ -19,7 +19,7 @@ public class JpegStreamReaderTest
         Assert.Equal(JpegLSError.SourceBufferTooSmall, exception.Data[nameof(JpegLSError)]);
     }
 
-    [Fact(Skip = "WIP")]
+    [Fact]
     public void ReadHeaderFromBufferPrecededWithFillBytes()
     {
         const byte extraStartByte = 0xFF;
@@ -32,7 +32,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfFrameSegment(1, 1, 2, 1);
 
         writer.WriteByte(extraStartByte);
-        writer.WriteStartOfScanSegment(0, 1, 128, JpegLSInterleaveMode.None);
+        writer.WriteStartOfScanSegment(0, 1, 1, JpegLSInterleaveMode.None);
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
@@ -51,7 +51,7 @@ public class JpegStreamReaderTest
         Assert.Equal(JpegLSError.JpegMarkerStartByteNotFound, exception.Data[nameof(JpegLSError)]);
     }
 
-    [Fact(Skip = "WIP")]
+    [Fact]
     public void ReadHeaderWithApplicationData()
     {
         ReadHeaderWithApplicationDataImpl(0);
@@ -85,7 +85,7 @@ public class JpegStreamReaderTest
         Assert.Equal(JpegLSError.EncodingNotSupported, exception.Data[nameof(JpegLSError)]);
     }
 
-    [Fact(Skip = "WIP")]
+    [Fact]
     public void ReadHeaderJpegLSPresetParameterSegment()
     {
         JpegTestStreamWriter writer = new();
@@ -94,7 +94,7 @@ public class JpegStreamReaderTest
         JpegLSPresetCodingParameters presets = new(1, 2, 3, 4, 5);
         writer.WriteJpegLSPresetParametersSegment(presets);
         writer.WriteStartOfFrameSegment(1, 1, 2, 1);
-        writer.WriteStartOfScanSegment(1, 0, 0, JpegLSInterleaveMode.None);
+        writer.WriteStartOfScanSegment(1, 1, 0, JpegLSInterleaveMode.None);
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
@@ -272,341 +272,358 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 128, JpegLSInterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        // TODO: enable
-        //var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
 
-        //Assert.False(string.IsNullOrEmpty(exception.Message));
-        //Assert.Equal(JpegLSError.InvalidParameterNearLossless, exception.Data[nameof(JpegLSError)]);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.InvalidParameterNearLossless, exception.Data[nameof(JpegLSError)]);
     }
 
-    //    TEST_METHOD(read_header_too_large_near_lossless_in_sos_should_throw2) // NOLINT
-    //    {
-    //        constexpr jpegls_pc_parameters preset_coding_parameters{ 200, 0, 0, 0, 0};
-
-    //        jpeg_test_stream_writer writer;
-    //        writer.write_start_of_image();
-    //        writer.write_jpegls_preset_parameters_segment(preset_coding_parameters);
-    //        writer.write_start_of_frame_segment(512, 512, 8, 3);
-
-    //        constexpr int bad_near_lossless = (200 / 2) + 1;
-    //        writer.write_start_of_scan_segment(0, 1, bad_near_lossless, interleave_mode::none);
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ writer.buffer.data(), writer.buffer.size()});
-    //        reader.read_header();
-
-    //        assert_expect_exception(jpegls_errc::invalid_parameter_near_lossless, [&reader] { reader.read_start_of_scan(); });
-    //    }
-
-    //    TEST_METHOD(read_header_line_interleave_in_sos_for_single_component_should_throw) // NOLINT
-    //    {
-    //        read_header_incorrect_interleave_in_sos_for_single_component_should_throw(interleave_mode::line);
-    //    }
-
-    //    TEST_METHOD(read_header_sample_interleave_in_sos_for_single_component_should_throw) // NOLINT
-    //    {
-    //        read_header_incorrect_interleave_in_sos_for_single_component_should_throw(interleave_mode::sample);
-    //    }
-
-    //    TEST_METHOD(read_header_with_duplicate_component_id_in_start_of_frame_segment_should_throw) // NOLINT
-    //    {
-    //        jpeg_test_stream_writer writer;
-    //        writer.componentIdOverride = 7;
-    //        writer.write_start_of_image();
-    //        writer.write_start_of_frame_segment(512, 512, 8, 3);
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ writer.buffer.data(), writer.buffer.size()});
-
-    //        assert_expect_exception(jpegls_errc::duplicate_component_id_in_sof_segment, [&reader] { reader.read_header(); });
-    //    }
-
-    //    TEST_METHOD(read_header_with_too_small_start_of_scan_should_throw) // NOLINT
-    //    {
-    //        array < uint8_t, 16 > buffer{
-    //            0xFF, 0xD8, 0xFF,
-    //                                  0xF7, // SOF_55: Marks the start of JPEG-LS extended scan.
-    //                                  0x00,
-    //                                  0x08, // size
-    //                                  0x08, // bits per sample
-    //                                  0x00,
-    //                                  0x01, // width
-    //                                  0x00,
-    //                                  0x01, // height
-    //                                  0x01, // component count
-    //                                  0xFF,
-    //                                  0xDA, // SOS
-    //                                  0x00, 0x03};
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ buffer.data(), buffer.size()});
-
-    //        assert_expect_exception(jpegls_errc::invalid_marker_segment_size, [&reader] { reader.read_header(); });
-    //    }
-
-    //    TEST_METHOD(read_header_with_too_small_start_of_scan_component_count_should_throw) // NOLINT
-    //    {
-    //        array < uint8_t, 17 > buffer{
-    //            0xFF, 0xD8, 0xFF,
-    //                                  0xF7, // SOF_55: Marks the start of JPEG-LS extended scan.
-    //                                  0x00,
-    //                                  0x08, // size
-    //                                  0x08, // bits per sample
-    //                                  0x00,
-    //                                  0x01, // width
-    //                                  0x00,
-    //                                  0x01, // height
-    //                                  0x01, // component count
-    //                                  0xFF,
-    //                                  0xDA, // SOS
-    //                                  0x00, 0x07, 0x01};
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ buffer.data(), buffer.size()});
-
-    //        assert_expect_exception(jpegls_errc::invalid_marker_segment_size, [&reader] { reader.read_header(); });
-    //    }
-
-    //    TEST_METHOD(read_header_with_directly_end_of_image_should_throw) // NOLINT
-    //    {
-    //        array < uint8_t, 4 > buffer{ 0xFF, 0xD8, 0xFF, 0xD9}; // 0xD9 = EOI
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ buffer.data(), buffer.size()});
-
-    //        assert_expect_exception(jpegls_errc::unexpected_end_of_image_marker, [&reader] { reader.read_header(); });
-    //    }
-
-    //    TEST_METHOD(read_header_with_duplicate_start_of_image_should_throw) // NOLINT
-    //    {
-    //        array < uint8_t, 4 > buffer{ 0xFF, 0xD8, 0xFF, 0xD8}; // 0xD8 = SOI.
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ buffer.data(), buffer.size()});
-
-    //        assert_expect_exception(jpegls_errc::duplicate_start_of_image_marker, [&reader] { reader.read_header(); });
-    //    }
-
-    //    TEST_METHOD(read_spiff_header) // NOLINT
-    //    {
-    //        read_spiff_header(0);
-    //    }
-
-    //    TEST_METHOD(read_spiff_header_low_version_newer) // NOLINT
-    //    {
-    //        read_spiff_header(1);
-    //    }
-
-    //    TEST_METHOD(read_spiff_header_high_version_to_new) // NOLINT
-    //    {
-    //        vector<uint8_t> buffer{ create_test_spiff_header(3)};
-    //        jpeg_stream_reader reader;
-    //        reader.source({ buffer.data(), buffer.size()});
-
-    //        spiff_header spiff_header{ };
-    //        bool spiff_header_found{ };
-
-    //        reader.read_header(&spiff_header, &spiff_header_found);
-
-    //        Assert::IsFalse(spiff_header_found);
-    //    }
-
-    //    TEST_METHOD(read_spiff_header_without_end_of_directory) // NOLINT
-    //    {
-    //        vector<uint8_t> buffer = create_test_spiff_header(2, 0, false);
-    //        jpeg_stream_reader reader;
-    //        reader.source({ buffer.data(), buffer.size()});
-
-    //        spiff_header spiff_header{ };
-    //        bool spiff_header_found{ };
-
-    //        reader.read_header(&spiff_header, &spiff_header_found);
-    //        Assert::IsTrue(spiff_header_found);
-
-    //        assert_expect_exception(jpegls_errc::missing_end_of_spiff_directory, [&reader] { reader.read_header(); });
-    //    }
-
-    //    TEST_METHOD(read_header_with_define_restart_interval_16_bit) // NOLINT
-    //    {
-    //        jpeg_test_stream_writer writer;
-    //        writer.write_start_of_image();
-    //        writer.write_start_of_frame_segment(512, 512, 8, 3);
-    //        writer.write_define_restart_interval(numeric_limits < uint16_t >::max() - 5, 2);
-    //        writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ writer.buffer.data(), writer.buffer.size()});
-    //        reader.read_header();
-
-    //        Assert::AreEqual(static_cast<uint32_t>(numeric_limits < uint16_t >::max() - 5), reader.parameters().restart_interval);
-    //    }
-
-    //    TEST_METHOD(read_header_with_define_restart_interval_24_bit) // NOLINT
-    //    {
-    //        jpeg_test_stream_writer writer;
-    //        writer.write_start_of_image();
-    //        writer.write_start_of_frame_segment(512, 512, 8, 3);
-    //        writer.write_define_restart_interval(numeric_limits < uint16_t >::max() + 5, 3);
-    //        writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ writer.buffer.data(), writer.buffer.size()});
-    //        reader.read_header();
-
-    //        Assert::AreEqual(static_cast<uint32_t>(numeric_limits < uint16_t >::max() + 5), reader.parameters().restart_interval);
-    //    }
-
-    //    TEST_METHOD(read_header_with_define_restart_interval_32_bit) // NOLINT
-    //    {
-    //        jpeg_test_stream_writer writer;
-    //        writer.write_start_of_image();
-    //        writer.write_start_of_frame_segment(512, 512, 8, 3);
-    //        writer.write_define_restart_interval(numeric_limits < uint32_t >::max() - 7, 4);
-    //        writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ writer.buffer.data(), writer.buffer.size()});
-    //        reader.read_header();
-
-    //        Assert::AreEqual(numeric_limits < uint32_t >::max() - 7, reader.parameters().restart_interval);
-    //    }
-
-    //    TEST_METHOD(read_header_with_2_define_restart_intervals) // NOLINT
-    //    {
-    //        jpeg_test_stream_writer writer;
-    //        writer.write_start_of_image();
-    //        writer.write_define_restart_interval(numeric_limits < uint32_t >::max(), 4);
-    //        writer.write_start_of_frame_segment(512, 512, 8, 3);
-    //        writer.write_define_restart_interval(0, 3);
-    //        writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ writer.buffer.data(), writer.buffer.size()});
-    //        reader.read_header();
-
-    //        Assert::AreEqual(0U, reader.parameters().restart_interval);
-    //    }
-
-    //    TEST_METHOD(read_header_with_bad_define_restart_interval) // NOLINT
-    //    {
-    //        jpeg_test_stream_writer writer;
-    //        writer.write_start_of_image();
-    //        writer.write_start_of_frame_segment(512, 512, 8, 3);
-
-    //        constexpr array<uint8_t, 1 > buffer{ };
-    //        writer.write_segment(jpeg_marker_code::define_restart_interval, buffer.data(), buffer.size());
-    //        writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ writer.buffer.data(), writer.buffer.size()});
-
-    //        assert_expect_exception(jpegls_errc::invalid_marker_segment_size, [&reader] { reader.read_header(); });
-    //    }
-
-    //    TEST_METHOD(read_jpegls_stream_with_restart_marker_outside_entropy_data) // NOLINT
-    //    {
-    //        jpeg_test_stream_writer writer;
-    //        writer.write_start_of_image();
-    //        writer.write_restart_marker(0);
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ writer.buffer.data(), writer.buffer.size()});
-
-    //        assert_expect_exception(jpegls_errc::unexpected_restart_marker, [&reader] { reader.read_header(); });
-    //    }
-
-    //    TEST_METHOD(read_comment) // NOLINT
-    //    {
-    //        jpeg_test_stream_writer writer;
-    //        writer.write_start_of_image();
-    //        writer.write_segment(jpeg_marker_code::comment, "hello", 5);
-    //        writer.write_start_of_frame_segment(512, 512, 8, 3);
-    //        writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //        jpeg_stream_reader reader;
-    //        reader.source({ writer.buffer.data(), writer.buffer.size()});
-
-    //        struct callback_output
-    //    {
-    //        const void* data{};
-    //    size_t size { };
-    //};
-    //callback_output actual;
-
-    //reader.at_comment(
-
-    //    [](const void* data, const size_t size, void* user_context) noexcept -> int32_t {
-    //                auto* actual_output = static_cast<callback_output*>(user_context);
-    //actual_output->data = data;
-    //                actual_output->size = size;
-    //                return 0;
-    //            },
-    //            &actual);
-
-    //reader.read_header();
-
-    //Assert::AreEqual(static_cast<size_t>(5), actual.size);
-    //Assert::IsTrue(memcmp("hello", actual.data, actual.size) == 0);
-    //    }
-
-    //    TEST_METHOD(read_empty_comment) // NOLINT
-    //    {
-    //    jpeg_test_stream_writer writer;
-    //    writer.write_start_of_image();
-    //    writer.write_segment(jpeg_marker_code::comment, "", 0);
-    //    writer.write_start_of_frame_segment(512, 512, 8, 3);
-    //    writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //    jpeg_stream_reader reader;
-    //    reader.source({ writer.buffer.data(), writer.buffer.size()});
-
-    //        struct callback_output
-    //{
-    //    const void* data{};
-    //size_t size { };
-    //        };
-    //callback_output actual;
-
-    //reader.at_comment(
-
-    //    [](const void* data, const size_t size, void* user_context) noexcept->int32_t {
-    //    auto* actual_output = static_cast<callback_output*>(user_context);
-    //    actual_output->data = data;
-    //    actual_output->size = size;
-    //    return 0;
-    //},
-    //            &actual);
-
-    //reader.read_header();
-
-    //Assert::AreEqual(static_cast<size_t>(0), actual.size);
-    //Assert::IsNull(actual.data);
-    //    }
-
-    //    TEST_METHOD(read_bad_comment) // NOLINT
-    //    {
-    //    jpeg_test_stream_writer writer;
-    //    writer.write_start_of_image();
-    //    writer.write_segment(jpeg_marker_code::comment, "", 10);
-
-    //    jpeg_stream_reader reader;
-    //    reader.source({ writer.buffer.data(), writer.buffer.size() - 1});
-
-    //    bool called{ };
-    //    reader.at_comment(
-
-    //        [](const void*, const size_t, void* user_context) noexcept->int32_t {
-    //        auto* actual_called = static_cast<bool*>(user_context);
-    //        *actual_called = true;
-    //        return 0;
-    //    },
-    //            &called);
-
-    //    assert_expect_exception(jpegls_errc::source_buffer_too_small, [&reader] { reader.read_header(); });
-    //    Assert::IsFalse(called);
-    //}
-
-
+    [Fact]
+    public void ReadHeaderTooLargeNearLosslessInSosShouldThrow2()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteJpegLSPresetParametersSegment(new JpegLSPresetCodingParameters(200, 0, 0, 0, 0));
+
+        const int badNearLossless = (200 / 2) + 1;
+        writer.WriteStartOfScanSegment(0, 1, badNearLossless, JpegLSInterleaveMode.None);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.InvalidParameterNearLossless, exception.Data[nameof(JpegLSError)]);
+    }
+
+    [Fact]
+    public void ReadHeaderLineInterleaveInSosForSingleComponentThrows()
+    {
+        ReadHeaderIncorrectInterleaveInSosForSingleComponentThrows(JpegLSInterleaveMode.Line);
+    }
+
+    [Fact]
+    public void ReadHeaderSampleInterleaveInSosForSingleComponentThrows()
+    {
+        ReadHeaderIncorrectInterleaveInSosForSingleComponentThrows(JpegLSInterleaveMode.Sample);
+    }
+
+    [Fact]
+    public void ReadHeaderWithDuplicateComponentIdInStartOfFrameSegmentShouldThrow()
+    {
+        JpegTestStreamWriter writer = new() { ComponentIdOverride = 7 };
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.DuplicateComponentIdInStartOfFrameSegment, exception.Data[nameof(JpegLSError)]);
+    }
+
+    [Fact]
+    public void ReadHeaderWithTooSmallStartOfScanShouldThrow()
+    {
+        byte[] buffer =
+        [
+            0xFF, 0xD8, 0xFF,
+            0xF7, // SOF_55: Marks the start of JPEG-LS extended scan.
+            0x00,
+            0x08, // size
+            0x08, // bits per sample
+            0x00,
+            0x01, // width
+            0x00,
+            0x01, // height
+            0x01, // component count
+            0xFF,
+            0xDA, // SOS
+            0x00, 0x03
+        ];
+        var reader = new JpegStreamReader { Source = buffer };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.InvalidMarkerSegmentSize, exception.Data[nameof(JpegLSError)]);
+    }
+
+    [Fact]
+    public void ReadHeaderWithTooSmallStartOfScanComponentCountShouldThrow()
+    {
+        byte[] buffer =
+        [
+            0xFF, 0xD8, 0xFF,
+            0xF7, // SOF_55: Marks the start of JPEG-LS extended scan.
+            0x00,
+            0x08, // size
+            0x08, // bits per sample
+            0x00,
+            0x01, // width
+            0x00,
+            0x01, // height
+            0x01, // component count
+            0xFF,
+            0xDA, // SOS
+            0x00, 0x07, 0x01
+        ];
+        var reader = new JpegStreamReader { Source = buffer };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.InvalidMarkerSegmentSize, exception.Data[nameof(JpegLSError)]);
+    }
+
+    [Fact]
+    public void ReadHeaderWithDirectlyEndOfImageShouldThrow()
+    {
+        byte[] buffer = [0xFF, 0xD8, 0xFF, 0xD9]; // 0xD9 = EOI
+        var reader = new JpegStreamReader { Source = buffer };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.UnexpectedEndOfImageMarker, exception.Data[nameof(JpegLSError)]);
+    }
+
+    [Fact]
+    public void ReadHeaderWithDuplicateStartOfImageShouldThrow()
+    {
+        byte[] buffer = [0xFF, 0xD8, 0xFF, 0xD8]; // 0xD8 = SOI.
+        var reader = new JpegStreamReader { Source = buffer };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.DuplicateStartOfImageMarker, exception.Data[nameof(JpegLSError)]);
+    }
+
+    [Fact]
+    public void ReadSpiffHeader()
+    {
+        ReadSpiffHeaderImpl(0);
+    }
+
+    [Fact]
+    public void ReadSpiffHeaderLowVersionNewer()
+    {
+        ReadSpiffHeaderImpl(1);
+    }
+
+    [Fact]
+    public void ReadSpiffHeaderHighVersionToNew()
+    {
+        var buffer = Util.CreateTestSpiffHeader(3);
+        var reader = new JpegStreamReader { Source = buffer };
+
+        reader.ReadHeader();
+
+        Assert.Null(reader.SpiffHeader);
+    }
+
+    [Fact]
+    public void ReadSpiffHeaderWithoutEndOfDirectory()
+    {
+        var buffer = Util.CreateTestSpiffHeader(2, 0, false);
+        var reader = new JpegStreamReader { Source = buffer };
+
+        reader.ReadHeader();
+        Assert.NotNull(reader.SpiffHeader);
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.MissingEndOfSpiffDirectory, exception.Data[nameof(JpegLSError)]);
+    }
+
+    [Fact]
+    public void ReadHeaderWithDefineRestartInterval16Bit()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        const uint expectedRestartInterval = ushort.MaxValue - 5;
+        writer.WriteDefineRestartInterval(expectedRestartInterval, 2);
+        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        reader.ReadHeader();
+
+        Assert.Equal(expectedRestartInterval, reader.RestartInterval);
+    }
+
+    [Fact]
+    public void ReadHeaderWithDefineRestartInterval24Bit()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        const uint expectedRestartInterval = ushort.MaxValue + 5;
+        writer.WriteDefineRestartInterval(expectedRestartInterval, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        reader.ReadHeader();
+
+        Assert.Equal(expectedRestartInterval, reader.RestartInterval);
+    }
+
+    [Fact]
+    public void ReadHeaderWithDefineRestartInterval32Bit()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        const uint expectedRestartInterval = uint.MaxValue - 7;
+        writer.WriteDefineRestartInterval(expectedRestartInterval, 4);
+        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        reader.ReadHeader();
+
+        Assert.Equal(expectedRestartInterval, reader.RestartInterval);
+    }
+
+    [Fact]
+    public void ReadHeaderWith2DefineRestartIntervals()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteDefineRestartInterval(uint.MaxValue, 4);
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteDefineRestartInterval(0, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        reader.ReadHeader();
+
+        Assert.Equal(0U, reader.RestartInterval);
+    }
+
+    [Fact]
+    public void ReadHeaderWithBadDefineRestartInterval()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteSegmentStart(JpegMarkerCode.DefineRestartInterval, 1);
+        writer.WriteByte(0);
+        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.InvalidMarkerSegmentSize, exception.Data[nameof(JpegLSError)]);
+    }
+
+    [Fact]
+    public void ReadJpegLSStreamWithRestartMarkerOutsideEntropyData()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteRestartMarker(0);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.UnexpectedRestartMarker, exception.Data[nameof(JpegLSError)]);
+    }
+
+    [Fact]
+    public void ReadComment()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        byte[] comment = [(byte)'h', (byte)'e', (byte)'l', (byte)'l', (byte)'o'];
+        writer.WriteSegment(JpegMarkerCode.Comment, comment);
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        byte[]? receivedComment = null;
+        reader.Comment += (_, e) =>
+        {
+            receivedComment = e.Data.ToArray();
+        };
+
+        reader.ReadHeader();
+
+        Assert.NotNull(receivedComment);
+        Assert.Equal(comment, receivedComment);
+    }
+
+    [Fact]
+    public void ReadEmptyComment()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        byte[] comment = [];
+        writer.WriteSegment(JpegMarkerCode.Comment, comment);
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        byte[]? receivedComment = null;
+        reader.Comment += (_, e) =>
+        {
+            receivedComment = e.Data.ToArray();
+        };
+
+        reader.ReadHeader();
+
+        Assert.NotNull(receivedComment);
+        Assert.Equal(comment, receivedComment);
+    }
+
+    [Fact]
+    public void ReadBadComment()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        byte[] comment = [];
+        writer.WriteSegment(JpegMarkerCode.Comment, comment);
+
+        var reader = new JpegStreamReader { Source = writer.GetBuffer()[..(writer.GetBuffer().Length - 1)] };
+
+        bool eventHandlerCalled = false;
+        reader.Comment += (_, _) =>
+        {
+            eventHandlerCalled = true;
+        };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.SourceBufferTooSmall, exception.Data[nameof(JpegLSError)]);
+        Assert.False(eventHandlerCalled);
+    }
+
+    private static void ReadSpiffHeaderImpl(byte lowVersion)
+    {
+        var buffer = Util.CreateTestSpiffHeader(2, lowVersion);
+        var reader = new JpegStreamReader { Source = buffer };
+
+        reader.ReadHeader();
+
+        var spiffHeader = reader.SpiffHeader;
+        Assert.NotNull(spiffHeader);
+        Assert.Equal(SpiffProfileId.None, spiffHeader.ProfileId);
+        Assert.Equal(3, spiffHeader.ComponentCount);
+        Assert.Equal(800, spiffHeader.Height);
+        Assert.Equal(600, spiffHeader.Width);
+        Assert.Equal(SpiffColorSpace.Rgb, spiffHeader.ColorSpace);
+        Assert.Equal(8, spiffHeader.BitsPerSample);
+        Assert.Equal(SpiffCompressionType.JpegLS, spiffHeader.CompressionType);
+        Assert.Equal(SpiffResolutionUnit.DotsPerInch, spiffHeader.ResolutionUnit);
+        Assert.Equal(96, spiffHeader.VerticalResolution);
+        Assert.Equal(1024, spiffHeader.HorizontalResolution);
+    }
 
     private static void ReadHeaderWithApplicationDataImpl(byte dataNumber)
     {
@@ -619,11 +636,25 @@ public class JpegStreamReaderTest
         writer.WriteByte(0x02);
 
         writer.WriteStartOfFrameSegment(1, 1, 2, 1);
-        writer.WriteStartOfScanSegment(0, 1, 128, JpegLSInterleaveMode.None);
+        writer.WriteStartOfScanSegment(0, 1, 1, JpegLSInterleaveMode.None);
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
         reader.ReadHeader(); // if it doesn't throw test is passed.
+    }
+
+    private static void ReadHeaderIncorrectInterleaveInSosForSingleComponentThrows(JpegLSInterleaveMode mode)
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 1);
+        writer.WriteStartOfScanSegment(0, 1, 0, mode);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(JpegLSError.InvalidParameterInterleaveMode, exception.Data[nameof(JpegLSError)]);
     }
 
     private static void ReadHeaderWithJpegLSPresetParameterWithExtendedIdShouldThrowImpl(int id)

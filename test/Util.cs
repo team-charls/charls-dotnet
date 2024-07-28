@@ -102,4 +102,72 @@ internal sealed class Util
         //}
     }
 
+    internal static ReadOnlyMemory<byte> CreateTestSpiffHeader(byte highVersion = 2, byte lowVersion = 0, bool endOfDirectory = true, byte componentCount = 3)
+    {
+        byte[] buffer =
+        [
+            0xFF,
+            0xD8, // SOI.
+            0xFF,
+            0xE8, // ApplicationData8
+            0,
+            32,
+
+            // SPIFF identifier string.
+            (byte)'S',
+            (byte)'P',
+            (byte)'I',
+            (byte)'F',
+            (byte)'F',
+            0,
+
+            // Version
+            highVersion,
+            lowVersion,
+
+            0, // profile id
+            componentCount,
+
+            // Height
+            0,
+            0,
+            0x3,
+            0x20,
+
+            // Width
+            0,
+            0,
+            0x2,
+            0x58,
+
+            10, // color space
+            8, // bits per sample
+            6, // compression type, 6 = JPEG-LS
+            1, // resolution units
+
+            // vertical_resolution
+            0,
+            0,
+            0,
+            96,
+
+            // header.horizontal_resolution = 1024
+            0,
+            0,
+            4,
+            0
+        ];
+
+        JpegTestStreamWriter writer = new();
+        writer.WriteBytes(buffer);
+        if (endOfDirectory)
+        {
+            writer.WriteSpiffEndOfDirectoryEntry();
+        }
+
+        writer.WriteStartOfFrameSegment(600, 800, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+
+        return writer.GetBuffer();
+    }
 }

@@ -91,7 +91,7 @@ public class JpegLSDecoderTest
     //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { ignore = decoder.preset_coding_parameters(); });
     //}
 
-    [Fact(Skip = "WIP")]
+    [Fact]
     public void DestinationSize()
     {
         JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));

@@ -1,9 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using CharLS.JpegLS;
-
-namespace CharLS;
+namespace CharLS.JpegLS;
 
 internal static class Util
 {
@@ -41,6 +39,7 @@ internal static class Util
             case JpegLSError.InvalidParameterJpeglsPresetCodingParameters:
             case JpegLSError.UnexpectedFailure:
             case JpegLSError.NotEnoughMemory:
+            case JpegLSError.UnexpectedRestartMarker:
                 exception = new InvalidDataException("TODO");
                 break;
 
@@ -69,5 +68,4 @@ internal static class Util
     {
         return Math.Min(Constants.MaximumNearLossless, maximumSampleValue / 2); // As defined by ISO/IEC 14495-1, C.2.3
     }
-
 }
