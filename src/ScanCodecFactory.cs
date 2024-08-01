@@ -5,8 +5,9 @@ namespace CharLS.JpegLS;
 
 internal class ScanCodecFactory
 {
-    internal static Decoder CreateScanDecoder(FrameInfo frameInfo, JpegLSInterleaveMode interleaveMode, ReadOnlyMemory<byte> source)
+    internal static ScanDecoder CreateScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
-        return new Decoder(frameInfo, interleaveMode, source);
+        var traits = new LosslessTraits8();
+        return new ScanDecoderImpl<byte, byte>(frameInfo, presetCodingParameters, codingParameters, traits);
     }
 }

@@ -55,6 +55,30 @@ internal class JpegStreamReader
         Position += count;
     }
 
+    internal JpegLSPresetCodingParameters GetValidatedPresetCodingParameters()
+    {
+        JpegLSPresetCodingParameters ??= new JpegLSPresetCodingParameters();
+
+        if (!JpegLSPresetCodingParameters.IsValid(Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample), _nearLossless, out var validatedCodingParameters))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterJpeglsPresetCodingParameters);
+
+        return validatedCodingParameters;
+    }
+
+    internal CodingParameters GetCodingParameters()
+    {
+        return  new CodingParameters
+        {
+            NearLossless = _nearLossless, InterleaveMode = InterleaveMode, RestartInterval = (int)RestartInterval
+        };
+    }
+
+    internal ReadOnlySpan<byte> RemainingSource()
+    {
+        //ASSERT(state_ == state::bit_stream_section);
+        return Source.Span[Position..];
+    }
+
     internal uint MaximumSampleValue
     {
         get
@@ -501,13 +525,13 @@ internal class JpegStreamReader
             ProfileId = (SpiffProfileId)ReadByte(),
             ComponentCount = ReadByte(),
             Height = (int)ReadUint32(), // TODO
-            Width = (int) ReadUint32(), // TODO
-            ColorSpace = (SpiffColorSpace) ReadByte(),
+            Width = (int)ReadUint32(), // TODO
+            ColorSpace = (SpiffColorSpace)ReadByte(),
             BitsPerSample = ReadByte(),
             CompressionType = (SpiffCompressionType)ReadByte(),
             ResolutionUnit = (SpiffResolutionUnit)ReadByte(),
-            VerticalResolution = (int) ReadUint32(), // TODO
-            HorizontalResolution = (int) ReadUint32(), // TODO
+            VerticalResolution = (int)ReadUint32(), // TODO
+            HorizontalResolution = (int)ReadUint32(), // TODO
         };
     }
 
