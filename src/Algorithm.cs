@@ -48,6 +48,14 @@ internal static class Algorithm
         return (sign ^ i) - sign;
     }
 
+    /// <summary>
+    /// Computes the parameter RANGE. When NEAR = 0, RANGE = MAXVAL + 1. (see ISO/IEC 14495-1, A.2.1)
+    /// </summary>
+    internal static int ComputeRangeParameter(int maximumSampleValue, int nearLossless)
+    {
+        return (maximumSampleValue + 2 * nearLossless) / (2 * nearLossless + 1) + 1;
+    }
+
     internal static int GetPredictedValue(int ra, int rb, int rc)
     {
         // sign trick reduces the number of if statements (branches)

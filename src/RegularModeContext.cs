@@ -1,14 +1,17 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Diagnostics;
+
 namespace CharLS.JpegLS;
 
 internal struct RegularModeContext
 {
+    // Initialize with the default values as defined in ISO 14495-1, A.8, step 1.d.
     internal int A;
     internal int B;
     internal int C;
-    internal int N;
+    internal int N = 1;
 
     internal RegularModeContext(int range)
     {
@@ -40,7 +43,7 @@ internal struct RegularModeContext
     /// <summary>Code segment A.12 – Variables update. ISO 14495-1, page 22</summary>
     internal void update_variables_and_bias(int errorValue, int nearLossless, int resetThreshold)
     {
-        ////ASSERT(N != 0);
+        Debug.Assert(N != 0);
 
         A += Math.Abs(errorValue);
         B += errorValue* (2 * nearLossless + 1);
@@ -57,11 +60,11 @@ internal struct RegularModeContext
         }
 
         ++N;
-        ////ASSERT(N != 0);
+        Debug.Assert(N != 0);
 
         // This part is from: Code segment A.13 – Update of bias-related variables B[Q] and C[Q]
-        const int maxC = 127;  // Minimum allowed value of C[0..364]. ISO 14495-1, section 3.3 // TODO => minimum to max?
-        const int minC = -128; // Minimum allowed value of C[0..364]. ISO 14495-1, section 3.3
+        const int maxC = 127;  // MAX_C: maximum allowed value of C[0..364]. ISO 14495-1, section 3.3
+        const int minC = -128; // MIN_C: Minimum allowed value of C[0..364]. ISO 14495-1, section 3.3
         if (B + N <= 0)
         {
             B += N;

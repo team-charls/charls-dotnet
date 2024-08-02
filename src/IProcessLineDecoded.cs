@@ -5,5 +5,5 @@ namespace CharLS.JpegLS;
 
 public interface IProcessLineDecoded
 {
-    void LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride);
+    int LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride);
 }

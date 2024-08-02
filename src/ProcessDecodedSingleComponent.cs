@@ -1,6 +1,8 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Diagnostics;
+
 namespace CharLS.JpegLS;
 
 internal class ProcessDecodedSingleComponent : IProcessLineDecoded
@@ -14,8 +16,11 @@ internal class ProcessDecodedSingleComponent : IProcessLineDecoded
         _bytesPerPixel = bytesPerPixel;
     }
 
-    public void LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    public int LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
     {
-        throw new NotImplementedException();
+        int bytesCount = pixelCount * _bytesPerPixel;
+        Debug.Assert(bytesCount <= _stride);
+        source[..bytesCount].CopyTo(destination);
+        return _stride;
     }
 }

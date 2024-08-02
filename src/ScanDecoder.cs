@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Buffers.Binary;
+using System.Diagnostics;
 
 namespace CharLS.JpegLS;
 
@@ -36,7 +37,7 @@ internal abstract class ScanDecoder(
         GolombCodeTable.Create(12), GolombCodeTable.Create(13), GolombCodeTable.Create(14), GolombCodeTable.Create(15)
     ];
 
-    public abstract uint DecodeScan(ReadOnlySpan<byte> source, Span<byte> destination, int stride);
+    public abstract int DecodeScan(ReadOnlySpan<byte> source, Span<byte> destination, int stride);
 
     protected internal void Initialize(ReadOnlySpan<byte> source)
     {
@@ -56,12 +57,12 @@ internal abstract class ScanDecoder(
         FillReadCache(source);
     }
 
-    protected void SkipBits(int length)
+    protected void SkipBits(int bitCount)
     {
-        //ASSERT(length);
+        Debug.Assert(bitCount > 0);
 
-        _validBits -= length; // Note: valid_bits_ may become negative to indicate that extra bits are needed.
-        _readCache = _readCache << length;
+        _validBits -= bitCount; // Note: valid_bits_ may become negative to indicate that extra bits are needed.
+        _readCache = _readCache << bitCount;
     }
 
     protected void ResetParameters(int range)
@@ -97,6 +98,22 @@ internal abstract class ScanDecoder(
             throw Util.CreateInvalidDataException(JpegLSError.TooMuchEncodedData);
     }
 
+    protected int get_cur_byte_pos(ReadOnlySpan<byte> source)
+    {
+        int validBits = _validBits;
+
+        for (;;)
+        {
+            int lastBitsCount = source[_position - 1] == Constants.JpegMarkerStartByte ? 7 : 8;
+
+            if (validBits < lastBitsCount)
+                return _position;
+
+            validBits -= lastBitsCount;
+            --_position;
+        }
+    }
+
     protected int DecodeValue(ReadOnlySpan<byte> source, int k, int limit, int quantizedBitsPerPixel)
     {
         int highBits = ReadHighBits(source);
@@ -110,19 +127,20 @@ internal abstract class ScanDecoder(
         return (highBits << k) + ReadValue(source, k);
     }
 
-    protected int ReadValue(ReadOnlySpan<byte> source, int length)
+    protected int ReadValue(ReadOnlySpan<byte> source, int bitCount)
     {
-        if (_validBits < length)
+        Debug.Assert(bitCount is > 0 and < 32);
+
+        if (_validBits < bitCount)
         {
             FillReadCache(source);
-            if (_validBits < length)
+            if (_validBits < bitCount)
                 throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
         }
 
-        ////ASSERT(length != 0 && length <= valid_bits_);
-        ////ASSERT(length< 32);
-        int result = (int)(_readCache >> (CacheBitCount - length));
-        SkipBits(length);
+        Debug.Assert(bitCount <= _validBits);
+        int result = (int)(_readCache >> (CacheBitCount - bitCount));
+        SkipBits(bitCount);
         return result;
     }
 
@@ -278,10 +296,10 @@ internal abstract class ScanDecoder(
             return false;
 
         _readCache |= BinaryPrimitives.ReadUInt64BigEndian(source) >> _validBits;
-        int bytesToRead = (CacheBitCount - _validBits) / 8;
-        _position += bytesToRead;
-        _validBits += bytesToRead * 8;
-        //ASSERT(valid_bits_ >= max_readable_cache_bits);
+        int bytesConsumed = (CacheBitCount - _validBits) / 8;
+        _position += bytesConsumed;
+        _validBits += bytesConsumed * 8;
+        Debug.Assert(_validBits >= MaxReadableCacheBits);
         return true;
     }
 }

@@ -1,9 +1,9 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
 
 namespace CharLS.JpegLS;
 
@@ -13,7 +13,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
 {
     private int _restartInterval;
     private readonly TraitsBase<TSample, TPixel> _traits;
-    private sbyte[] _quantization;
+    private readonly sbyte[] _quantizationLut;
     private IProcessLineDecoded? _processLineDecoded;
 
     internal ScanDecoderImpl(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
@@ -22,13 +22,13 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     {
         _traits = traits;
 
-        _quantization = InitializeQuantizationLut<TSample, TPixel>(traits, PresetCodingParameters.Threshold1,
+        _quantizationLut = InitializeQuantizationLut<TSample, TPixel>(traits, PresetCodingParameters.Threshold1,
             PresetCodingParameters.Threshold2, PresetCodingParameters.Threshold3);
 
         ResetParameters(_traits.Range);
     }
 
-    public override uint DecodeScan(ReadOnlySpan<byte> source, Span<byte> destination, int stride)
+    public override int DecodeScan(ReadOnlySpan<byte> source, Span<byte> destination, int stride)
     {
         _processLineDecoded = CreateProcessLine(stride);
 
@@ -42,11 +42,10 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             _restartInterval = FrameInfo.Height;
         }
 
-        DecodeLines(source);
+        DecodeLines(source, destination);
         EndScan(source);
 
-        //return get_cur_byte_pos() - scan_begin;
-        return 0;
+        return get_cur_byte_pos(source);
     }
 
     // Factory function for ProcessLine objects to copy/transform un encoded pixels to/from our scan line buffers.
@@ -84,23 +83,23 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     // In ILV_SAMPLE mode, multiple components are handled in do_line
     // In ILV_LINE mode, a call to do_line is made for every component
     // In ILV_NONE mode, do_scan is called for each component
-    private void DecodeLines(ReadOnlySpan<byte> source)
+    private void DecodeLines(ReadOnlySpan<byte> source, Span<byte> destination)
     {
-        int pixelStride = FrameInfo.Width + 4;
+        int pixelStride = FrameInfo.Width + 2;
         int componentCount = CodingParameters.InterleaveMode == JpegLSInterleaveMode.Line ? FrameInfo.ComponentCount : 1;
         int restartIntervalCounter = 0;
 
-        Span<TPixel> lineBuffer = new TPixel[componentCount * pixelStride * 2];
         Span<int> runIndex = stackalloc int[componentCount];
+        Span<TPixel> lineBuffer = new TPixel[componentCount * pixelStride * 2];
 
-        for (int line = 0;;)
+        for (int line = 0; ;)
         {
-            int linesInInterval = Math.Min(FrameInfo.Height - line, CodingParameters.RestartInterval);
+            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
 
             for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
             {
-                Span<TPixel> previousLine = lineBuffer[1..];
-                Span<TPixel> currentLine = lineBuffer[(1 + componentCount * pixelStride)..];
+                Span<TPixel> previousLine = lineBuffer;
+                Span<TPixel> currentLine = lineBuffer[(componentCount * pixelStride)..];
                 if ((line & 1) == 1)
                 {
                     Span<TPixel> temp = previousLine;
@@ -108,13 +107,13 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                     currentLine = temp;
                 }
 
-                for (int component = 0; component < componentCount; ++component)
+                for (int component = 0; ;)
                 {
                     RunIndex = runIndex[component];
 
                     // initialize edge pixels used for prediction
-                    previousLine[FrameInfo.Width] = previousLine[FrameInfo.Width - 1];
-                    currentLine[-1] = previousLine[0];
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
 
                     DecodeSampleLine(source, previousLine, currentLine);
                     //if constexpr(std::is_same_v<pixel_type, sample_type>)
@@ -132,11 +131,17 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                     //}
 
                     runIndex[component] = RunIndex;
-                    //previousLine += pixel_stride;
-                    //current_line_ += pixel_stride;
+
+                    ++component;
+                    if (component == componentCount)
+                        break;
+
+                    previousLine = previousLine[pixelStride..];
+                    currentLine = currentLine[pixelStride..];
                 }
 
-                //on_line_end(current_line_ - (component_count * pixel_stride), frame_info().width, pixelStride);
+                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                destination = destination[bytesWritten..];
             }
 
             if (line == FrameInfo.Height)
@@ -156,17 +161,17 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
 
     private int QuantizeGradient(int di)
     {
-        //ASSERT(quantize_gradient_org(di, traits_.near_lossless) == *(quantization_ + di));
-        return _quantization[di];
+        Debug.Assert(QuantizeGradientOrg(di, _traits.NearLossless) == _quantizationLut[_quantizationLut.Length / 2 + di]);
+        return _quantizationLut[_quantizationLut.Length / 2 + di];
     }
 
     private void DecodeSampleLine(ReadOnlySpan<byte> source, Span<TPixel> previousLine, Span<TPixel> currentLine)
     {
-        int index = 0;
-        int rb = ToInt32(previousLine[index - 1]);
+        int index = 1;
+        int rb = ToInt32(previousLine[0]);
         int rd = ToInt32(previousLine[index]);
 
-        while (index < FrameInfo.Width)
+        while (index <= FrameInfo.Width)
         {
             int ra = ToInt32(currentLine[index - 1]);
             int rc = rb;
@@ -185,9 +190,9 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             }
             else
             {
-                //index += decode_run_mode(index);
-                //rb = previous_line_[index - 1];
-                //rd = previous_line_[index];
+                index += DecodeRunMode(source, index, previousLine, currentLine);
+                rb = ToInt32(previousLine[index - 1]);
+                rd = ToInt32(previousLine[index]);
             }
         }
     }
@@ -195,7 +200,10 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     private TSample DecodeRegular(ReadOnlySpan<byte> source, int qs, int predicted)
     {
         int sign = Algorithm.BitWiseSign(qs);
-        var context = RegularModeContext[Algorithm.ApplySign(qs, sign)];
+
+        int tempContextIndex = Algorithm.ApplySign(qs, sign);
+        Debug.WriteLine("DecodeRegular: tempContextIndex={0},", tempContextIndex);
+        ref var context = ref RegularModeContext[tempContextIndex];
         int k = context.GetGolombCodingParameter();
         int predictedValue = _traits.CorrectPrediction(predicted + Algorithm.ApplySign(context.C, sign));
 
@@ -224,28 +232,28 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         return _traits.ComputeReconstructedSample(predictedValue, errorValue);
     }
 
-    private int decode_run_mode(ReadOnlySpan<byte> source, int start_index, Span<TPixel> previousLine, Span<TPixel> currentLine)
+    private int DecodeRunMode(ReadOnlySpan<byte> source, int startIndex, Span<TPixel> previousLine, Span<TPixel> currentLine)
     {
-        var ra = currentLine[start_index - 1];
+        var ra = currentLine[startIndex - 1];
 
-        int run_length = decode_run_pixels(source, ra, currentLine.Slice(start_index), FrameInfo.Width - start_index);
-        int end_index = start_index + run_length;
+        int runLength = DecodeRunPixels(source, ra, currentLine[startIndex..], FrameInfo.Width - (startIndex - 1));
+        int endIndex = startIndex + runLength;
 
-        if (end_index == FrameInfo.Width)
-            return end_index - start_index;
+        if (endIndex - 1 == FrameInfo.Width)
+            return endIndex - startIndex;
 
         // run interruption
-        var rb = ToInt32(previousLine[end_index]);
-        currentLine[end_index] = (TPixel)
+        var rb = ToInt32(previousLine[endIndex]);
+        currentLine[endIndex] = (TPixel)
             Convert.ChangeType(
-            decode_run_interruption_pixel(ToInt32(ra), rb),
+            DecodeRunInterruptionPixel(source, ToInt32(ra), rb),
             typeof(TPixel), CultureInfo.InvariantCulture);
 
         DecrementRunIndex();
-        return end_index - start_index + 1;
+        return endIndex - startIndex + 1;
     }
 
-    private int decode_run_pixels(ReadOnlySpan<byte> source, TPixel ra, Span<TPixel> startPos, int pixelCount)
+    private int DecodeRunPixels(ReadOnlySpan<byte> source, TPixel ra, Span<TPixel> startPos, int pixelCount)
     {
         int index = 0;
         while (ReadBit(source))
@@ -280,41 +288,45 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         return index;
     }
 
-    TSample decode_run_interruption_pixel(int ra, int rb)
+    private TSample DecodeRunInterruptionPixel(ReadOnlySpan<byte> source, int ra, int rb)
     {
         if (Math.Abs(ra - rb) <= _traits.NearLossless)
         {
-            int error_value = decode_run_interruption_error(RunModeContexts[1]);
-            return _traits.ComputeReconstructedSample(ra, error_value);
+            int errorValue = DecodeRunInterruptionError(source, ref RunModeContexts[1]);
+            return _traits.ComputeReconstructedSample(ra, errorValue);
         }
         else
         {
-            int error_value = decode_run_interruption_error(RunModeContexts[0]);
-            return _traits.ComputeReconstructedSample(rb, error_value * Algorithm.Sign(rb - ra));
+            int errorValue = DecodeRunInterruptionError(source, ref RunModeContexts[0]);
+            return _traits.ComputeReconstructedSample(rb, errorValue * Algorithm.Sign(rb - ra));
         }
     }
 
-    private int decode_run_interruption_error(RunModeContext context)
+    private int DecodeRunInterruptionError(ReadOnlySpan<byte> source, ref RunModeContext context)
     {
-        //int k = context.get_golomb_code();
-        //int e_mapped_error_value =
-        //    decode_value(k, traits_.limit - J[run_index_] - 1, traits_.quantized_bits_per_pixel);
-        //int error_value = context.compute_error_value(e_mapped_error_value + context.run_interruption_type(), k);
-        //context.update_variables(error_value, e_mapped_error_value, reset_value_);
-        //return error_value;
-        return default;
+        int k = context.GetGolombCode();
+        int eMappedErrorValue = DecodeValue(source, k, _traits.Limit - J[RunIndex] - 1, _traits.qbpp);
+        int errorValue = context.ComputeErrorValue(eMappedErrorValue + context.RunInterruptionType, k);
+        context.UpdateVariables(errorValue, eMappedErrorValue, (byte)PresetCodingParameters.ResetValue);
+        return errorValue;
     }
 
-    private int ToInt32(TPixel value)
+    private static int ToInt32(TPixel value)
     {
+        // TODO assert that TPixel is byte or ushort
+
         return value switch
         {
             byte b => b,
             short s => s,
             _ => default
         };
-
-        //Debug.Fail("Unreachable");
     }
 
+    private int on_line_end(Span<TPixel> source, Span<byte> destination, int pixelCount, int pixelStride)
+    {
+        Span<byte> sourceInBytes = MemoryMarshal.Cast<TPixel, byte>(source);
+
+        return _processLineDecoded!.LineDecoded(sourceInBytes, destination, pixelCount, pixelStride);
+    }
 }

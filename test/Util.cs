@@ -170,4 +170,18 @@ internal sealed class Util
 
         return writer.GetBuffer();
     }
+
+    internal static void CompareBuffers(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
+    {
+        Assert.Equal(buffer1.Length, buffer2.Length);
+
+        for (int i = 0; i != buffer1.Length; ++i)
+        {
+            if (buffer1[i] != buffer2[i])
+            {
+                Assert.Equal(buffer1[i], buffer2[i]);
+                break;
+            }
+        }
+    }
 }
