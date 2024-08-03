@@ -37,7 +37,7 @@ internal sealed class JpegTestStreamWriter
         WriteByte((byte)(value));
     }
 
-    public void WriteBytes(byte[] values)
+    public void WriteBytes(ReadOnlySpan<byte> values)
     {
         _buffer.AddRange(values);
     }
@@ -125,6 +125,17 @@ internal sealed class JpegTestStreamWriter
         WriteUint16(presetCodingParameters.Threshold2);
         WriteUint16(presetCodingParameters.Threshold3);
         WriteUint16(presetCodingParameters.ResetValue);
+    }
+
+    internal void WriteJpegLSPresetParametersSegment(byte tableId, byte entrySize, ReadOnlySpan<byte> tableData, bool continuation = false)
+    {
+        // Format is defined in ISO/IEC 14495-1, C.2.4.1.2 and C.2.4.1.3
+        WriteSegmentStart(JpegMarkerCode.JpegLSPresetParameters, 3 + tableData.Length);
+
+        WriteByte((byte)(continuation ? JpegLSPresetParametersType.MappingTableContinuation : JpegLSPresetParametersType.MappingTableSpecification));
+        WriteByte(tableId);
+        WriteByte(entrySize);
+        WriteBytes(tableData);
     }
 
     internal void WriteDefineRestartInterval(uint restartInterval, int size)

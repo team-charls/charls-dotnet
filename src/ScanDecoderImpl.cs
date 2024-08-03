@@ -14,7 +14,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     private int _restartInterval;
     private readonly TraitsBase<TSample, TPixel> _traits;
     private readonly sbyte[] _quantizationLut;
-    private IProcessLineDecoded? _processLineDecoded;
+    private ProcessDecodedSingleComponent? _processLineDecoded;
 
     internal ScanDecoderImpl(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
         CodingParameters codingParameters, TraitsBase<TSample, TPixel> traits) :
@@ -202,7 +202,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         int sign = Algorithm.BitWiseSign(qs);
 
         int tempContextIndex = Algorithm.ApplySign(qs, sign);
-        Debug.WriteLine("DecodeRegular: tempContextIndex={0},", tempContextIndex);
+        //Debug.WriteLine("DecodeRegular: tempContextIndex={0},", tempContextIndex);
         ref var context = ref RegularModeContext[tempContextIndex];
         int k = context.GetGolombCodingParameter();
         int predictedValue = _traits.CorrectPrediction(predicted + Algorithm.ApplySign(context.C, sign));
