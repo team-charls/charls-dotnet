@@ -101,7 +101,7 @@ public sealed record JpegLSPresetCodingParameters
             Threshold1 != 0 ? Threshold1 : defaultParameters.Threshold1,
             Threshold2 != 0 ? Threshold2 : defaultParameters.Threshold2,
             Threshold3 != 0 ? Threshold3 : defaultParameters.Threshold3,
-            ResetValue != 0 ? ResetValue : defaultParameters.Threshold3);
+            ResetValue != 0 ? ResetValue : defaultParameters.ResetValue);
         return true;
     }
 

@@ -1,6 +1,8 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Diagnostics;
+
 namespace CharLS.JpegLS;
 
 internal static class Algorithm
@@ -8,17 +10,8 @@ internal static class Algorithm
     // Computes the initial value for A. See ISO/IEC 14495-1, A.8, step 1.d and A.2.1
     internal static int InitializationValueForA(int range)
     {
+        Debug.Assert(range is >= 4 and <= (ushort.MaxValue + 1));
         return Math.Max(2, (range + 32) / 64);
-    }
-
-    /// <summary>
-    /// This is the optimized inverse algorithm of ISO/IEC 14495-1, A.5.2, Code Segment A.11 (second else branch)
-    /// It will map unsigned values back to signed values.
-    /// </summary>
-    internal static int UnmapErrorValue(int mappedError)
-    {
-        int sign = (int)((uint)mappedError << (Constants.Int32BitCount - 1) >>(Constants.Int32BitCount - 1));
-        return sign ^ (mappedError >> 1);
     }
 
     /// <summary>
@@ -31,6 +24,16 @@ internal static class Algorithm
 
         int mappedError = (errorValue >> (Constants.Int32BitCount - 2)) ^ (2 * errorValue);
         return mappedError;
+    }
+
+    /// <summary>
+    /// This is the optimized inverse algorithm of ISO/IEC 14495-1, A.5.2, Code Segment A.11 (second else branch)
+    /// It will map unsigned values back to signed values.
+    /// </summary>
+    internal static int UnmapErrorValue(int mappedError)
+    {
+        int sign = (int)((uint)mappedError << (Constants.Int32BitCount - 1)) >> (Constants.Int32BitCount - 1);
+        return sign ^ (mappedError >> 1);
     }
 
     internal static int Sign(int n)

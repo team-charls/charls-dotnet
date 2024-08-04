@@ -72,7 +72,7 @@ public class ComplianceTest
     //        decompress_file("DataFiles/t16e3.jls", "DataFiles/TEST16.pgm", false);
     //    }
 
-    [Fact(Skip = "WIP")]
+    [Fact]
     public void TulipsMonochrome8BitLosslessHp()
     {
         // Additional, Tulips encoded with HP 1.0BETA encoder.

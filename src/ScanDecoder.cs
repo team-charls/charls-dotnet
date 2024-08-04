@@ -39,7 +39,7 @@ internal abstract class ScanDecoder(
 
     public abstract int DecodeScan(ReadOnlySpan<byte> source, Span<byte> destination, int stride);
 
-    protected internal void Initialize(ReadOnlySpan<byte> source)
+    protected void Initialize(ReadOnlySpan<byte> source)
     {
         _position = 0;
         _endPosition = source.Length;
@@ -231,10 +231,14 @@ internal abstract class ScanDecoder(
 
     private void FindJpegMarkerStartByte(ReadOnlySpan<byte> source)
     {
-        _positionFF = source[_position..].IndexOf(Constants.JpegMarkerStartByte);
-        if (_positionFF == -1)
+        int positionFF = source[_position..].IndexOf(Constants.JpegMarkerStartByte);
+        if (positionFF == -1)
         {
             _positionFF = _endPosition;
+        }
+        else
+        {
+            _positionFF = _position + positionFF;
         }
     }
 
@@ -291,11 +295,11 @@ internal abstract class ScanDecoder(
 
     private bool FillReadCacheOptimistic(ReadOnlySpan<byte> source)
     {
-        // Easy & fast: if there is no 0xFF byte in sight, we can read without bit stuffing
         if (_position >= _positionFF - (sizeof(ulong) - 1))
             return false;
 
-        _readCache |= BinaryPrimitives.ReadUInt64BigEndian(source) >> _validBits;
+        // Easy & fast: there is no 0xFF byte in sight, read without bit stuffing
+        _readCache |= BinaryPrimitives.ReadUInt64BigEndian(source[_position..]) >> _validBits;
         int bytesConsumed = (CacheBitCount - _validBits) / 8;
         _position += bytesConsumed;
         _validBits += bytesConsumed * 8;

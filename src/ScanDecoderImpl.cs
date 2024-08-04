@@ -200,10 +200,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     private TSample DecodeRegular(ReadOnlySpan<byte> source, int qs, int predicted)
     {
         int sign = Algorithm.BitWiseSign(qs);
-
-        int tempContextIndex = Algorithm.ApplySign(qs, sign);
-        //Debug.WriteLine("DecodeRegular: tempContextIndex={0},", tempContextIndex);
-        ref var context = ref RegularModeContext[tempContextIndex];
+        ref var context = ref RegularModeContext[Algorithm.ApplySign(qs, sign)];
         int k = context.GetGolombCodingParameter();
         int predictedValue = _traits.CorrectPrediction(predicted + Algorithm.ApplySign(context.C, sign));
 
