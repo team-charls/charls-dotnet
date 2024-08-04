@@ -242,5 +242,15 @@ public enum JpegLSError
     /// <summary>
     /// This error is returned when the stream contains an invalid JPEG-LS preset coding parameters segment.
     /// </summary>
-    InvalidParameterJpeglsPresetCodingParameters = 206
+    InvalidParameterJpeglsPresetCodingParameters = 206,
+
+    /// <summary>
+    /// This error is returned when the stream contains a mapping table with an invalid ID.
+    /// </summary>
+    InvalidParameterMappingTableId = 208,
+
+    /// <summary>
+    /// This error is returned when the stream contains an invalid mapping table continuation.
+    /// </summary>
+    InvalidParameterMappingTableContinuation = 209
 }

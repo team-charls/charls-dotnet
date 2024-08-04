@@ -13,7 +13,6 @@ internal class JpegStreamReader
         BeforeStartOfImage,
         HeaderSection,
         SpiffHeaderSection,
-        ImageSection,
         FrameSection,
         ScanSection,
         BitStreamSection
@@ -21,6 +20,7 @@ internal class JpegStreamReader
 
     private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0..D7)
     private const int JpegRestartMarkerRange = 8;
+    private const int PcTableIdEntrySizeBytes = 3;
 
     private State _state;
 
@@ -29,6 +29,7 @@ internal class JpegStreamReader
     private int _segmentDataSize;
     private int _segmentStartPosition;
     private readonly List<int> _componentIds = [];
+    private readonly List<MappingTableEntry> _mappingTables = [];
 
     public event EventHandler<CommentEventArgs>? Comment;
 
@@ -44,15 +45,63 @@ internal class JpegStreamReader
 
     internal JpegLSInterleaveMode InterleaveMode { get; private set; }
 
+    internal int MappingTableCount => _mappingTables.Count;
+
+    private int SegmentBytesToRead => (_segmentStartPosition + _segmentDataSize) - Position;
+
     internal uint RestartInterval
     {
         get { return _restartInterval; }
+    }
+
+    internal int? FindMappingTableIndex(int tableId)
+    {
+        var index = _mappingTables.FindIndex(entry => entry.TableId == tableId);
+        return index == -1 ? null : index;
+    }
+
+    internal MappingTableInfo GetMappingTableInfo(int index)
+    {
+        var entry = _mappingTables[index];
+        return new MappingTableInfo() { EntrySize = entry.EntrySize, TableId = entry.TableId };
+    }
+
+    internal ReadOnlyMemory<byte> GetMappingTableData(int index)
+    {
+        var entry = _mappingTables[index];
+        return entry.GetData();
     }
 
     internal void AdvancePosition(int count)
     {
         //Debug.Assert(Position + count <= /*end_position_*/ );
         Position += count;
+    }
+
+    internal JpegLSPresetCodingParameters GetValidatedPresetCodingParameters()
+    {
+        JpegLSPresetCodingParameters ??= new JpegLSPresetCodingParameters();
+
+        if (!JpegLSPresetCodingParameters.IsValid(Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample), _nearLossless, out var validatedCodingParameters))
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterJpeglsPresetCodingParameters);
+
+        return validatedCodingParameters;
+    }
+
+    internal CodingParameters GetCodingParameters()
+    {
+        return new CodingParameters
+        {
+            NearLossless = _nearLossless,
+            InterleaveMode = InterleaveMode,
+            RestartInterval = (int)RestartInterval
+        };
+    }
+
+    internal ReadOnlySpan<byte> RemainingSource()
+    {
+        //ASSERT(state_ == state::bit_stream_section);
+        return Source.Span[Position..];
     }
 
     internal uint MaximumSampleValue
@@ -309,7 +358,7 @@ internal class JpegStreamReader
         if (spiffDirectoryType == Constants.SpiffEndOfDirectoryEntryType)
         {
             CheckSegmentSize(6); // 4 + 2 for dummy SOI.
-            _state = State.ImageSection;
+            _state = State.FrameSection;
         }
 
         SkipRemainingSegmentData();
@@ -378,7 +427,13 @@ internal class JpegStreamReader
                 return;
 
             case JpegLSPresetParametersType.MappingTableSpecification:
+                ReadMappingTableSpecification();
+                return;
+
             case JpegLSPresetParametersType.MappingTableContinuation:
+                ReadMappingTableContinuation();
+                return;
+
             case JpegLSPresetParametersType.ExtendedWidthAndHeight:
                 throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
         }
@@ -402,6 +457,48 @@ internal class JpegStreamReader
             Threshold3 = ReadUint16(),
             ResetValue = ReadUint16(),
         };
+    }
+
+    private void ReadMappingTableSpecification()
+    {
+        CheckMinimalSegmentSize(PcTableIdEntrySizeBytes);
+
+        byte tableId = ReadByte();
+        byte entrySize = ReadByte();
+
+        AddMappingTable(tableId, entrySize, Source.Slice(Position, SegmentBytesToRead));
+        SkipRemainingSegmentData();
+    }
+
+    private void ReadMappingTableContinuation()
+    {
+        CheckMinimalSegmentSize(PcTableIdEntrySizeBytes);
+
+        byte tableId = ReadByte();
+        byte entrySize = ReadByte();
+
+        ExtendMappingTable(tableId, entrySize, Source.Slice(Position, SegmentBytesToRead));
+        SkipRemainingSegmentData();
+    }
+
+    private void AddMappingTable(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
+    {
+        if (tableId == 0 || _mappingTables.FindIndex(entry => entry.TableId == tableId) != -1)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterMappingTableId);
+
+        _mappingTables.Add(new MappingTableEntry(tableId, entrySize, tableData));
+    }
+
+    private void ExtendMappingTable(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
+    {
+        int index = _mappingTables.FindIndex(entry => entry.TableId == tableId);
+
+        if (index == -1 || _mappingTables[index].EntrySize != entrySize)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterMappingTableContinuation);
+
+        MappingTableEntry tableEntry = _mappingTables[index];
+        tableEntry.AddFragment(tableData);
+        _mappingTables[index] = tableEntry;
     }
 
     private void ReadDefineRestartIntervalSegment()
@@ -501,13 +598,13 @@ internal class JpegStreamReader
             ProfileId = (SpiffProfileId)ReadByte(),
             ComponentCount = ReadByte(),
             Height = (int)ReadUint32(), // TODO
-            Width = (int) ReadUint32(), // TODO
-            ColorSpace = (SpiffColorSpace) ReadByte(),
+            Width = (int)ReadUint32(), // TODO
+            ColorSpace = (SpiffColorSpace)ReadByte(),
             BitsPerSample = ReadByte(),
             CompressionType = (SpiffCompressionType)ReadByte(),
             ResolutionUnit = (SpiffResolutionUnit)ReadByte(),
-            VerticalResolution = (int) ReadUint32(), // TODO
-            HorizontalResolution = (int) ReadUint32(), // TODO
+            VerticalResolution = (int)ReadUint32(), // TODO
+            HorizontalResolution = (int)ReadUint32(), // TODO
         };
     }
 
@@ -520,8 +617,7 @@ internal class JpegStreamReader
 
     private void SkipRemainingSegmentData()
     {
-        int bytesStillToRead = (_segmentStartPosition + _segmentDataSize) - Position;
-        Position += bytesStillToRead;
+        Position += SegmentBytesToRead;
     }
 
     private void CheckMinimalSegmentSize(int minimumSize)
@@ -548,5 +644,35 @@ internal class JpegStreamReader
     {
         if (!Enum.IsDefined(mode) || (FrameInfo!.ComponentCount == 1 && mode != JpegLSInterleaveMode.None))
             throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterInterleaveMode);
+    }
+
+    private readonly struct MappingTableEntry
+    {
+        private readonly List<ReadOnlyMemory<byte>> _dataFragments = [];
+
+        internal MappingTableEntry(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
+        {
+            TableId = tableId;
+            EntrySize = entrySize;
+            _dataFragments.Add(tableData);
+        }
+
+        internal void AddFragment(ReadOnlyMemory<byte> tableData)
+        {
+            _dataFragments.Add(tableData);
+        }
+
+        internal ReadOnlyMemory<byte> GetData()
+        {
+            if (_dataFragments.Count == 1)
+            {
+                return _dataFragments[0];
+            }
+
+            throw new NotImplementedException();
+        }
+
+        internal byte TableId { get; }
+        internal byte EntrySize { get; }
     }
 }

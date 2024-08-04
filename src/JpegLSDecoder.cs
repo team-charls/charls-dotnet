@@ -260,14 +260,12 @@ public sealed class JpegLSDecoder
         if (destination.Length < minimumDestinationSize)
             throw new ArgumentException("destination buffer too small", nameof(destination));
 
-
         for (int plane = 0; ;)
         {
-            var scanDecoder = ScanCodecFactory.CreateScanDecoder(FrameInfo, InterleaveMode, Source);
+            var scanDecoder = ScanCodecFactory.CreateScanDecoder(FrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
 
             ////const size_t bytes_read{ scan_codec->decode_scan(reader_.remaining_source(), destination.data(), stride)};
-            int bytesRead = scanDecoder.DecodeScan(destination);
-
+            int bytesRead = (int)scanDecoder.DecodeScan(_reader.RemainingSource(), destination, stride);
             _reader.AdvancePosition(bytesRead);
 
             ++plane;
@@ -280,33 +278,6 @@ public sealed class JpegLSDecoder
 
         _reader.ReadEndOfImage();
         _state = State.Completed;
-
-
-
-        //int componentIndex = 0;
-        //while (componentIndex < FrameInfo.ComponentCount)
-        //{
-        //    var decoder = new Decoder(FrameInfo, InterleaveMode, Source[_reader.Position..]);
-        //    _ = decoder.DecodeScan(destination);
-
-        //    if (state_ == state::scan_section)
-        //    {
-        //        read_next_start_of_scan();
-        //    }
-
-        //    const unique_ptr<decoder_strategy> codec{
-        //        jls_codec_factory<decoder_strategy>().create_codec(
-        //            frame_info_, parameters_, get_validated_preset_coding_parameters())};
-        //    unique_ptr<process_line> process_line(codec->create_process_line(destination, stride));
-        //    codec->decode_scan(move(process_line), rect_, source_);
-        //    skip_bytes(destination, static_cast<size_t>(bytes_per_plane));
-        //    state_ = state::scan_section;
-
-        //    if (parameters_.interleave_mode != interleave_mode::none)
-        //        return;
-        //    componentIndex++;
-        //}
-
     }
 
     /// <summary>

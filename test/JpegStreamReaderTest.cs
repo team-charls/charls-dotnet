@@ -604,6 +604,31 @@ public class JpegStreamReaderTest
         Assert.False(eventHandlerCalled);
     }
 
+    [Fact]
+    public void ReadMappingTable()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        var tableData = new byte[2];
+        tableData[0] = 2;
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData);
+        writer.WriteStartOfFrameSegment(1, 1, 2, 1);
+        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+        reader.ReadHeader();
+
+        Assert.Equal(1, reader.MappingTableCount);
+        Assert.Equal(0, reader.FindMappingTableIndex(1).GetValueOrDefault(-1));
+
+        var info = reader.GetMappingTableInfo(0);
+        Assert.Equal(1, info.TableId);
+        Assert.Equal(1, info.EntrySize);
+
+        var mappingTableData = reader.GetMappingTableData(0);
+        Assert.Equal(2, mappingTableData.Span[0]);
+    }
+
     private static void ReadSpiffHeaderImpl(byte lowVersion)
     {
         var buffer = Util.CreateTestSpiffHeader(2, lowVersion);
