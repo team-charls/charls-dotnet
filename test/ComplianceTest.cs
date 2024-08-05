@@ -8,11 +8,12 @@ namespace CharLS.JpegLS.Test;
 public class ComplianceTest
 {
 
-    //TEST_METHOD(decompress_color_8_bit_interleave_none_lossless) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 1 (T87_test-1-2-3-4-5-6.zip)
-    //        decompress_file("DataFiles/t8c0e0.jls", "DataFiles/test8.ppm");
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveNoneLossless()
+    {
+        // ISO 14495-1: official test image 1 (T87_test-1-2-3-4-5-6.zip)
+        DecompressFile("conformance/t8c0e0.jls", "conformance/test8.ppm");
+    }
 
     //    TEST_METHOD(decompress_color_8_bit_interleave_line_lossless) // NOLINT
     //    {

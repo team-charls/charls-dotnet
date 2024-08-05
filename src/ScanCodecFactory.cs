@@ -9,6 +9,16 @@ internal class ScanCodecFactory
     {
         if (codingParameters.NearLossless == 0)
         {
+            if (codingParameters.InterleaveMode == JpegLSInterleaveMode.Sample)
+            {
+                if (frameInfo.ComponentCount == 3 && frameInfo.BitsPerSample == 8)
+                {
+                    var traits = new LosslessTraitsTriplet<byte>(frameInfo.ComponentCount * frameInfo.BitsPerSample);
+                    return new ScanDecoderImpl<byte, Triplet<byte>>(frameInfo, presetCodingParameters, codingParameters, traits);
+                }
+
+                throw new NotImplementedException();
+            }
             switch (frameInfo.BitsPerSample)
             {
                 case 8:
