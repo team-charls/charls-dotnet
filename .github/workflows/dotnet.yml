@@ -1,4 +1,7 @@
-name: .NET
+# Copyright (c) Team CharLS.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Build and Test
 
 on:
   push:
@@ -7,19 +10,28 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
 
-    runs-on: ubuntu-latest
+    name: build-and-test-${{matrix.os}}-${{matrix.configuration}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        configuration: [Debug, Release]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+
     - name: Setup .NET
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 8.0.x
+
     - name: Restore dependencies
       run: dotnet restore
+
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore -c ${{matrix.configuration}}
+
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal -c ${{matrix.configuration}}
