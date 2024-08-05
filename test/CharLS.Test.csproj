@@ -25,6 +25,12 @@
     <None Update="conformance\t8c0e0.jls">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="conformance\t8c1e0.jls">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="conformance\t8c2e0.jls">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="conformance\test8.ppm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -3,12 +3,13 @@
 
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace CharLS.JpegLS;
 
 internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
-    where TSample : struct
+    where TSample : struct, IBinaryInteger<TSample>
     where TPixel : struct
 {
     private int _restartInterval;
@@ -115,20 +116,15 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                     previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
                     currentLine[0] = previousLine[1];
 
-                    DecodeSampleLine(source, previousLine, currentLine);
-                    //if constexpr(std::is_same_v<pixel_type, sample_type>)
-                    //{
-                    //    decode_sample_line();
-                    //}
-                    //else if constexpr(std::is_same_v<pixel_type, triplet<sample_type>>)
-                    //{
-                    //    decode_triplet_line();
-                    //}
-                    //else
-                    //{
-                    //    static_assert(std::is_same_v<pixel_type, quad<sample_type>>);
-                    //    decode_quad_line();
-                    //}
+                    if (typeof(TPixel) == typeof(TSample))
+                    {
+                        DecodeSampleLine(source, previousLine, currentLine);
+                    }
+                    else if (typeof(TPixel) == typeof(Triplet<TSample>))
+                    {
+                        DecodeTripletLine(source, MemoryMarshal.Cast<TPixel, Triplet<TSample>>(previousLine),
+                            MemoryMarshal.Cast<TPixel, Triplet<TSample>>(currentLine));
+                    }
 
                     runIndex[component] = RunIndex;
 
@@ -193,6 +189,46 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                 index += DecodeRunMode(source, index, previousLine, currentLine);
                 rb = ToInt32(previousLine[index - 1]);
                 rd = ToInt32(previousLine[index]);
+            }
+        }
+    }
+
+    private void DecodeTripletLine(ReadOnlySpan<byte> source, Span<Triplet<TSample>> previousLine, Span<Triplet<TSample>> currentLine)
+    {
+        int index = 1;
+        while (index <= FrameInfo.Width)
+        {
+            var ra = currentLine[index - 1];
+            var rc = previousLine[index - 1];
+            var rb = previousLine[index];
+            var rd = previousLine[index + 1];
+
+            int qs1 =
+                Algorithm.ComputeContextId(QuantizeGradient(int.CreateTruncating(rd.V1 - rb.V1)),
+                    QuantizeGradient(int.CreateTruncating(rb.V1 - rc.V1)),
+                        QuantizeGradient(int.CreateTruncating(rc.V1 - ra.V1)));
+            int qs2 =
+                Algorithm.ComputeContextId(QuantizeGradient(int.CreateTruncating(rd.V2 - rb.V2)),
+                    QuantizeGradient(int.CreateTruncating(rb.V2 - rc.V2)),
+                    QuantizeGradient(int.CreateTruncating(rc.V2 - ra.V2)));
+
+            int qs3 =
+                Algorithm.ComputeContextId(QuantizeGradient(int.CreateTruncating(rd.V3 - rb.V3)),
+                    QuantizeGradient(int.CreateTruncating(rb.V3 - rc.V3)),
+                    QuantizeGradient(int.CreateTruncating(rc.V3 - ra.V3)));
+            if (qs1 == 0 && qs2 == 0 && qs3 == 0)
+            {
+                index += DecodeRunMode(source, index, MemoryMarshal.Cast<Triplet<TSample>, TPixel>(previousLine),
+                    MemoryMarshal.Cast<Triplet<TSample>, TPixel>(currentLine));
+            }
+            else
+            {
+                Triplet<TSample> rx;
+                rx.V1 = DecodeRegular(source, qs1, Algorithm.GetPredictedValue(ToInt32(ra.V1), ToInt32(rb.V1), ToInt32(rc.V1)));
+                rx.V2 = DecodeRegular(source, qs2, Algorithm.GetPredictedValue(ToInt32(ra.V2), ToInt32(rb.V2), ToInt32(rc.V2)));
+                rx.V3 = DecodeRegular(source, qs3, Algorithm.GetPredictedValue(ToInt32(ra.V3), ToInt32(rb.V3), ToInt32(rc.V3)));
+                currentLine[index] = rx;
+                ++index;
             }
         }
     }
@@ -309,6 +345,18 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     }
 
     private static int ToInt32(TPixel value)
+    {
+        // TODO assert that TPixel is byte or ushort
+
+        return value switch
+        {
+            byte b => b,
+            short s => s,
+            _ => default
+        };
+    }
+
+    private static int ToInt32(TSample value)
     {
         // TODO assert that TPixel is byte or ushort
 

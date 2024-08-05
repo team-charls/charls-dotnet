@@ -8,6 +8,11 @@ namespace CharLS.JpegLS;
 internal abstract class LosslessTraitsImplT<TSample, TPixel> : TraitsBase<TSample, TPixel>
     where TSample : struct
 {
+    protected LosslessTraitsImplT(int max, int near, int reset = Constants.DefaultResetValue)
+        : base(max, near, reset)
+    {
+    }
+
     protected LosslessTraitsImplT(int bitsperpixel)
         : base(bitsperpixel)
     {
@@ -78,8 +83,8 @@ internal class LosslessTraits8 : LosslessTraitsImplT<byte, byte>
 internal class LosslessTraitsTriplet<TSample> : LosslessTraitsImplT<TSample, Triplet<TSample>>
     where TSample : struct, IBinaryInteger<TSample>
 {
-    public LosslessTraitsTriplet(int bitsperpixel)
-        : base(bitsperpixel)
+    public LosslessTraitsTriplet(int max, int near, int reset = Constants.DefaultResetValue)
+        : base(max, near, reset)
     {
     }
 
