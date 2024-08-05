@@ -263,17 +263,15 @@ public sealed class JpegLSDecoder
         for (int plane = 0; ;)
         {
             var scanDecoder = ScanCodecFactory.CreateScanDecoder(FrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
-
-            ////const size_t bytes_read{ scan_codec->decode_scan(reader_.remaining_source(), destination.data(), stride)};
-            int bytesRead = (int)scanDecoder.DecodeScan(_reader.RemainingSource(), destination, stride);
+            int bytesRead = scanDecoder.DecodeScan(_reader.RemainingSource(), destination, stride);
             _reader.AdvancePosition(bytesRead);
 
             ++plane;
             if (plane == planeCount)
                 break;
 
-            ////_reader.read_next_start_of_scan();
-            ////destination = destination.subspan(bytes_per_plane);
+            _reader.ReadNextStartOfScan();
+            destination = destination[bytesPerPlane..];
         }
 
         _reader.ReadEndOfImage();

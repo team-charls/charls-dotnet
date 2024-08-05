@@ -33,13 +33,13 @@ internal sealed class Util
         return result;
     }
 
-    internal static PortableAnymapFile ReadAnymapReferenceFile(string filename, JpegLSInterleaveMode interleave_mode, FrameInfo frameInfo)
+    internal static PortableAnymapFile ReadAnymapReferenceFile(string filename, JpegLSInterleaveMode interleaveMode, FrameInfo frameInfo)
     {
         PortableAnymapFile referenceFile = new(filename);
 
-        if (interleave_mode == JpegLSInterleaveMode.None && frameInfo.ComponentCount == 3)
+        if (interleaveMode == JpegLSInterleaveMode.None && frameInfo.ComponentCount == 3)
         {
-            //triplet_to_planar(reference_file.image_data(), frameInfo.width, frameInfo.height);
+            referenceFile.ImageData = TripletToPlanar(referenceFile.ImageData, frameInfo.Width, frameInfo.Height);
         }
 
         return referenceFile;
@@ -183,5 +183,20 @@ internal sealed class Util
                 break;
             }
         }
+    }
+
+    private static byte[] TripletToPlanar(byte[] tripletBuffer, int width, int height)
+    {
+        byte[] planarBuffer = new byte[tripletBuffer.Length];
+
+        int byteCount = width * height;
+        for (int index = 0; index != byteCount; ++index)
+        {
+            planarBuffer[index] = tripletBuffer[index * 3 + 0];
+            planarBuffer[index + 1 * byteCount] = tripletBuffer[index * 3 + 1];
+            planarBuffer[index + 2 * byteCount] = tripletBuffer[index * 3 + 2];
+        }
+
+        return planarBuffer;
     }
 }

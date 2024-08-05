@@ -1,11 +1,18 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Numerics;
+
 namespace CharLS.JpegLS;
 
 internal abstract class LosslessTraitsImplT<TSample, TPixel> : TraitsBase<TSample, TPixel>
     where TSample : struct
 {
+    protected LosslessTraitsImplT(int max, int near, int reset = Constants.DefaultResetValue)
+        : base(max, near, reset)
+    {
+    }
+
     protected LosslessTraitsImplT(int bitsperpixel)
         : base(bitsperpixel)
     {
@@ -72,3 +79,23 @@ internal class LosslessTraits8 : LosslessTraitsImplT<byte, byte>
         return (byte)(predictedValue + errorValue);
     }
 }
+
+internal class LosslessTraitsTriplet<TSample> : LosslessTraitsImplT<TSample, Triplet<TSample>>
+    where TSample : struct, IBinaryInteger<TSample>
+{
+    public LosslessTraitsTriplet(int max, int near, int reset = Constants.DefaultResetValue)
+        : base(max, near, reset)
+    {
+    }
+
+    public override bool IsNear(Triplet<TSample> lhs, Triplet<TSample> rhs)
+    {
+        return lhs.Equals(rhs);
+    }
+
+    public override TSample ComputeReconstructedSample(int predictedValue, int errorValue)
+    {
+        return TSample.CreateTruncating(predictedValue + errorValue);
+    }
+}
+

@@ -164,6 +164,22 @@ internal class JpegStreamReader
         }
     }
 
+    internal void ReadNextStartOfScan()
+    {
+        Debug.Assert(_state == State.BitStreamSection);
+        _state = State.ScanSection;
+
+        do
+        {
+            var markerCode = ReadNextMarkerCode();
+            ValidateMarkerCode(markerCode);
+            ReadSegmentSize();
+            ReadMarkerSegment(markerCode);
+
+            Debug.Assert(SegmentBytesToRead == 0); // All segment data should be processed.
+        } while (_state == State.ScanSection);
+    }
+
     private byte ReadByte()
     {
         return Position < Source.Span.Length

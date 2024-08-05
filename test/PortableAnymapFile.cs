@@ -12,7 +12,7 @@ internal sealed class PortableAnymapFile
     internal int Height { get; set; }
     internal int BitsPerSample { get; set; }
 
-    internal byte[] ImageData { get; }
+    internal byte[] ImageData { get; set; }
 
     internal PortableAnymapFile(string filename)
     {

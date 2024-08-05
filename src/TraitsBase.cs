@@ -15,6 +15,7 @@ internal abstract class TraitsBase<TSample, TPixel> : ITraits<TSample, TPixel>
         bpp = Log2(max);
         Limit = 2 * (bpp + Math.Max(8, bpp));
         RESET = reset;
+        QuantizationRange = 1 << bpp;
     }
 
     //protected TraitsBase(ITraits<TSample, TPixel> other)
