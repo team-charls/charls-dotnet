@@ -39,7 +39,7 @@ internal abstract class LosslessTraitsImplT<TSample, TPixel> : TraitsBase<TSampl
         return (errorValue << (Constants.Int32BitCount - bpp)) >> (Constants.Int32BitCount - bpp);
     }
 
-    public override TSample ComputeReconstructedSample(int predictedValue, int errorValue)
+    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
         return default;
         ////return (TSample)Convert.ChangeType(MAXVAL & (Px + ErrVal), typeof(TSample));
@@ -74,9 +74,9 @@ internal class LosslessTraits8 : LosslessTraitsImplT<byte, byte>
         return (sbyte)errorValue;
     }
 
-    public override byte ComputeReconstructedSample(int predictedValue, int errorValue)
+    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
-        return (byte)(predictedValue + errorValue);
+        return predictedValue + errorValue;
     }
 }
 
@@ -93,9 +93,9 @@ internal class LosslessTraitsTriplet<TSample> : LosslessTraitsImplT<TSample, Tri
         return lhs.Equals(rhs);
     }
 
-    public override TSample ComputeReconstructedSample(int predictedValue, int errorValue)
+    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
-        return TSample.CreateTruncating(predictedValue + errorValue);
+        return predictedValue + errorValue;
     }
 }
 

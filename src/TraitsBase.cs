@@ -61,7 +61,7 @@ internal abstract class TraitsBase<TSample, TPixel> : ITraits<TSample, TPixel>
 
     public abstract int ComputeErrVal(int e);
 
-    public abstract TSample ComputeReconstructedSample(int predictedValue, int errorValue);
+    public abstract int ComputeReconstructedSample(int predictedValue, int errorValue);
 
     public abstract bool IsNear(int lhs, int rhs);
 

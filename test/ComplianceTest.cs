@@ -80,6 +80,22 @@ public class ComplianceTest
         DecompressFile("test-images/tulips-gray-8bit-512-512-hp-encoder.jls", "test-images/tulips-gray-8bit-512-512.pgm");
     }
 
+    [Fact]
+    public void TulipsMonochrome8BitLosslessHpForMeasurement()
+    {
+        var encodedSource = Util.ReadFile("test-images/tulips-gray-8bit-512-512-hp-encoder.jls");
+
+        JpegLSDecoder decoder = new(encodedSource);
+        var destination = new byte[decoder.GetDestinationSize()];
+
+        const int loopTimes = 1; // Increase to 300 for profiling sessions.
+        for (int i = 0; i < loopTimes; ++i)
+        {
+            JpegLSDecoder decoder2 = new(encodedSource);
+            decoder2.Decode(destination);
+        }
+    }
+
     //    TEST_METHOD(decompress_color_8_bit_interleave_none_lossless_restart_7) // NOLINT
     //    {
     //        // ISO 14495-1: official test image 1 but with restart markers.
