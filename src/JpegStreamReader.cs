@@ -98,10 +98,10 @@ internal class JpegStreamReader
         };
     }
 
-    internal ReadOnlySpan<byte> RemainingSource()
+    internal ReadOnlyMemory<byte> RemainingSource()
     {
         //ASSERT(state_ == state::bit_stream_section);
-        return Source.Span[Position..];
+        return Source[Position..];
     }
 
     internal uint MaximumSampleValue
