@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Diagnostics;
-using System.Globalization;
 using System.Numerics;
-using System.Runtime.InteropServices;
 
 namespace CharLS.JpegLS;
 
@@ -15,7 +13,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     private int _restartInterval;
     private readonly TraitsBase<TSample, TPixel> _traits;
     private readonly sbyte[] _quantizationLut;
-    private ProcessDecodedSingleComponent? _processLineDecoded;
+    private IProcessLineDecoded? _processLineDecoded;
 
     internal ScanDecoderImpl(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
         CodingParameters codingParameters, TraitsBase<TSample, TPixel> traits) :
@@ -43,16 +41,35 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             _restartInterval = FrameInfo.Height;
         }
 
-        DecodeLines(destination);
+        switch (CodingParameters.InterleaveMode)
+        {
+            case JpegLSInterleaveMode.None:
+                DecodeLinesByteNone(destination);
+                break;
+
+            case JpegLSInterleaveMode.Sample:
+                DecodeLinesTripletByte(destination);
+                break;
+        }
+
         EndScan();
 
         return get_cur_byte_pos();
     }
 
     // Factory function for ProcessLine objects to copy/transform un encoded pixels to/from our scan line buffers.
-    private static ProcessDecodedSingleComponent CreateProcessLine(int stride)
+    private IProcessLineDecoded CreateProcessLine(int stride)
     {
-        return new ProcessDecodedSingleComponent(stride, 1);
+        switch (CodingParameters.InterleaveMode)
+        {
+            case JpegLSInterleaveMode.None:
+                return new ProcessDecodedSingleComponent(stride, 1);
+
+            case JpegLSInterleaveMode.Sample:
+                return new ProcessDecodedTripletComponent(stride, 3);
+        }
+
+        throw new NotImplementedException();
 
         //if (parameters().interleave_mode == interleave_mode::none)
         //{
@@ -84,14 +101,14 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     // In ILV_SAMPLE mode, multiple components are handled in do_line
     // In ILV_LINE mode, a call to do_line is made for every component
     // In ILV_NONE mode, do_scan is called for each component
-    private void DecodeLines(Span<byte> destination)
+    private void DecodeLinesByteNone(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = CodingParameters.InterleaveMode == JpegLSInterleaveMode.Line ? FrameInfo.ComponentCount : 1;
         int restartIntervalCounter = 0;
 
         Span<int> runIndex = stackalloc int[componentCount];
-        Span<TPixel> lineBuffer = new TPixel[componentCount * pixelStride * 2];
+        Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2];
 
         for (int line = 0; ;)
         {
@@ -99,11 +116,11 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
 
             for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
             {
-                Span<TPixel> previousLine = lineBuffer;
-                Span<TPixel> currentLine = lineBuffer[(componentCount * pixelStride)..];
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[(componentCount * pixelStride)..];
                 if ((line & 1) == 1)
                 {
-                    Span<TPixel> temp = previousLine;
+                    var temp = previousLine;
                     previousLine = currentLine;
                     currentLine = temp;
                 }
@@ -116,15 +133,70 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                     previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
                     currentLine[0] = previousLine[1];
 
-                    if (typeof(TPixel) == typeof(TSample))
-                    {
-                        DecodeSampleLine(previousLine, currentLine);
-                    }
-                    else if (typeof(TPixel) == typeof(Triplet<TSample>))
-                    {
-                        DecodeTripletLine(MemoryMarshal.Cast<TPixel, Triplet<TSample>>(previousLine),
-                            MemoryMarshal.Cast<TPixel, Triplet<TSample>>(currentLine));
-                    }
+                    DecodeSampleLine(previousLine, currentLine);
+
+                    runIndex[component] = RunIndex;
+
+                    ++component;
+                    if (component == componentCount)
+                        break;
+
+                    previousLine = previousLine[pixelStride..];
+                    currentLine = currentLine[pixelStride..];
+                }
+
+                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                destination = destination[bytesWritten..];
+            }
+
+            if (line == FrameInfo.Height)
+                break;
+
+            // At this point in the byte stream a restart marker should be present: process it.
+            ReadRestartMarker(restartIntervalCounter);
+            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+
+            // After a restart marker it is required to reset the decoder.
+            Reset();
+            lineBuffer.Clear();
+            runIndex.Clear();
+            ResetParameters(_traits.Range);
+        }
+    }
+
+    private void DecodeLinesTripletByte(Span<byte> destination)
+    {
+        int pixelStride = FrameInfo.Width + 2;
+        int componentCount = CodingParameters.InterleaveMode == JpegLSInterleaveMode.Line ? FrameInfo.ComponentCount : 1;
+        int restartIntervalCounter = 0;
+
+        Span<int> runIndex = stackalloc int[componentCount];
+        Span<Triplet<byte>> lineBuffer = new Triplet<byte>[componentCount * pixelStride * 2];
+
+        for (int line = 0; ;)
+        {
+            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            {
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[(componentCount * pixelStride)..];
+                if ((line & 1) == 1)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                for (int component = 0; ;)
+                {
+                    RunIndex = runIndex[component];
+
+                    // initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    DecodeTripletLine(previousLine, currentLine);
 
                     runIndex[component] = RunIndex;
 
@@ -161,39 +233,36 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         return _quantizationLut[_quantizationLut.Length / 2 + di];
     }
 
-    private void DecodeSampleLine(Span<TPixel> previousLine, Span<TPixel> currentLine)
+    private void DecodeSampleLine(Span<byte> previousLine, Span<byte> currentLine)
     {
         int index = 1;
-        int rb = ToInt32(previousLine[0]);
-        int rd = ToInt32(previousLine[index]);
+        int rb = previousLine[0];
+        int rd = previousLine[index];
 
         while (index <= FrameInfo.Width)
         {
-            int ra = ToInt32(currentLine[index - 1]);
+            int ra = currentLine[index - 1];
             int rc = rb;
             rb = rd;
-            rd = ToInt32(previousLine[index + 1]);
+            rd = previousLine[index + 1];
 
             int qs = Algorithm.ComputeContextId(QuantizeGradient(rd - rb),
                 QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
             if (qs != 0)
             {
-                currentLine[index] =
-                    (TPixel)
-                    Convert.ChangeType(DecodeRegular(qs, Algorithm.GetPredictedValue(ra, rb, rc)),
-                    typeof(TPixel), CultureInfo.InvariantCulture);
+                currentLine[index] = DecodeRegular(qs, Algorithm.GetPredictedValue(ra, rb, rc));
                 ++index;
             }
             else
             {
                 index += DecodeRunMode(index, previousLine, currentLine);
-                rb = ToInt32(previousLine[index - 1]);
-                rd = ToInt32(previousLine[index]);
+                rb = previousLine[index - 1];
+                rd = previousLine[index];
             }
         }
     }
 
-    private void DecodeTripletLine(Span<Triplet<TSample>> previousLine, Span<Triplet<TSample>> currentLine)
+    private void DecodeTripletLine(Span<Triplet<byte>> previousLine, Span<Triplet<byte>> currentLine)
     {
         int index = 1;
         while (index <= FrameInfo.Width)
@@ -204,36 +273,35 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             var rd = previousLine[index + 1];
 
             int qs1 =
-                Algorithm.ComputeContextId(QuantizeGradient(int.CreateTruncating(rd.V1 - rb.V1)),
-                    QuantizeGradient(int.CreateTruncating(rb.V1 - rc.V1)),
-                        QuantizeGradient(int.CreateTruncating(rc.V1 - ra.V1)));
+                Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
+                    QuantizeGradient(rb.V1 - rc.V1),
+                        QuantizeGradient(rc.V1 - ra.V1));
             int qs2 =
-                Algorithm.ComputeContextId(QuantizeGradient(int.CreateTruncating(rd.V2 - rb.V2)),
-                    QuantizeGradient(int.CreateTruncating(rb.V2 - rc.V2)),
-                    QuantizeGradient(int.CreateTruncating(rc.V2 - ra.V2)));
+                Algorithm.ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
+                    QuantizeGradient(rb.V2 - rc.V2),
+                    QuantizeGradient(rc.V2 - ra.V2));
 
             int qs3 =
-                Algorithm.ComputeContextId(QuantizeGradient(int.CreateTruncating(rd.V3 - rb.V3)),
-                    QuantizeGradient(int.CreateTruncating(rb.V3 - rc.V3)),
-                    QuantizeGradient(int.CreateTruncating(rc.V3 - ra.V3)));
+                Algorithm.ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
+                    QuantizeGradient(rb.V3 - rc.V3),
+                    QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
             {
-                index += DecodeRunMode(index, MemoryMarshal.Cast<Triplet<TSample>, TPixel>(previousLine),
-                    MemoryMarshal.Cast<Triplet<TSample>, TPixel>(currentLine));
+                index += DecodeRunMode(index, previousLine, currentLine);
             }
             else
             {
-                Triplet<TSample> rx;
-                rx.V1 = DecodeRegular(qs1, Algorithm.GetPredictedValue(ToInt32(ra.V1), ToInt32(rb.V1), ToInt32(rc.V1)));
-                rx.V2 = DecodeRegular(qs2, Algorithm.GetPredictedValue(ToInt32(ra.V2), ToInt32(rb.V2), ToInt32(rc.V2)));
-                rx.V3 = DecodeRegular(qs3, Algorithm.GetPredictedValue(ToInt32(ra.V3), ToInt32(rb.V3), ToInt32(rc.V3)));
+                Triplet<byte> rx;
+                rx.V1 = DecodeRegular(qs1, Algorithm.GetPredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = DecodeRegular(qs2, Algorithm.GetPredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = DecodeRegular(qs3, Algorithm.GetPredictedValue(ra.V3, rb.V3, rc.V3));
                 currentLine[index] = rx;
                 ++index;
             }
         }
     }
 
-    private TSample DecodeRegular(int qs, int predicted)
+    private byte DecodeRegular(int qs, int predicted)
     {
         int sign = Algorithm.BitWiseSign(qs);
         ref var context = ref RegularModeContext[Algorithm.ApplySign(qs, sign)];
@@ -262,10 +330,10 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
 
         context.update_variables_and_bias(errorValue, _traits.NearLossless, _traits.RESET);
         errorValue = Algorithm.ApplySign(errorValue, sign);
-        return _traits.ComputeReconstructedSample(predictedValue, errorValue);
+        return (byte)_traits.ComputeReconstructedSample(predictedValue, errorValue);
     }
 
-    private int DecodeRunMode(int startIndex, Span<TPixel> previousLine, Span<TPixel> currentLine)
+    private int DecodeRunMode(int startIndex, Span<byte> previousLine, Span<byte> currentLine)
     {
         var ra = currentLine[startIndex - 1];
 
@@ -276,17 +344,30 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             return endIndex - startIndex;
 
         // run interruption
-        var rb = ToInt32(previousLine[endIndex]);
-        currentLine[endIndex] = (TPixel)
-            Convert.ChangeType(
-            DecodeRunInterruptionPixel(ToInt32(ra), rb),
-            typeof(TPixel), CultureInfo.InvariantCulture);
-
+        var rb = previousLine[endIndex];
+        currentLine[endIndex] = (byte)DecodeRunInterruptionPixel(ra, rb);
         DecrementRunIndex();
         return endIndex - startIndex + 1;
     }
 
-    private int DecodeRunPixels(TPixel ra, Span<TPixel> startPos, int pixelCount)
+    private int DecodeRunMode(int startIndex, Span<Triplet<byte>> previousLine, Span<Triplet<byte>> currentLine)
+    {
+        var ra = currentLine[startIndex - 1];
+
+        int runLength = DecodeRunPixels(ra, currentLine[startIndex..], FrameInfo.Width - (startIndex - 1));
+        int endIndex = startIndex + runLength;
+
+        if (endIndex - 1 == FrameInfo.Width)
+            return endIndex - startIndex;
+
+        // run interruption
+        var rb = previousLine[endIndex];
+        currentLine[endIndex] = DecodeRunInterruptionPixel(ra, rb);
+        DecrementRunIndex();
+        return endIndex - startIndex + 1;
+    }
+
+    private int DecodeRunPixels(byte ra, Span<byte> startPos, int pixelCount)
     {
         int index = 0;
         while (ReadBit())
@@ -321,7 +402,43 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         return index;
     }
 
-    private TSample DecodeRunInterruptionPixel(int ra, int rb)
+    private int DecodeRunPixels(Triplet<byte> ra, Span<Triplet<byte>> startPos, int pixelCount)
+    {
+        int index = 0;
+        while (ReadBit())
+        {
+            int count = Math.Min(1 << J[RunIndex], pixelCount - index);
+            index += count;
+            ////ASSERT(index <= pixel_count);
+
+            if (count == (1 << J[RunIndex]))
+            {
+                IncrementRunIndex();
+            }
+
+            if (index == pixelCount)
+                break;
+        }
+
+        if (index != pixelCount)
+        {
+            // incomplete run.
+            index += (J[RunIndex] > 0) ? ReadValue(J[RunIndex]) : 0;
+        }
+
+        if (index > pixelCount)
+            throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
+
+        for (int i = 0; i < index; ++i)
+        {
+            startPos[i] = ra;
+        }
+
+        return index;
+    }
+
+
+    private int DecodeRunInterruptionPixel(int ra, int rb)
     {
         if (Math.Abs(ra - rb) <= _traits.NearLossless)
         {
@@ -335,6 +452,18 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         }
     }
 
+    private Triplet<byte> DecodeRunInterruptionPixel(Triplet<byte> ra, Triplet<byte> rb)
+    {
+        int errorValue1 = DecodeRunInterruptionError(ref RunModeContexts[0]);
+        int errorValue2 = DecodeRunInterruptionError(ref RunModeContexts[0]);
+        int errorValue3 = DecodeRunInterruptionError(ref RunModeContexts[0]);
+
+        return new Triplet<byte>(
+            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
+            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
+            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)));
+    }
+
     private int DecodeRunInterruptionError(ref RunModeContext context)
     {
         int k = context.GetGolombCode();
@@ -344,34 +473,18 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         return errorValue;
     }
 
-    private static int ToInt32(TPixel value)
+    private int on_line_end(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
-        // TODO assert that TPixel is byte or ushort
+        //Span<byte> sourceInBytes = MemoryMarshal.Cast<TPixel, byte>(source);
 
-        return value switch
-        {
-            byte b => b,
-            short s => s,
-            _ => default
-        };
+        return _processLineDecoded!.LineDecoded(source, destination, pixelCount, pixelStride);
     }
 
-    private static int ToInt32(TSample value)
+    private int on_line_end(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
-        // TODO assert that TPixel is byte or ushort
+        //Span<byte> sourceInBytes = MemoryMarshal.Cast<TPixel, byte>(source);
 
-        return value switch
-        {
-            byte b => b,
-            short s => s,
-            _ => default
-        };
+        return _processLineDecoded!.LineDecoded(source, destination, pixelCount, pixelStride);
     }
 
-    private int on_line_end(Span<TPixel> source, Span<byte> destination, int pixelCount, int pixelStride)
-    {
-        Span<byte> sourceInBytes = MemoryMarshal.Cast<TPixel, byte>(source);
-
-        return _processLineDecoded!.LineDecoded(sourceInBytes, destination, pixelCount, pixelStride);
-    }
 }

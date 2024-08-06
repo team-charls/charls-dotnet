@@ -1,8 +1,6 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using System;
-using System.Globalization;
 
 namespace CharLS.JpegLS;
 
@@ -29,7 +27,7 @@ internal class DefaultTraits<TSample, TPixel> : TraitsBase<TSample, TPixel>
         throw new NotImplementedException();
     }
 
-    public override TSample ComputeReconstructedSample(int predictedValue, int errorValue)
+    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
         return FixReconstructedValue(predictedValue + Dequantize(errorValue));
     }
@@ -62,7 +60,7 @@ internal class DefaultTraits<TSample, TPixel> : TraitsBase<TSample, TPixel>
         return errorValue * (2 * _nearLossless + 1);
     }
 
-    private TSample FixReconstructedValue(int value)
+    private int FixReconstructedValue(int value)
     {
         if (value < -_nearLossless)
         {
@@ -73,7 +71,6 @@ internal class DefaultTraits<TSample, TPixel> : TraitsBase<TSample, TPixel>
             value = value - _range * (2 * _nearLossless + 1);
         }
 
-        return (TSample)
-            Convert.ChangeType(CorrectPrediction(value), typeof(TSample), CultureInfo.InvariantCulture);
+        return CorrectPrediction(value);
     }
 }
