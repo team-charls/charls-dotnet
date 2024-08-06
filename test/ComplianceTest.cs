@@ -20,7 +20,7 @@ public class ComplianceTest
     //        decompress_file("conformance/t8c1e0.jls", "conformance/test8.ppm");
     //    }
 
-    [Fact (Skip= "WIP")]
+    [Fact]
     public void DecompressColor8BitInterleaveSampleLossless()
     {
         // ISO 14495-1: official test image 3 (T87_test-1-2-3-4-5-6.zip)

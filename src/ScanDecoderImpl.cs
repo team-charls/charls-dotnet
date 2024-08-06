@@ -458,11 +458,10 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         int errorValue2 = DecodeRunInterruptionError(ref RunModeContexts[0]);
         int errorValue3 = DecodeRunInterruptionError(ref RunModeContexts[0]);
 
-        Triplet<byte> result;
-        result.V1 = (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1));
-        result.V2 = (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2));
-        result.V3 = (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V2 - ra.V2));
-        return result;
+        return new Triplet<byte>(
+            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
+            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
+            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)));
     }
 
     private int DecodeRunInterruptionError(ref RunModeContext context)
