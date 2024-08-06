@@ -5,7 +5,7 @@ using Xunit;
 
 namespace CharLS.JpegLS.Test;
 
-internal sealed class TestScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters) :
+internal sealed unsafe class TestScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters) :
     ScanDecoder(frameInfo, presetCodingParameters, codingParameters)
 {
     public override int DecodeScan(ReadOnlySpan<byte> source, Span<byte> destination, int stride)
@@ -13,28 +13,28 @@ internal sealed class TestScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingPar
         throw new NotImplementedException();
     }
 
-    public void TestInitialize(ReadOnlySpan<byte> source)
+    public void TestInitialize(byte* source, int length)
     {
-        Initialize(source);
+        Initialize(source, length);
     }
 
-    public bool TestReadBit(ReadOnlySpan<byte> source)
+    public bool TestReadBit()
     {
-        return ReadBit(source);
+        return ReadBit();
     }
 
-    public void TestEndScan(ReadOnlySpan<byte> source)
+    public void TestEndScan()
     {
-        EndScan(source);
+        EndScan();
     }
 
-    public byte TestPeekByte(ReadOnlySpan<byte> source)
+    public byte TestPeekByte()
     {
-        return PeekByte(source);
+        return PeekByte();
     }
 }
 
-public class ScanDecoderTest
+public unsafe class ScanDecoderTest
 {
     private static readonly JpegLSPresetCodingParameters DefaultParameters = new JpegLSPresetCodingParameters();
 
@@ -47,15 +47,18 @@ public class ScanDecoderTest
         var codingParameters = new CodingParameters();
 
         var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
-        scanDecoder.TestInitialize(source);
-
-        for (int i = 0; i < 2 * 8; i++)
+        fixed (byte* ptr = source)
         {
-            var actual = scanDecoder.TestReadBit(source);
-            Assert.False(actual);
-        }
+            scanDecoder.TestInitialize(ptr, source.Length);
 
-        scanDecoder.TestEndScan(source);
+            for (int i = 0; i < 2 * 8; i++)
+            {
+                var actual = scanDecoder.TestReadBit();
+                Assert.False(actual);
+            }
+
+            scanDecoder.TestEndScan();
+        }
     }
 
     [Fact]
@@ -67,15 +70,18 @@ public class ScanDecoderTest
         var codingParameters = new CodingParameters();
 
         var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
-        scanDecoder.TestInitialize(source);
-
-        for (int i = 0; i < 9 * 8; i++)
+        fixed (byte* ptr = source)
         {
-            var actual = scanDecoder.TestReadBit(source);
-            Assert.False(actual);
-        }
+            scanDecoder.TestInitialize(ptr, source.Length);
 
-        scanDecoder.TestEndScan(source);
+            for (int i = 0; i < 9 * 8; i++)
+            {
+                var actual = scanDecoder.TestReadBit();
+                Assert.False(actual);
+            }
+
+            scanDecoder.TestEndScan();
+        }
     }
 
     [Fact]
@@ -87,21 +93,24 @@ public class ScanDecoderTest
         var codingParameters = new CodingParameters();
 
         var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
-        scanDecoder.TestInitialize(source);
-
-        byte peekByte1 = scanDecoder.TestPeekByte(source);
-        for (int i = 0; i < 1 * 8; i++)
+        fixed (byte* ptr = source)
         {
-            var actual = scanDecoder.TestReadBit(source);
-        }
-        byte peekByte2 = scanDecoder.TestPeekByte(source);
-        for (int i = 0; i < 1 * 8; i++)
-        {
-            var actual = scanDecoder.TestReadBit(source);
-        }
-        scanDecoder.TestEndScan(source);
+            scanDecoder.TestInitialize(ptr, source.Length);
 
-        Assert.Equal(7, peekByte1);
-        Assert.Equal(8, peekByte2);
+            byte peekByte1 = scanDecoder.TestPeekByte();
+            for (int i = 0; i < 1 * 8; i++)
+            {
+                var actual = scanDecoder.TestReadBit();
+            }
+            byte peekByte2 = scanDecoder.TestPeekByte();
+            for (int i = 0; i < 1 * 8; i++)
+            {
+                var actual = scanDecoder.TestReadBit();
+            }
+            scanDecoder.TestEndScan();
+
+            Assert.Equal(7, peekByte1);
+            Assert.Equal(8, peekByte2);
+        }
     }
 }

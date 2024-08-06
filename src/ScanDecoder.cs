@@ -6,15 +6,15 @@ using System.Diagnostics;
 
 namespace CharLS.JpegLS;
 
-internal abstract class ScanDecoder(
+internal abstract unsafe class ScanDecoder(
     FrameInfo frameInfo,
     JpegLSPresetCodingParameters presetCodingParameters,
     CodingParameters codingParameters)
     : ScanCodec(frameInfo, presetCodingParameters, codingParameters)
 {
-    private int _position;
-    private int _endPosition;
-    private int _positionFF;
+    private byte* _position;
+    private byte* _endPosition;
+    private byte* _positionFF;
     private int _length;
     private int _validBits;
     private ulong _readCache; // TODO: change for 32-bit build
@@ -39,22 +39,22 @@ internal abstract class ScanDecoder(
 
     public abstract int DecodeScan(ReadOnlySpan<byte> source, Span<byte> destination, int stride);
 
-    protected void Initialize(ReadOnlySpan<byte> source)
+    protected void Initialize(byte* scan_begin, int length)
     {
-        _position = 0;
-        _endPosition = source.Length;
+        _position = scan_begin;
+        _endPosition = _position + length;
 
-        FindJpegMarkerStartByte(source);
-        FillReadCache(source);
+        FindJpegMarkerStartByte();
+        FillReadCache();
     }
 
-    protected void Reset(ReadOnlySpan<byte> source)
+    protected void Reset()
     {
         _validBits = 0;
         _readCache = 0;
 
-        FindJpegMarkerStartByte(source);
-        FillReadCache(source);
+        FindJpegMarkerStartByte();
+        FillReadCache();
     }
 
     protected void SkipBits(int bitCount)
@@ -78,19 +78,19 @@ internal abstract class ScanDecoder(
         RunIndex = 0;
     }
 
-    protected void EndScan(ReadOnlySpan<byte> source)
+    protected void EndScan()
     {
         if (_position >= _endPosition)
             throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
 
-        if (source[_position] != Constants.JpegMarkerStartByte)
+        if (*_position != Constants.JpegMarkerStartByte)
         {
-            ReadBit(source);
+            var _ = ReadBit();
 
             if (_position >= _endPosition)
                 throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
 
-            if (source[_position] != Constants.JpegMarkerStartByte)
+            if (*_position != Constants.JpegMarkerStartByte)
                 throw Util.CreateInvalidDataException(JpegLSError.TooMuchEncodedData);
         }
 
@@ -98,42 +98,43 @@ internal abstract class ScanDecoder(
             throw Util.CreateInvalidDataException(JpegLSError.TooMuchEncodedData);
     }
 
-    protected int get_cur_byte_pos(ReadOnlySpan<byte> source)
+    protected byte* get_cur_byte_pos()
     {
         int validBits = _validBits;
+        byte* compressedBytes = _position;
 
         for (;;)
         {
-            int lastBitsCount = source[_position - 1] == Constants.JpegMarkerStartByte ? 7 : 8;
+            int lastBitsCount = compressedBytes[- 1] == Constants.JpegMarkerStartByte ? 7 : 8;
 
             if (validBits < lastBitsCount)
-                return _position;
+                return compressedBytes;
 
             validBits -= lastBitsCount;
-            --_position;
+            --compressedBytes;
         }
     }
 
-    protected int DecodeValue(ReadOnlySpan<byte> source, int k, int limit, int quantizedBitsPerPixel)
+    protected int DecodeValue(int k, int limit, int quantizedBitsPerPixel)
     {
-        int highBits = ReadHighBits(source);
+        int highBits = ReadHighBits();
 
         if (highBits >= limit - (quantizedBitsPerPixel + 1))
-            return ReadValue(source, quantizedBitsPerPixel) + 1;
+            return ReadValue(quantizedBitsPerPixel) + 1;
 
         if (k == 0)
             return highBits;
 
-        return (highBits << k) + ReadValue(source, k);
+        return (highBits << k) + ReadValue(k);
     }
 
-    protected int ReadValue(ReadOnlySpan<byte> source, int bitCount)
+    protected int ReadValue(int bitCount)
     {
         Debug.Assert(bitCount is > 0 and < 32);
 
         if (_validBits < bitCount)
         {
-            FillReadCache(source);
+            FillReadCache();
             if (_validBits < bitCount)
                 throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
         }
@@ -144,21 +145,21 @@ internal abstract class ScanDecoder(
         return result;
     }
 
-    protected byte PeekByte(ReadOnlySpan<byte> source)
+    protected byte PeekByte()
     {
         if (_validBits < 8)
         {
-            FillReadCache(source);
+            FillReadCache();
         }
 
         return (byte)(_readCache >> MaxReadableCacheBits);
     }
 
-    protected bool ReadBit(ReadOnlySpan<byte> source)
+    protected bool ReadBit()
     {
         if (_validBits <= 0)
         {
-            FillReadCache(source);
+            FillReadCache();
         }
 
         bool set = (_readCache & 1UL << (CacheBitCount - 1)) != 0;
@@ -166,11 +167,11 @@ internal abstract class ScanDecoder(
         return set;
     }
 
-    protected int peek_0_bits(ReadOnlySpan<byte> source)
+    protected int peek_0_bits()
     {
         if (_validBits < 16)
         {
-            FillReadCache(source);
+            FillReadCache();
         }
 
         var valueTest = _readCache;
@@ -184,9 +185,9 @@ internal abstract class ScanDecoder(
         return -1;
     }
 
-    protected int ReadHighBits(ReadOnlySpan<byte> source)
+    protected int ReadHighBits()
     {
-        int count = peek_0_bits(source);
+        int count = peek_0_bits();
         if (count >= 0)
         {
             SkipBits(count + 1);
@@ -197,24 +198,24 @@ internal abstract class ScanDecoder(
 
         for (int highBitsCount = 15; ; ++highBitsCount)
         {
-            if (ReadBit(source))
+            if (ReadBit())
                 return highBitsCount;
         }
     }
 
-    protected byte ReadByte(ReadOnlySpan<byte> source)
+    protected byte ReadByte()
     {
         if (_position == _endPosition)
             throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
 
-        byte value = source[_position];
+        byte value = *_position;
         ++_position;
         return value;
     }
 
-    protected void ReadRestartMarker(ReadOnlySpan<byte> source, int expectedRestartMarkerId)
+    protected void ReadRestartMarker(int expectedRestartMarkerId)
     {
-        byte value = ReadByte(source);
+        byte value = ReadByte();
 
         if (value != Constants.JpegMarkerStartByte)
             throw Util.CreateInvalidDataException(JpegLSError.RestartMarkerNotFound);
@@ -222,31 +223,25 @@ internal abstract class ScanDecoder(
         // Read all preceding 0xFF fill bytes until a non 0xFF byte has been found. (see T.81, B.1.1.2)
         do
         {
-            value = ReadByte(source);
+            value = ReadByte();
         } while (value == Constants.JpegMarkerStartByte);
 
         if (value != Constants.JpegRestartMarkerBase + expectedRestartMarkerId)
             throw Util.CreateInvalidDataException(JpegLSError.RestartMarkerNotFound);
     }
 
-    private void FindJpegMarkerStartByte(ReadOnlySpan<byte> source)
+    private void FindJpegMarkerStartByte()
     {
-        int positionFF = source[_position..].IndexOf(Constants.JpegMarkerStartByte);
-        if (positionFF == -1)
-        {
-            _positionFF = _endPosition;
-        }
-        else
-        {
-            _positionFF = _position + positionFF;
-        }
+        var source = new Span<byte>(_position, (int)(_endPosition - _position));
+        int positionFF = source.IndexOf(Constants.JpegMarkerStartByte);
+        _positionFF = positionFF == -1 ? _endPosition : _position + positionFF;
     }
 
-    private void FillReadCache(ReadOnlySpan<byte> source)
+    private void FillReadCache()
     {
         // ASSERT(valid_bits_ <= max_readable_cache_bits);
 
-        if (FillReadCacheOptimistic(source))
+        if (FillReadCacheOptimistic())
             return;
 
         do
@@ -262,11 +257,11 @@ internal abstract class ScanDecoder(
                 return;
             }
 
-            ulong newByteValue = source[_position];
+            ulong newByteValue = *_position;
 
             // JPEG-LS bit stream rule: if FF is followed by a 1 bit then it is a marker
             if (newByteValue == Constants.JpegMarkerStartByte &&
-                (_position == _endPosition - 1 || (source[_position + 1] & 0x80) != 0))
+                (_position == _endPosition - 1 || (_position[1] & 0x80) != 0))
             {
                 if (_validBits <= 0)
                 {
@@ -290,16 +285,17 @@ internal abstract class ScanDecoder(
 
         } while (_validBits < MaxReadableCacheBits);
 
-        FindJpegMarkerStartByte(source);
+        FindJpegMarkerStartByte();
     }
 
-    private bool FillReadCacheOptimistic(ReadOnlySpan<byte> source)
+    private bool FillReadCacheOptimistic()
     {
         if (_position >= _positionFF - (sizeof(ulong) - 1))
             return false;
 
         // Easy & fast: there is no 0xFF byte in sight, read without bit stuffing
-        _readCache |= BinaryPrimitives.ReadUInt64BigEndian(source[_position..]) >> _validBits;
+        var source = new ReadOnlySpan<byte>(_position, (int)(_endPosition - _position));
+        _readCache |= BinaryPrimitives.ReadUInt64BigEndian(source) >> _validBits;
         int bytesConsumed = (CacheBitCount - _validBits) / 8;
         _position += bytesConsumed;
         _validBits += bytesConsumed * 8;
