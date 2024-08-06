@@ -14,11 +14,12 @@ public class ComplianceTest
         DecompressFile("conformance/t8c0e0.jls", "conformance/test8.ppm");
     }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_line_lossless) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 2 (T87_test-1-2-3-4-5-6.zip)
-    //        decompress_file("conformance/t8c1e0.jls", "conformance/test8.ppm");
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveLineLossless()
+    {
+        // ISO 14495-1: official test image 2 (T87_test-1-2-3-4-5-6.zip)
+        DecompressFile("conformance/t8c1e0.jls", "conformance/test8.ppm");
+    }
 
     [Fact]
     public void DecompressColor8BitInterleaveSampleLossless()

@@ -32,6 +32,42 @@ internal class ProcessDecodedSingleComponent : IProcessLineDecoded
 }
 
 
+// Purpose: this class will copy the 3 decoded lines to destination buffer in by-p
+internal class ProcessDecodedSingleComponentToLine : IProcessLineDecoded
+{
+    private int _stride;
+    private int _bytesPerPixel;
+
+    internal ProcessDecodedSingleComponentToLine(int stride, int bytesPerPixel)
+    {
+        _stride = stride;
+        _bytesPerPixel = bytesPerPixel;
+    }
+
+    public int LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
+
+        int bytesCount = pixelCount * _bytesPerPixel;
+        Debug.Assert(bytesCount <= _stride);
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            destinationTriplet[i] = new Triplet<byte>(
+                source[i], source[i + sourceStride], source[i + 2 * sourceStride]);
+        }
+
+        return _stride;
+    }
+
+    public int LineDecoded(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+
+
 internal class ProcessDecodedTripletComponent : IProcessLineDecoded
 {
     private int _stride;

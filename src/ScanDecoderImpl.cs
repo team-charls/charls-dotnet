@@ -31,8 +31,6 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     {
         _processLineDecoded = CreateProcessLine(stride);
 
-        //const auto* scan_begin{ to_address(source.begin())};
-
         Initialize(source);
 
         // Process images without a restart interval, as 1 large restart interval.
@@ -45,6 +43,10 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         {
             case JpegLSInterleaveMode.None:
                 DecodeLinesByteNone(destination);
+                break;
+
+            case JpegLSInterleaveMode.Line:
+                DecodeLinesByteLine(destination);
                 break;
 
             case JpegLSInterleaveMode.Sample:
@@ -64,6 +66,9 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         {
             case JpegLSInterleaveMode.None:
                 return new ProcessDecodedSingleComponent(stride, 1);
+
+            case JpegLSInterleaveMode.Line:
+                return new ProcessDecodedSingleComponentToLine(stride, 3);
 
             case JpegLSInterleaveMode.Sample:
                 return new ProcessDecodedTripletComponent(stride, 3);
@@ -104,11 +109,57 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     private void DecodeLinesByteNone(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int componentCount = CodingParameters.InterleaveMode == JpegLSInterleaveMode.Line ? FrameInfo.ComponentCount : 1;
+        int restartIntervalCounter = 0;
+
+        Span<byte> lineBuffer = new byte[pixelStride * 2];
+
+        for (int line = 0; ;)
+        {
+            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            {
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[pixelStride..];
+                if ((line & 1) == 1)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                // initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                DecodeSampleLine(previousLine, currentLine);
+
+                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                destination = destination[bytesWritten..];
+            }
+
+            if (line == FrameInfo.Height)
+                break;
+
+            // At this point in the byte stream a restart marker should be present: process it.
+            ReadRestartMarker(restartIntervalCounter);
+            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+
+            // After a restart marker it is required to reset the decoder.
+            Reset();
+            lineBuffer.Clear();
+            ResetParameters(_traits.Range);
+        }
+    }
+
+    private void DecodeLinesByteLine(Span<byte> destination)
+    {
+        int pixelStride = FrameInfo.Width + 2;
+        int componentCount = FrameInfo.ComponentCount;
         int restartIntervalCounter = 0;
 
         Span<int> runIndex = stackalloc int[componentCount];
-        Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2];
+        Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
 
         for (int line = 0; ;)
         {
@@ -118,14 +169,15 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             {
                 var previousLine = lineBuffer;
                 var currentLine = lineBuffer[(componentCount * pixelStride)..];
-                if ((line & 1) == 1)
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
                 {
                     var temp = previousLine;
                     previousLine = currentLine;
                     currentLine = temp;
                 }
 
-                for (int component = 0; ;)
+                for (int component = 0; component < componentCount; ++component)
                 {
                     RunIndex = runIndex[component];
 
@@ -136,16 +188,12 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                     DecodeSampleLine(previousLine, currentLine);
 
                     runIndex[component] = RunIndex;
-
-                    ++component;
-                    if (component == componentCount)
-                        break;
-
-                    previousLine = previousLine[pixelStride..];
                     currentLine = currentLine[pixelStride..];
+                    previousLine = previousLine[pixelStride..];
                 }
 
-                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
+                int bytesWritten = on_line_end(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -167,11 +215,9 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     private void DecodeLinesTripletByte(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int componentCount = CodingParameters.InterleaveMode == JpegLSInterleaveMode.Line ? FrameInfo.ComponentCount : 1;
         int restartIntervalCounter = 0;
 
-        Span<int> runIndex = stackalloc int[componentCount];
-        Span<Triplet<byte>> lineBuffer = new Triplet<byte>[componentCount * pixelStride * 2];
+        Span<Triplet<byte>> lineBuffer = new Triplet<byte>[pixelStride * 2];
 
         for (int line = 0; ;)
         {
@@ -180,7 +226,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
             {
                 var previousLine = lineBuffer;
-                var currentLine = lineBuffer[(componentCount * pixelStride)..];
+                var currentLine = lineBuffer[pixelStride..];
                 if ((line & 1) == 1)
                 {
                     var temp = previousLine;
@@ -188,25 +234,11 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                     currentLine = temp;
                 }
 
-                for (int component = 0; ;)
-                {
-                    RunIndex = runIndex[component];
+                // initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
 
-                    // initialize edge pixels used for prediction
-                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                    currentLine[0] = previousLine[1];
-
-                    DecodeTripletLine(previousLine, currentLine);
-
-                    runIndex[component] = RunIndex;
-
-                    ++component;
-                    if (component == componentCount)
-                        break;
-
-                    previousLine = previousLine[pixelStride..];
-                    currentLine = currentLine[pixelStride..];
-                }
+                DecodeTripletLine(previousLine, currentLine);
 
                 int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
@@ -222,7 +254,6 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             // After a restart marker it is required to reset the decoder.
             Reset();
             lineBuffer.Clear();
-            runIndex.Clear();
             ResetParameters(_traits.Range);
         }
     }
