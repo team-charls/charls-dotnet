@@ -34,8 +34,13 @@ internal sealed class PortableAnymapFile
         if (bytesRead != imageData.Length)
             throw new InvalidDataException("Missing image data");
 
+        if (bytesPerSample == 2)
+        {
+            // Anymap files with multibyte pixels are stored in big endian format in the file.
+            ConvertToLittleEndian(imageData);
+        }
+
         ImageData = imageData;
-        // convert_to_little_endian_if_needed();
     }
 
     private static List<int> ReadHeader(Stream pnmFile)
@@ -74,6 +79,14 @@ internal sealed class PortableAnymapFile
             ++x;
         }
         return x;
+    }
+
+    private static void ConvertToLittleEndian(byte[] imageBytes)
+    {
+        for (int i = 0; i < imageBytes.Length - 1; i += 2)
+        {
+            (imageBytes[i], imageBytes[i + 1]) = (imageBytes[i + 1], imageBytes[i]);
+        }
     }
 
     private sealed class UnbufferedStreamReader(Stream stream) : TextReader
@@ -122,16 +135,3 @@ internal sealed class PortableAnymapFile
         }
     }
 }
-
-
-//void convert_to_little_endian_if_needed() noexcept
-//{
-//    // Anymap files with multi byte pixels are stored in big endian format in the file.
-//    if (bits_per_sample_ > 8)
-//    {
-//        for (size_t i{ }; i < input_buffer_.size() - 1; i += 2)
-//            {
-//            std::swap(input_buffer_[i], input_buffer_[i + 1]);
-//        }
-//    }
-//}

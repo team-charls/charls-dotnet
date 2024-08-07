@@ -24,13 +24,14 @@ internal class ScanCodecFactory
             switch (frameInfo.BitsPerSample)
             {
                 case 8:
-                    var traits = new LosslessTraits8();
-                    return new ScanDecoderImpl<byte, byte>(frameInfo, presetCodingParameters, codingParameters, traits);
+                    return new ScanDecoderImpl<byte, byte>(frameInfo, presetCodingParameters, codingParameters, new LosslessTraits8());
+
                 case 12:
-                    throw new NotImplementedException();
+                    return new ScanDecoderImpl<ushort, ushort>(frameInfo, presetCodingParameters, codingParameters,
+                        new LosslessTraitsImplT<ushort, ushort>(maximumSampleValue, 0));
 
                 case 16:
-                    throw new NotImplementedException();
+                    return new ScanDecoderImpl<ushort, ushort>(frameInfo, presetCodingParameters, codingParameters, new LosslessTraits16(16));
             }
         }
 

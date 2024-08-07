@@ -5,10 +5,10 @@ using System.Numerics;
 
 namespace CharLS.JpegLS;
 
-internal abstract class LosslessTraitsImplT<TSample, TPixel> : TraitsBase<TSample, TPixel>
+internal class LosslessTraitsImplT<TSample, TPixel> : TraitsBase<TSample, TPixel>
     where TSample : struct
 {
-    protected LosslessTraitsImplT(int max, int near, int reset = Constants.DefaultResetValue)
+    internal LosslessTraitsImplT(int max, int near, int reset = Constants.DefaultResetValue)
         : base(max, near, reset)
     {
     }
@@ -41,8 +41,7 @@ internal abstract class LosslessTraitsImplT<TSample, TPixel> : TraitsBase<TSampl
 
     public override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
-        return default;
-        ////return (TSample)Convert.ChangeType(MAXVAL & (Px + ErrVal), typeof(TSample));
+        return MaximumSampleValue & (predictedValue + errorValue);
     }
 
     public override int CorrectPrediction(int predicted)
@@ -79,6 +78,26 @@ internal class LosslessTraits8 : LosslessTraitsImplT<byte, byte>
         return predictedValue + errorValue;
     }
 }
+
+
+internal class LosslessTraits16 : LosslessTraitsImplT<ushort, ushort>
+{
+    public LosslessTraits16(int bitsPerSample)
+        : base(bitsPerSample)
+    {
+    }
+
+    public /*override*/ int ComputeErrorValue(int errorValue)
+    {
+        return (ushort)errorValue;
+    }
+
+    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
+    {
+        return predictedValue + errorValue;
+    }
+}
+
 
 internal class LosslessTraitsTriplet<TSample> : LosslessTraitsImplT<TSample, Triplet<TSample>>
     where TSample : struct, IBinaryInteger<TSample>
