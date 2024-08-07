@@ -60,12 +60,13 @@ public class ComplianceTest
     //        decompress_file("DataFiles/t8nde3.jls", "DataFiles/test8bs2.pgm");
     //    }
 
-    //    TEST_METHOD(decompress_monochrome_16_bit_lossless) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 11 (T87_test-11-12.zip)
-    //        // Note: test image is actually 12 bit.
-    //        decompress_file("DataFiles/t16e0.jls", "DataFiles/test16.pgm");
-    //    }
+    [Fact]
+    public void DecompressMonochrome16BitLossless()
+    {
+        // ISO 14495-1: official test image 11 (T87_test-11-12.zip)
+        // Note: test image is actually 12 bit.
+        DecompressFile("conformance/t16e0.jls", "conformance/test16.pgm");
+    }
 
     //    TEST_METHOD(decompress_monochrome_16_bit_near_lossless_3) // NOLINT
     //    {

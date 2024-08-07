@@ -1,8 +1,8 @@
 <img src="docs/jpeg_ls_logo.png" alt="JPEG-LS Logo" width="100"/>
 
-# CharLS.Native .NET
+# CharLS .NET
 
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://raw.githubusercontent.com/team-charls/charls-dotnet/main/LICENSE.md)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/team-charls/charls-dotnet/blob/main/LICENSE.md)
 [![Build and Test](https://github.com/team-charls/charls-dotnet/actions/workflows/dotnet.yml/badge.svg)](https://github.com/team-charls/charls-dotnet/actions/workflows/dotnet.yml)
 
 CharLS .NET is an C# JPEG-LS library implementation.  
@@ -15,7 +15,7 @@ This project is considered work in progress and NOT ready for general use. The f
 * [X] Decode 8 bit images, interleave mode: none
 * [X] Decode 8 bit images, interleave mode: line
 * [X] Decode 8 bit images, interleave mode: sample
-* [ ] Decode 16 bit images, interleave mode: none
+* [X] Decode 16 bit images, interleave mode: none
 * [ ] Decode 16 bit images, interleave mode: line
 * [ ] Decode 16 bit images, interleave mode: sample
 * [ ] Encode 8 bit images, interleave mode: none
