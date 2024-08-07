@@ -435,7 +435,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     {
         int sign = Algorithm.BitWiseSign(qs);
         ref var context = ref RegularModeContext[Algorithm.ApplySign(qs, sign)];
-        int k = context.GetGolombCodingParameter();
+        int k = context.ComputeGolombCodingParameter();
         int predictedValue = _traits.CorrectPrediction(predicted + Algorithm.ApplySign(context.C, sign));
 
         int errorValue;
@@ -458,7 +458,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             errorValue = errorValue ^ context.GetErrorCorrection(_traits.NearLossless);
         }
 
-        context.update_variables_and_bias(errorValue, _traits.NearLossless, _traits.ResetThreshold);
+        context.UpdateVariablesAndBias(errorValue, _traits.NearLossless, _traits.ResetThreshold);
         errorValue = Algorithm.ApplySign(errorValue, sign);
         return _traits.ComputeReconstructedSample(predictedValue, errorValue);
     }

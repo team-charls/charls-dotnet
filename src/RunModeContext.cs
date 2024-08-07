@@ -8,21 +8,22 @@ namespace CharLS.JpegLS;
 internal struct RunModeContext
 {
     // Initialize with the default values as defined in ISO 14495-1, A.8, step 1.d and 1.f.
-    internal int RunInterruptionType;
-    internal int A;
-    internal byte N = 1;
-    internal byte Nn;
+    private int _a;
+    private byte _n = 1;
+    private byte _nn;
 
     internal RunModeContext(int runInterruptionType, int range)
     {
         RunInterruptionType = runInterruptionType;
-        A = Algorithm.InitializationValueForA(range);
+        _a = Algorithm.InitializationValueForA(range);
     }
+
+    internal int RunInterruptionType { get; }
 
     internal int GetGolombCode()
     {
-        int temp = A + (N >> 1) * RunInterruptionType;
-        int nTest = N;
+        int temp = _a + (_n >> 1) * RunInterruptionType;
+        int nTest = _n;
         int k = 0;
         for (; nTest < temp; ++k)
         {
@@ -37,7 +38,7 @@ internal struct RunModeContext
         bool map = (temp & 1) == 1;
         int errorValueAbs = (temp + Convert.ToInt32(map)) / 2;
 
-        if ((k != 0 || (2 * Nn >= N)) == map)
+        if ((k != 0 || (2 * _nn >= _n)) == map)
         {
             Debug.Assert(map == ComputeMap(-errorValueAbs, k));
             return -errorValueAbs;
@@ -52,28 +53,28 @@ internal struct RunModeContext
     {
         if (errorValue< 0)
         {
-            ++Nn;
+            ++_nn;
         }
 
-        A += (eMappedErrorValue + 1 - RunInterruptionType) >> 1;
+        _a += (eMappedErrorValue + 1 - RunInterruptionType) >> 1;
 
-        if (N == resetThreshold)
+        if (_n == resetThreshold)
         {
-            A >>= 1;
-            N = (byte)(N >> 1);
-            Nn = (byte)(Nn >> 1);
+            _a >>= 1;
+            _n = (byte)(_n >> 1);
+            _nn = (byte)(_nn >> 1);
         }
 
-        ++N;
+        ++_n;
     }
 
     /// <summary>Code segment A.21 – Computation of map for Errval mapping.</summary>
     private bool ComputeMap(int errorValue, int k)
     {
-        if (k == 0 && errorValue > 0 && 2 * Nn < N)
+        if (k == 0 && errorValue > 0 && 2 * _nn < _n)
             return true;
 
-        if (errorValue < 0 && 2 * Nn >= N)
+        if (errorValue < 0 && 2 * _nn >= _n)
             return true;
 
         if (errorValue < 0 && k != 0)
@@ -84,6 +85,6 @@ internal struct RunModeContext
 
     internal bool ComputeMapNegativeE(int k)
     {
-        return k != 0 || 2 * Nn >= N;
+        return k != 0 || 2 * _nn >= _n;
     }
 }
