@@ -97,7 +97,7 @@ internal sealed class JpegTestStreamWriter
         }
     }
 
-    public void WriteStartOfScanSegment(int componentId, int componentCount, int nearLossless, JpegLSInterleaveMode jpegLSInterleaveMode)
+    public void WriteStartOfScanSegment(int componentId, int componentCount, int nearLossless, InterleaveMode interleaveMode)
     {
         // Create a Scan Header as defined in T.87, C.2.3 and T.81, B.2.3
         WriteSegmentStart(JpegMarkerCode.StartOfScan, 1 + (componentCount * 2) + 3);
@@ -111,7 +111,7 @@ internal sealed class JpegTestStreamWriter
         }
 
         WriteByte((byte)nearLossless);// NEAR parameter
-        WriteByte((byte)jpegLSInterleaveMode);// ILV parameter
+        WriteByte((byte)interleaveMode);// ILV parameter
         WriteByte(0); // transformation
     }
 

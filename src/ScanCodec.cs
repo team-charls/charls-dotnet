@@ -38,7 +38,7 @@ internal class ScanCodec
         //ASSERT((parameters().interleave_mode == interleave_mode::none && frame_info().component_count == 1) ||
         //       parameters().interleave_mode != interleave_mode::none);
 
-        return CodingParameters.InterleaveMode != JpegLSInterleaveMode.None;
+        return CodingParameters.InterleaveMode != InterleaveMode.None;
     }
 
     protected void IncrementRunIndex()

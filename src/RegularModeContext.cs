@@ -30,7 +30,7 @@ internal struct RegularModeContext
         }
 
         if (k == Constants.MaxKValue)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
 
         return k;
     }
@@ -50,7 +50,7 @@ internal struct RegularModeContext
 
         const int limit = 65536 * 256;
         if (A >= limit || Math.Abs(B) >= limit)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
 
         if (N == resetThreshold)
         {

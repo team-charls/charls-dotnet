@@ -13,9 +13,9 @@ internal static class Check
 }
 
 /// <summary>
-/// Defines the result codes that the native CharLS implementation can return (see enumeration charls::jpegls_errc in public_types.h).
+/// Defines the error codes that can be used as additional information in the thrown exceptions.
 /// </summary>
-public enum JpegLSError
+public enum ErrorCode
 {
     /// <summary>
     /// The operation completed without errors.

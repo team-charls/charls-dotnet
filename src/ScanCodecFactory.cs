@@ -11,7 +11,7 @@ internal class ScanCodecFactory
 
         if (codingParameters.NearLossless == 0)
         {
-            if (codingParameters.InterleaveMode == JpegLSInterleaveMode.Sample)
+            if (codingParameters.InterleaveMode == InterleaveMode.Sample)
             {
                 if (frameInfo.ComponentCount == 3 && frameInfo.BitsPerSample == 8)
                 {

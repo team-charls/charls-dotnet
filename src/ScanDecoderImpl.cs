@@ -44,15 +44,15 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         {
             switch (CodingParameters.InterleaveMode)
             {
-                case JpegLSInterleaveMode.None:
+                case InterleaveMode.None:
                     DecodeLinesByteNone(destination);
                     break;
 
-                case JpegLSInterleaveMode.Line:
+                case InterleaveMode.Line:
                     DecodeLinesByteLine(destination);
                     break;
 
-                case JpegLSInterleaveMode.Sample:
+                case InterleaveMode.Sample:
                     DecodeLinesTripletByte(destination);
                     break;
             }
@@ -61,15 +61,15 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         {
             switch (CodingParameters.InterleaveMode)
             {
-                case JpegLSInterleaveMode.None:
+                case InterleaveMode.None:
                     DecodeLinesUint16None(destination);
                     break;
 
-                case JpegLSInterleaveMode.Line:
+                case InterleaveMode.Line:
                     //DecodeLinesByteLine(destination);
                     break;
 
-                case JpegLSInterleaveMode.Sample:
+                case InterleaveMode.Sample:
                     //DecodeLinesTripletByte(destination);
                     break;
             }
@@ -85,13 +85,13 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     {
         switch (CodingParameters.InterleaveMode)
         {
-            case JpegLSInterleaveMode.None:
+            case InterleaveMode.None:
                 return new ProcessDecodedSingleComponent(stride, 1);
 
-            case JpegLSInterleaveMode.Line:
+            case InterleaveMode.Line:
                 return new ProcessDecodedSingleComponentToLine(stride, 3);
 
-            case JpegLSInterleaveMode.Sample:
+            case InterleaveMode.Sample:
                 return new ProcessDecodedTripletComponent(stride, 3);
         }
 
@@ -450,7 +450,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         {
             errorValue = Algorithm.UnmapErrorValue(DecodeValue(k, _traits.Limit, _traits.qbpp));
             if (Math.Abs(errorValue) > 65535)
-                throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
+                throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
         }
 
         if (k == 0)
@@ -539,7 +539,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         }
 
         if (index > pixelCount)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
 
         for (int i = 0; i < index; ++i)
         {
@@ -574,7 +574,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         }
 
         if (index > pixelCount)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
 
         for (int i = 0; i < index; ++i)
         {
@@ -609,7 +609,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         }
 
         if (index > pixelCount)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidEncodedData);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
 
         for (int i = 0; i < index; ++i)
         {
