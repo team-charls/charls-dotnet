@@ -5,11 +5,10 @@ using System.Numerics;
 
 namespace CharLS.JpegLS;
 
-internal class LosslessTraitsImplT<TSample, TPixel> : TraitsBase<TSample, TPixel>
-    where TSample : struct
+internal class LosslessTraitsImplT : Traits
 {
-    internal LosslessTraitsImplT(int max, int near, int reset = Constants.DefaultResetValue)
-        : base(max, near, reset)
+    internal LosslessTraitsImplT(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetValue)
+        : base(maximumSampleValue, nearLossless, resetThreshold)
     {
     }
 
@@ -28,11 +27,11 @@ internal class LosslessTraitsImplT<TSample, TPixel> : TraitsBase<TSample, TPixel
         return lhs == rhs;
     }
 
-    public override bool IsNear(TPixel lhs, TPixel rhs)
-    {
-        return false;
-        ////return IsNear(Convert.ToInt32(lhs), Convert.ToInt32(rhs));
-    }
+    //public override bool IsNear(TPixel lhs, TPixel rhs)
+    //{
+    //    return false;
+    //    ////return IsNear(Convert.ToInt32(lhs), Convert.ToInt32(rhs));
+    //}
 
     public override int ModuloRange(int errorValue)
     {
@@ -56,7 +55,7 @@ internal class LosslessTraitsImplT<TSample, TPixel> : TraitsBase<TSample, TPixel
 }
 
 
-internal class LosslessTraits8 : LosslessTraitsImplT<byte, byte>
+internal class LosslessTraits8 : LosslessTraitsImplT
 {
     public LosslessTraits8()
         : base(8)
@@ -80,7 +79,7 @@ internal class LosslessTraits8 : LosslessTraitsImplT<byte, byte>
 }
 
 
-internal class LosslessTraits16 : LosslessTraitsImplT<ushort, ushort>
+internal class LosslessTraits16 : LosslessTraitsImplT
 {
     public LosslessTraits16(int bitsPerSample)
         : base(bitsPerSample)
@@ -99,18 +98,18 @@ internal class LosslessTraits16 : LosslessTraitsImplT<ushort, ushort>
 }
 
 
-internal class LosslessTraitsTriplet<TSample> : LosslessTraitsImplT<TSample, Triplet<TSample>>
+internal class LosslessTraitsTriplet<TSample> : LosslessTraitsImplT
     where TSample : struct, IBinaryInteger<TSample>
 {
-    public LosslessTraitsTriplet(int max, int near, int reset = Constants.DefaultResetValue)
-        : base(max, near, reset)
+    public LosslessTraitsTriplet(int maximumSampleValue, int near, int reset = Constants.DefaultResetValue)
+        : base(maximumSampleValue, near, reset)
     {
     }
 
-    public override bool IsNear(Triplet<TSample> lhs, Triplet<TSample> rhs)
-    {
-        return lhs.Equals(rhs);
-    }
+    //public override bool IsNear(Triplet<TSample> lhs, Triplet<TSample> rhs)
+    //{
+    //    return lhs.Equals(rhs);
+    //}
 
     public override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {

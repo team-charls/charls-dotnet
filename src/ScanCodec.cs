@@ -51,8 +51,7 @@ internal class ScanCodec
         RunIndex = Math.Max(0, RunIndex - 1);
     }
 
-    protected sbyte[] InitializeQuantizationLut<TSample, TPixel>(ITraits<TSample, TPixel> traits, int threshold1, int threshold2, int threshold3)
-        where TSample : struct
+    protected sbyte[] InitializeQuantizationLut(Traits traits, int threshold1, int threshold2, int threshold3)
     {
     //// For lossless mode with default parameters, we have precomputed the lookup table for bit counts 8, 10, 12 and 16.
     //if (precomputed_quantization_lut_available(traits, threshold1, threshold2, threshold3))

@@ -12,17 +12,17 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     where TPixel : struct
 {
     private int _restartInterval;
-    private readonly TraitsBase<TSample, TPixel> _traits;
+    private readonly Traits _traits;
     private readonly sbyte[] _quantizationLut;
     private IProcessLineDecoded? _processLineDecoded;
 
     internal ScanDecoderImpl(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
-        CodingParameters codingParameters, TraitsBase<TSample, TPixel> traits) :
+        CodingParameters codingParameters, Traits traits) :
         base(frameInfo, presetCodingParameters, codingParameters)
     {
         _traits = traits;
 
-        _quantizationLut = InitializeQuantizationLut<TSample, TPixel>(traits, PresetCodingParameters.Threshold1,
+        _quantizationLut = InitializeQuantizationLut(traits, PresetCodingParameters.Threshold1,
             PresetCodingParameters.Threshold2, PresetCodingParameters.Threshold3);
 
         ResetParameters(_traits.Range);
@@ -458,7 +458,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             errorValue = errorValue ^ context.GetErrorCorrection(_traits.NearLossless);
         }
 
-        context.update_variables_and_bias(errorValue, _traits.NearLossless, _traits.RESET);
+        context.update_variables_and_bias(errorValue, _traits.NearLossless, _traits.ResetThreshold);
         errorValue = Algorithm.ApplySign(errorValue, sign);
         return _traits.ComputeReconstructedSample(predictedValue, errorValue);
     }

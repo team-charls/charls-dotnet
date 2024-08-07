@@ -3,41 +3,28 @@
 
 namespace CharLS.JpegLS;
 
-internal abstract class TraitsBase<TSample, TPixel> : ITraits<TSample, TPixel>
-    where TSample : struct
+internal abstract class Traits
 {
-    protected TraitsBase(int max, int near, int reset = Constants.DefaultResetValue)
+    protected Traits(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetValue)
     {
-        MaximumSampleValue = max;
-        Range = (max + 2 * near) / (2 * near + 1) + 1;
-        NEAR = near;
+        MaximumSampleValue = maximumSampleValue;
+        Range = (maximumSampleValue + 2 * nearLossless) / (2 * nearLossless + 1) + 1;
+        NearLossless = nearLossless;
         qbpp = Log2(Range);
-        bpp = Log2(max);
+        bpp = Log2(maximumSampleValue);
         Limit = 2 * (bpp + Math.Max(8, bpp));
-        RESET = reset;
+        ResetThreshold = resetThreshold;
         QuantizationRange = 1 << bpp;
     }
 
-    //protected TraitsBase(ITraits<TSample, TPixel> other)
-    //{
-    //    MAXVAL = other.MAXVAL;
-    //    RANGE = other.RANGE;
-    //    NEAR = other.NEAR;
-    //    qbpp = other.qbpp;
-    //    bpp = other.bpp;
-    //    Limit = other.Limit;
-    //    RESET = other.RESET;
-    //}
-
-    protected TraitsBase(int bitsperpixel)
+    protected Traits(int bitsperpixel)
     {
-        NEAR = 0;
         bpp = bitsperpixel;
         qbpp = bitsperpixel;
         Range = 1 << bpp;
         MaximumSampleValue = (1 << bpp) - 1;
         Limit = 2 * (bitsperpixel + Math.Max(8, bitsperpixel));
-        RESET = Constants.DefaultResetValue;
+        ResetThreshold = Constants.DefaultResetValue;
         QuantizationRange = 1 << bitsperpixel;
     }
 
@@ -45,19 +32,17 @@ internal abstract class TraitsBase<TSample, TPixel> : ITraits<TSample, TPixel>
 
     public int Range { get; }
 
-    public int NEAR { get; }
-
     public int qbpp { get; }
 
     public int bpp { get; }
 
     public int Limit { get; }
 
-    public int RESET { get; }
+    public int ResetThreshold { get; }
 
     public int QuantizationRange { get; }
 
-    public abstract int NearLossless { get; }
+    public virtual int NearLossless { get; }
 
     public abstract int ComputeErrVal(int e);
 
@@ -65,7 +50,7 @@ internal abstract class TraitsBase<TSample, TPixel> : ITraits<TSample, TPixel>
 
     public abstract bool IsNear(int lhs, int rhs);
 
-    public abstract bool IsNear(TPixel lhs, TPixel rhs);
+    //public abstract bool IsNear(TPixel lhs, TPixel rhs);
 
     public abstract int CorrectPrediction(int predicted);
 

@@ -4,23 +4,17 @@
 
 namespace CharLS.JpegLS;
 
-internal class DefaultTraits<TSample, TPixel> : TraitsBase<TSample, TPixel>
-    where TSample : struct
+internal class DefaultTraits : Traits
 {
     private readonly int _maximumSampleValue;
-    private readonly int _nearLossless;
     private readonly int _range;
-
 
     internal DefaultTraits(int maximumSampleValue, int bitsPerPixel, int nearLossless)
         : base(bitsPerPixel)
     {
         _maximumSampleValue = maximumSampleValue;
-        _nearLossless = nearLossless;
-        _range = Algorithm.ComputeRangeParameter(_maximumSampleValue, _nearLossless);
+        _range = Algorithm.ComputeRangeParameter(_maximumSampleValue, nearLossless);
     }
-
-    public override int NearLossless => _nearLossless;
 
     public override int ComputeErrVal(int e)
     {
@@ -45,10 +39,10 @@ internal class DefaultTraits<TSample, TPixel> : TraitsBase<TSample, TPixel>
         throw new NotImplementedException();
     }
 
-    public override bool IsNear(TPixel lhs, TPixel rhs)
-    {
-        throw new NotImplementedException();
-    }
+    //public override bool IsNear(TPixel lhs, TPixel rhs)
+    //{
+    //    throw new NotImplementedException();
+    //}
 
     public override int ModuloRange(int errorValue)
     {
@@ -57,18 +51,18 @@ internal class DefaultTraits<TSample, TPixel> : TraitsBase<TSample, TPixel>
 
     private int Dequantize(int errorValue)
     {
-        return errorValue * (2 * _nearLossless + 1);
+        return errorValue * (2 * NearLossless + 1);
     }
 
     private int FixReconstructedValue(int value)
     {
-        if (value < -_nearLossless)
+        if (value < -NearLossless)
         {
-            value = value + _range * (2 * _nearLossless + 1);
+            value = value + _range * (2 * NearLossless + 1);
         }
-        else if (value > _maximumSampleValue + _nearLossless)
+        else if (value > _maximumSampleValue + NearLossless)
         {
-            value = value - _range * (2 * _nearLossless + 1);
+            value = value - _range * (2 * NearLossless + 1);
         }
 
         return CorrectPrediction(value);
