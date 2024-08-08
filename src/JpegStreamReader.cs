@@ -249,11 +249,11 @@ internal class JpegStreamReader
                 break;
 
             case JpegMarkerCode.StartOfScan:
-                ReadStartOfScan();
+                ReadStartOfScanSegment();
                 break;
 
             case JpegMarkerCode.Comment:
-                ReadComment();
+                ReadCommentSegment();
                 break;
 
             case JpegMarkerCode.JpegLSPresetParameters:
@@ -279,6 +279,7 @@ internal class JpegStreamReader
             case JpegMarkerCode.ApplicationData13:
             case JpegMarkerCode.ApplicationData14:
             case JpegMarkerCode.ApplicationData15:
+                ReadApplicationDataSegment(markerCode);
                 break;
 
             case JpegMarkerCode.ApplicationData8:
@@ -413,7 +414,13 @@ internal class JpegStreamReader
         _state = State.ScanSection;
     }
 
-    private void ReadComment()
+    private void ReadApplicationDataSegment(JpegMarkerCode markerCode)
+    {
+        ////call_application_data_callback(marker_code);
+        SkipRemainingSegmentData();
+    }
+
+    private void ReadCommentSegment()
     {
         var comment = Comment;
         if (comment != null)
@@ -523,7 +530,7 @@ internal class JpegStreamReader
         };
     }
 
-    internal void ReadStartOfScan()
+    internal void ReadStartOfScanSegment()
     {
         CheckMinimalSegmentSize(1);
 
@@ -718,5 +725,4 @@ internal class JpegStreamReader
                 return false;
         }
     }
-
 }

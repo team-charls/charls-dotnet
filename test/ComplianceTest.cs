@@ -28,37 +28,42 @@ public class ComplianceTest
         DecompressFile("conformance/t8c2e0.jls", "conformance/test8.ppm");
     }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_none_near_lossless_3) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 4 (T87_test-1-2-3-4-5-6.zip)
-    //        decompress_file("DataFiles/t8c2e3.jls", "DataFiles/test8.ppm");
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveNoneNearLossless3()
+    {
+        // ISO 14495-1: official test image 4 (T87_test-1-2-3-4-5-6.zip)
+        DecompressFile("conformance/t8c0e3.jls", "conformance/test8.ppm");
+    }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_line_near_lossless_3) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 5 (T87_test-1-2-3-4-5-6.zip)
-    //        decompress_file("DataFiles/t8c1e3.jls", "DataFiles/test8.ppm");
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveLineNearLossless3()
+    {
+        // ISO 14495-1: official test image 5 (T87_test-1-2-3-4-5-6.zip)
+        DecompressFile("conformance/t8c1e3.jls", "conformance/test8.ppm");
+    }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_sample_near_lossless_3) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 6 (T87_test-1-2-3-4-5-6.zip)
-    //        decompress_file("DataFiles/t8c2e3.jls", "DataFiles/test8.ppm");
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveSampleNearLossless3()
+    {
+        // ISO 14495-1: official test image 6 (T87_test-1-2-3-4-5-6.zip)
+        DecompressFile("conformance/t8c2e3.jls", "conformance/test8.ppm");
+    }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_line_lossless_non_default) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 9 (T87_test-1-2-3-4-5-6.zip)
-    //        // NON-DEFAULT parameters T1=T2=T3=9,RESET=31.
-    //        decompress_file("DataFiles/t8nde0.jls", "DataFiles/test8bs2.pgm");
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveLineLosslessNonDefault()
+    {
+        // ISO 14495-1: official test image 9 (T87_test-1-2-3-4-5-6.zip)
+        // NON-DEFAULT parameters T1=T2=T3=9,RESET=31.
+        DecompressFile("conformance/t8nde0.jls", "conformance/test8bs2.pgm");
+    }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_line_near_lossless_3_non_default) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 10 (T87_test-1-2-3-4-5-6.zip)
-    //        // NON-DEFAULT parameters T1=T2=T3=9,RESET=31.
-    //        decompress_file("DataFiles/t8nde3.jls", "DataFiles/test8bs2.pgm");
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveLineNearLossless3NonDefault()
+    {
+        // ISO 14495-1: official test image 10 (T87_test-1-2-3-4-5-6.zip)
+        // NON-DEFAULT parameters T1=T2=T3=9,RESET=31.
+        DecompressFile("conformance/t8nde3.jls", "conformance/test8bs2.pgm");
+    }
 
     [Fact]
     public void DecompressMonochrome16BitLossless()
@@ -68,12 +73,13 @@ public class ComplianceTest
         DecompressFile("conformance/t16e0.jls", "conformance/test16.pgm");
     }
 
-    //    TEST_METHOD(decompress_monochrome_16_bit_near_lossless_3) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 12 (T87_test-11-12.zip)
-    //        // Note: test image is actually 12 bit.
-    //        decompress_file("DataFiles/t16e3.jls", "DataFiles/TEST16.pgm", false);
-    //    }
+    [Fact]
+    public void DecompressMonochrome16BitNearLossless3()
+    {
+        // ISO 14495-1: official test image 12 (T87_test-11-12.zip)
+        // Note: test image is actually 12 bit.
+        DecompressFile("conformance/t16e3.jls", "conformance/test16.pgm", false);
+    }
 
     [Fact]
     public void TulipsMonochrome8BitLosslessHp()
@@ -98,35 +104,40 @@ public class ComplianceTest
         }
     }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_none_lossless_restart_7) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 1 but with restart markers.
-    //        decompress_file("DataFiles/test8_ilv_none_rm_7.jls", "DataFiles/test8.ppm", false);
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveNoneLosslessRestart7()
+    {
+        // ISO 14495-1: official test image 1 but with restart markers.
+        DecompressFile("test-images/test8_ilv_none_rm_7.jls", "conformance/test8.ppm", false);
+    }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_line_lossless_restart_7) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 2 but with restart markers.
-    //        decompress_file("DataFiles/test8_ilv_line_rm_7.jls", "DataFiles/test8.ppm", false);
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveLineLosslessRestart7()
+    {
+        // ISO 14495-1: official test image 2 but with restart markers.
+        DecompressFile("test-images/test8_ilv_line_rm_7.jls", "conformance/test8.ppm", false);
+    }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_sample_lossless_restart_7) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 3 but with restart markers.
-    //        decompress_file("DataFiles/test8_ilv_sample_rm_7.jls", "DataFiles/test8.ppm", false);
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveSampleLosslessRestart7()
+    {
+        // ISO 14495-1: official test image 3 but with restart markers.
+        DecompressFile("test-images/test8_ilv_sample_rm_7.jls", "conformance/test8.ppm", false);
+    }
 
-    //    TEST_METHOD(decompress_color_8_bit_interleave_sample_lossless_restart_300) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 3 but with restart markers and restart interval 300
-    //        decompress_file("DataFiles/test8_ilv_sample_rm_300.jls", "DataFiles/test8.ppm", false);
-    //    }
+    [Fact]
+    public void DecompressColor8BitInterleaveSampleLosslessRestart300()
+    {
+        // ISO 14495-1: official test image 3 but with restart markers and restart interval 300
+        DecompressFile("test-images/test8_ilv_sample_rm_300.jls", "conformance/test8.ppm", false);
+    }
 
-    //    TEST_METHOD(decompress_monochrome_16_bit_restart_5) // NOLINT
-    //    {
-    //        // ISO 14495-1: official test image 12 but with restart markers and restart interval 5
-    //        decompress_file("DataFiles/test16_rm_5.jls", "DataFiles/test16.pgm", false);
-    //    }
+    [Fact]
+    public void DecompressMonochrome16BitRestart5()
+    {
+        // ISO 14495-1: official test image 12 but with restart markers and restart interval 5
+        DecompressFile("test-images/test16_rm_5.jls", "conformance/test16.pgm", false);
+    }
 
     [Fact]
     public void DecompressMappingTableSampleAnnexH4Dot5()

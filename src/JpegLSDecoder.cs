@@ -11,7 +11,6 @@ namespace CharLS.JpegLS;
 public sealed class JpegLSDecoder
 {
     private FrameInfo? _frameInfo;
-    private int? _nearLossless;
     //private JpegLSInterleaveMode? _interleaveMode;
     private readonly JpegStreamReader _reader = new();
 
@@ -106,12 +105,7 @@ public sealed class JpegLSDecoder
         get
         {
             CheckHeaderRead();
-            if (!_nearLossless.HasValue)
-            {
-                _nearLossless = 0;
-            }
-
-            return _nearLossless.Value;
+            return _reader.GetCodingParameters().NearLossless;
         }
     }
 

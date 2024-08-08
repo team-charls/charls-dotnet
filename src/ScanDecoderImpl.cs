@@ -35,10 +35,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         Initialize(source);
 
         // Process images without a restart interval, as 1 large restart interval.
-        if (CodingParameters.RestartInterval == 0)
-        {
-            _restartInterval = FrameInfo.Height;
-        }
+        _restartInterval = CodingParameters.RestartInterval == 0 ? FrameInfo.Height : CodingParameters.RestartInterval;
 
         if (FrameInfo.BitsPerSample <= 8)
         {
