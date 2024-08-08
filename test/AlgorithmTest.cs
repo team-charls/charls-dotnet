@@ -12,8 +12,8 @@ public class AlgorithmTest
     {
         CallAndCompareLog2Ceiling(1);
         CallAndCompareLog2Ceiling(2);
-        CallAndCompareLog2Ceiling(32);
         CallAndCompareLog2Ceiling(31);
+        CallAndCompareLog2Ceiling(32);
         CallAndCompareLog2Ceiling(33);
         CallAndCompareLog2Ceiling(ushort.MaxValue);
         CallAndCompareLog2Ceiling(ushort.MaxValue + 1);
@@ -91,11 +91,11 @@ public class AlgorithmTest
         Assert.Equal(errorValue, actual);
     }
 
-    private static void CallAndCompareLog2Ceiling(int arg)
+    private static void CallAndCompareLog2Ceiling(int value)
     {
         // Use the standard floating point algorithm to compute the expected value.
-        int expected = (int)Math.Ceiling(Math.Log2(arg));
-        Assert.Equal(expected, Algorithm.Log2Ceiling(arg));
+        int expected = (int)Math.Ceiling(Math.Log2(value));
+        Assert.Equal(expected, Algorithm.Log2Ceiling(value));
     }
 
     /// <summary>

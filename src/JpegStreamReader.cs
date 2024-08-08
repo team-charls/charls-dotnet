@@ -331,19 +331,8 @@ internal class JpegStreamReader
             case JpegMarkerCode.ApplicationData15:
                 return;
 
-            // Check explicit for one of the other common JPEG encodings.
-            case JpegMarkerCode.StartOfFrameBaselineJpeg:
-            case JpegMarkerCode.StartOfFrameExtendedSequential:
-            case JpegMarkerCode.StartOfFrameProgressive:
-            case JpegMarkerCode.StartOfFrameLossless:
-            case JpegMarkerCode.StartOfFrameDifferentialSequential:
-            case JpegMarkerCode.StartOfFrameDifferentialProgressive:
-            case JpegMarkerCode.StartOfFrameDifferentialLossless:
-            case JpegMarkerCode.StartOfFrameExtendedArithmetic:
-            case JpegMarkerCode.StartOfFrameProgressiveArithmetic:
-            case JpegMarkerCode.StartOfFrameLosslessArithmetic:
-            case JpegMarkerCode.StartOfFrameJpeglSExtended:
-                throw Util.CreateInvalidDataException(ErrorCode.EncodingNotSupported);
+            case JpegMarkerCode.DefineNumberOfLines: // DLN is a JPEG-LS valid marker, but not supported: handle as unknown.
+                throw Util.CreateInvalidDataException(ErrorCode.UnknownJpegMarkerFound);
 
             case JpegMarkerCode.StartOfImage:
                 throw Util.CreateInvalidDataException(ErrorCode.DuplicateStartOfImageMarker);
@@ -351,6 +340,10 @@ internal class JpegStreamReader
             case JpegMarkerCode.EndOfImage:
                 throw Util.CreateInvalidDataException(ErrorCode.UnexpectedEndOfImageMarker);
         }
+
+        // Check explicit for one of the other common JPEG encodings.
+        if (IsKnownJpegSofMarker(markerCode))
+            throw Util.CreateInvalidDataException(ErrorCode.EncodingNotSupported);
 
         if (IsRestartMarkerCode(markerCode))
             throw Util.CreateInvalidDataException(ErrorCode.UnexpectedRestartMarker);
@@ -691,4 +684,39 @@ internal class JpegStreamReader
         internal byte TableId { get; }
         internal byte EntrySize { get; }
     }
+
+    private static bool IsKnownJpegSofMarker(JpegMarkerCode markerCode)
+    {
+        // The following start of frame (SOF) markers are defined in ISO/IEC 10918-1 | ITU T.81 (general JPEG standard).
+        const byte sofBaselineJpeg = 0xC0;            // SOF_0: Baseline jpeg encoded frame.
+        const byte sofExtendedSequential = 0xC1;      // SOF_1: Extended sequential Huffman encoded frame.
+        const byte sofProgressive = 0xC2;             // SOF_2: Progressive Huffman encoded frame.
+        const byte sofLossless = 0xC3;                // SOF_3: Lossless Huffman encoded frame.
+        const byte sofDifferentialSequential = 0xC5;  // SOF_5: Differential sequential Huffman encoded frame.
+        const byte sofDifferentialProgressive = 0xC6; // SOF_6: Differential progressive Huffman encoded frame.
+        const byte sofDifferentialLossless = 0xC7;    // SOF_7: Differential lossless Huffman encoded frame.
+        const byte sofExtendedArithmetic = 0xC9;      // SOF_9: Extended sequential arithmetic encoded frame.
+        const byte sofProgressiveArithmetic = 0xCA;   // SOF_10: Progressive arithmetic encoded frame.
+        const byte sofLosslessArithmetic = 0xCB;      // SOF_11: Lossless arithmetic encoded frame.
+        const byte sofJpegLSExtended = 0xF9;          // SOF_57: JPEG-LS extended (ISO/IEC 14495-2) encoded frame.
+
+        switch ((byte)markerCode)
+        {
+            case sofBaselineJpeg:
+            case sofExtendedSequential:
+            case sofProgressive:
+            case sofLossless:
+            case sofDifferentialSequential:
+            case sofDifferentialProgressive:
+            case sofDifferentialLossless:
+            case sofExtendedArithmetic:
+            case sofProgressiveArithmetic:
+            case sofLosslessArithmetic:
+            case sofJpegLSExtended:
+                return true;
+            default:
+                return false;
+        }
+    }
+
 }
