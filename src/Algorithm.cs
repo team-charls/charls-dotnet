@@ -2,11 +2,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Diagnostics;
+using System.Numerics;
 
 namespace CharLS.JpegLS;
 
 internal static class Algorithm
 {
+    internal static int Log2Ceiling(int value)
+    {
+        Debug.Assert(value >= 0);
+        Debug.Assert((uint)value <= uint.MaxValue >> 2); // otherwise 1 << x becomes negative.
+
+        int log2Floor = BitOperations.Log2((uint)value);
+        bool isPowerOfTwo = (value & (value - 1)) == 0;
+
+        // If value is not a power of two, add 1 to get the ceiling
+        return isPowerOfTwo ? log2Floor : log2Floor + 1;
+    }
+
     // Computes the initial value for A. See ISO/IEC 14495-1, A.8, step 1.d and A.2.1
     internal static int InitializationValueForA(int range)
     {

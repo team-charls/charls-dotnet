@@ -61,4 +61,4 @@ internal sealed class GolombCodeTable
         int highBits = mappedError >> k;
         return new Tuple<int, int>(highBits + k + 1, (1 << k) | (mappedError & ((1 << k) - 1)));
     }
-};
+}

@@ -23,7 +23,7 @@ public sealed class JpegLSDecoder
         SpiffHeaderNotFound,
         HeaderRead,
         Completed
-    };
+    }
 
     private State _state = State.Initial;
 
@@ -123,7 +123,7 @@ public sealed class JpegLSDecoder
     /// </remarks>
     /// <returns>The result of the operation: success or a failure code.</returns>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public JpegLSInterleaveMode InterleaveMode
+    public InterleaveMode InterleaveMode
     {
         get
         {
@@ -161,11 +161,11 @@ public sealed class JpegLSDecoder
 
         switch (InterleaveMode)
         {
-            case JpegLSInterleaveMode.None:
+            case InterleaveMode.None:
                 return stride * FrameInfo.ComponentCount * FrameInfo.Height;
 
-            case JpegLSInterleaveMode.Line:
-            case JpegLSInterleaveMode.Sample:
+            case InterleaveMode.Line:
+            case InterleaveMode.Sample:
                 return stride * FrameInfo.Height;
 
             default:
@@ -254,7 +254,7 @@ public sealed class JpegLSDecoder
 
         // Compute the layout of the destination buffer.
         int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * BitToByteCount(FrameInfo.BitsPerSample);
-        int planeCount = _reader.InterleaveMode == JpegLSInterleaveMode.None ? FrameInfo.ComponentCount : 1;
+        int planeCount = _reader.InterleaveMode == InterleaveMode.None ? FrameInfo.ComponentCount : 1;
         int minimumDestinationSize = (bytesPerPlane * planeCount) - (stride - minimumStride);
 
         if (destination.Length < minimumDestinationSize)
@@ -302,7 +302,7 @@ public sealed class JpegLSDecoder
     private int CalculateMinimumStride()
     {
         int componentsInPlaneCount = 
-            _reader.InterleaveMode == JpegLSInterleaveMode.None
+            _reader.InterleaveMode == InterleaveMode.None
             ? 1
             : FrameInfo.ComponentCount;
         return componentsInPlaneCount * FrameInfo.Width * Util.BitToByteCount(FrameInfo.BitsPerSample);

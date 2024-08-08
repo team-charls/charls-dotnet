@@ -11,7 +11,7 @@ internal class ScanCodecFactory
 
         if (codingParameters.NearLossless == 0)
         {
-            if (codingParameters.InterleaveMode == JpegLSInterleaveMode.Sample)
+            if (codingParameters.InterleaveMode == InterleaveMode.Sample)
             {
                 if (frameInfo.ComponentCount == 3 && frameInfo.BitsPerSample == 8)
                 {
@@ -28,7 +28,7 @@ internal class ScanCodecFactory
 
                 case 12:
                     return new ScanDecoderImpl<ushort, ushort>(frameInfo, presetCodingParameters, codingParameters,
-                        new LosslessTraitsImplT<ushort, ushort>(maximumSampleValue, 0));
+                        new LosslessTraitsImplT(maximumSampleValue, 0));
 
                 case 16:
                     return new ScanDecoderImpl<ushort, ushort>(frameInfo, presetCodingParameters, codingParameters, new LosslessTraits16(16));
@@ -37,7 +37,7 @@ internal class ScanCodecFactory
 
         if (frameInfo.BitsPerSample <= 8)
         {
-            var traits = new DefaultTraits<byte, byte>(maximumSampleValue, frameInfo.BitsPerSample, codingParameters.NearLossless);
+            var traits = new DefaultTraits(maximumSampleValue, frameInfo.BitsPerSample, codingParameters.NearLossless);
             return new ScanDecoderImpl<byte, byte>(frameInfo, presetCodingParameters, codingParameters, traits);
         }
 

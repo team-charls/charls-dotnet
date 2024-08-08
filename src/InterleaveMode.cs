@@ -6,7 +6,7 @@ namespace CharLS.JpegLS;
 /// <summary>
 /// Defines the interleave mode for multi-component (color) pixel data.
 /// </summary>
-public enum JpegLSInterleaveMode
+public enum InterleaveMode
 {
     /// <summary>
     /// The encoded pixel data is not interleaved but stored as component for component, for example: RRRGGGBBB.

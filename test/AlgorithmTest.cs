@@ -8,6 +8,19 @@ namespace CharLS.JpegLS.Test;
 public class AlgorithmTest
 {
     [Fact]
+    public void Log2Ceiling()
+    {
+        CallAndCompareLog2Ceiling(1);
+        CallAndCompareLog2Ceiling(2);
+        CallAndCompareLog2Ceiling(31);
+        CallAndCompareLog2Ceiling(32);
+        CallAndCompareLog2Ceiling(33);
+        CallAndCompareLog2Ceiling(ushort.MaxValue);
+        CallAndCompareLog2Ceiling(ushort.MaxValue + 1);
+        CallAndCompareLog2Ceiling((int)(uint.MaxValue >> 2));
+    }
+
+    [Fact]
     public void InitializationValueForA()
     {
         int minValue = Algorithm.InitializationValueForA(4);
@@ -76,6 +89,13 @@ public class AlgorithmTest
         int actual = Algorithm.UnmapErrorValue(mappedErrorValue);
 
         Assert.Equal(errorValue, actual);
+    }
+
+    private static void CallAndCompareLog2Ceiling(int value)
+    {
+        // Use the standard floating point algorithm to compute the expected value.
+        int expected = (int)Math.Ceiling(Math.Log2(value));
+        Assert.Equal(expected, Algorithm.Log2Ceiling(value));
     }
 
     /// <summary>

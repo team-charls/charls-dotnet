@@ -7,5 +7,5 @@ internal sealed record CodingParameters
 {
     public int NearLossless { get; init; }
     public int RestartInterval { get; init; }
-    public JpegLSInterleaveMode InterleaveMode { get; init; }
+    public InterleaveMode InterleaveMode { get; init; }
 }

@@ -5,49 +5,49 @@ namespace CharLS.JpegLS;
 
 internal static class Util
 {
-    internal static InvalidDataException CreateInvalidDataException(JpegLSError error)
+    internal static InvalidDataException CreateInvalidDataException(ErrorCode errorCode)
     {
         InvalidDataException exception;
 
-        switch (error)
+        switch (errorCode)
         {
-            case JpegLSError.TooMuchEncodedData:
-            case JpegLSError.ParameterValueNotSupported:
-            case JpegLSError.InvalidEncodedData:
-            case JpegLSError.SourceBufferTooSmall:
-            case JpegLSError.BitDepthForTransformNotSupported:
-            case JpegLSError.ColorTransformNotSupported:
-            case JpegLSError.EncodingNotSupported:
-            case JpegLSError.UnknownJpegMarkerFound:
-            case JpegLSError.JpegMarkerStartByteNotFound:
-            case JpegLSError.StartOfImageMarkerNotFound:
-            case JpegLSError.UnexpectedMarkerFound:
-            case JpegLSError.InvalidMarkerSegmentSize:
-            case JpegLSError.DuplicateStartOfImageMarker:
-            case JpegLSError.DuplicateStartOfFrameMarker:
-            case JpegLSError.DuplicateComponentIdInStartOfFrameSegment:
-            case JpegLSError.UnexpectedEndOfImageMarker:
-            case JpegLSError.InvalidJpegLSPresetParameterType:
-            case JpegLSError.JpeglsPresetExtendedParameterTypeNotSupported:
-            case JpegLSError.MissingEndOfSpiffDirectory:
-            case JpegLSError.InvalidParameterWidth:
-            case JpegLSError.InvalidParameterHeight:
-            case JpegLSError.InvalidParameterComponentCount:
-            case JpegLSError.InvalidParameterBitsPerSample:
-            case JpegLSError.InvalidParameterInterleaveMode:
-            case JpegLSError.InvalidParameterNearLossless:
-            case JpegLSError.InvalidParameterJpeglsPresetCodingParameters:
-            case JpegLSError.UnexpectedFailure:
-            case JpegLSError.NotEnoughMemory:
-            case JpegLSError.UnexpectedRestartMarker:
+            case ErrorCode.TooMuchEncodedData:
+            case ErrorCode.ParameterValueNotSupported:
+            case ErrorCode.InvalidEncodedData:
+            case ErrorCode.SourceBufferTooSmall:
+            case ErrorCode.BitDepthForTransformNotSupported:
+            case ErrorCode.ColorTransformNotSupported:
+            case ErrorCode.EncodingNotSupported:
+            case ErrorCode.UnknownJpegMarkerFound:
+            case ErrorCode.JpegMarkerStartByteNotFound:
+            case ErrorCode.StartOfImageMarkerNotFound:
+            case ErrorCode.UnexpectedMarkerFound:
+            case ErrorCode.InvalidMarkerSegmentSize:
+            case ErrorCode.DuplicateStartOfImageMarker:
+            case ErrorCode.DuplicateStartOfFrameMarker:
+            case ErrorCode.DuplicateComponentIdInStartOfFrameSegment:
+            case ErrorCode.UnexpectedEndOfImageMarker:
+            case ErrorCode.InvalidJpegLSPresetParameterType:
+            case ErrorCode.JpeglsPresetExtendedParameterTypeNotSupported:
+            case ErrorCode.MissingEndOfSpiffDirectory:
+            case ErrorCode.InvalidParameterWidth:
+            case ErrorCode.InvalidParameterHeight:
+            case ErrorCode.InvalidParameterComponentCount:
+            case ErrorCode.InvalidParameterBitsPerSample:
+            case ErrorCode.InvalidParameterInterleaveMode:
+            case ErrorCode.InvalidParameterNearLossless:
+            case ErrorCode.InvalidParameterJpeglsPresetCodingParameters:
+            case ErrorCode.UnexpectedFailure:
+            case ErrorCode.NotEnoughMemory:
+            case ErrorCode.UnexpectedRestartMarker:
                 exception = new InvalidDataException("TODO");
                 break;
 
             default:
-                throw new ArgumentOutOfRangeException(nameof(error), error, null);
+                throw new ArgumentOutOfRangeException(nameof(errorCode), errorCode, null);
         }
 
-        exception.Data.Add(nameof(JpegLSError), error);
+        exception.Data.Add(nameof(ErrorCode), errorCode);
         return exception;
     }
 

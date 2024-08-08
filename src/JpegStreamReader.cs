@@ -43,7 +43,7 @@ internal class JpegStreamReader
 
     public SpiffHeader? SpiffHeader { get; private set; }
 
-    internal JpegLSInterleaveMode InterleaveMode { get; private set; }
+    internal InterleaveMode InterleaveMode { get; private set; }
 
     internal int MappingTableCount => _mappingTables.Count;
 
@@ -83,7 +83,7 @@ internal class JpegStreamReader
         JpegLSPresetCodingParameters ??= new JpegLSPresetCodingParameters();
 
         if (!JpegLSPresetCodingParameters.IsValid(Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample), _nearLossless, out var validatedCodingParameters))
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterJpeglsPresetCodingParameters);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidParameterJpeglsPresetCodingParameters);
 
         return validatedCodingParameters;
     }
@@ -124,7 +124,7 @@ internal class JpegStreamReader
         if (_state == State.BeforeStartOfImage)
         {
             if (ReadNextMarkerCode() != JpegMarkerCode.StartOfImage)
-                throw Util.CreateInvalidDataException(JpegLSError.StartOfImageMarkerNotFound);
+                throw Util.CreateInvalidDataException(ErrorCode.StartOfImageMarkerNotFound);
 
             _state = State.HeaderSection;
         }
@@ -184,13 +184,13 @@ internal class JpegStreamReader
     {
         return Position < Source.Span.Length
             ? Source.Span[Position++]
-            : throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
+            : throw Util.CreateInvalidDataException(ErrorCode.SourceBufferTooSmall);
     }
 
     private void SkipByte()
     {
         if (Position == Source.Span.Length)
-            throw Util.CreateInvalidDataException(JpegLSError.SourceBufferTooSmall);
+            throw Util.CreateInvalidDataException(ErrorCode.SourceBufferTooSmall);
 
         Position++;
     }
@@ -218,7 +218,7 @@ internal class JpegStreamReader
     {
         byte value = ReadByte();
         if (value != Constants.JpegMarkerStartByte)
-            throw Util.CreateInvalidDataException(JpegLSError.JpegMarkerStartByteNotFound);
+            throw Util.CreateInvalidDataException(ErrorCode.JpegMarkerStartByteNotFound);
 
         // Read all preceding 0xFF fill values until a non 0xFF value has been found. (see T.81, B.1.1.2)
         do
@@ -235,7 +235,7 @@ internal class JpegStreamReader
         int segmentSize = ReadUint16();
         _segmentDataSize = segmentSize - segmentLength;
         if (segmentSize < segmentLength || Position + _segmentDataSize > Source.Length)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidMarkerSegmentSize);
 
         _segmentStartPosition = Position;
     }
@@ -300,13 +300,13 @@ internal class JpegStreamReader
         {
             case JpegMarkerCode.StartOfScan:
                 if (_state != State.ScanSection)
-                    throw Util.CreateInvalidDataException(JpegLSError.UnexpectedMarkerFound);
+                    throw Util.CreateInvalidDataException(ErrorCode.UnexpectedMarkerFound);
 
                 return;
 
             case JpegMarkerCode.StartOfFrameJpegLS:
                 if (_state == State.ScanSection)
-                    throw Util.CreateInvalidDataException(JpegLSError.DuplicateStartOfFrameMarker);
+                    throw Util.CreateInvalidDataException(ErrorCode.DuplicateStartOfFrameMarker);
 
                 return;
 
@@ -331,31 +331,24 @@ internal class JpegStreamReader
             case JpegMarkerCode.ApplicationData15:
                 return;
 
-            // Check explicit for one of the other common JPEG encodings.
-            case JpegMarkerCode.StartOfFrameBaselineJpeg:
-            case JpegMarkerCode.StartOfFrameExtendedSequential:
-            case JpegMarkerCode.StartOfFrameProgressive:
-            case JpegMarkerCode.StartOfFrameLossless:
-            case JpegMarkerCode.StartOfFrameDifferentialSequential:
-            case JpegMarkerCode.StartOfFrameDifferentialProgressive:
-            case JpegMarkerCode.StartOfFrameDifferentialLossless:
-            case JpegMarkerCode.StartOfFrameExtendedArithmetic:
-            case JpegMarkerCode.StartOfFrameProgressiveArithmetic:
-            case JpegMarkerCode.StartOfFrameLosslessArithmetic:
-            case JpegMarkerCode.StartOfFrameJpeglSExtended:
-                throw Util.CreateInvalidDataException(JpegLSError.EncodingNotSupported);
+            case JpegMarkerCode.DefineNumberOfLines: // DLN is a JPEG-LS valid marker, but not supported: handle as unknown.
+                throw Util.CreateInvalidDataException(ErrorCode.UnknownJpegMarkerFound);
 
             case JpegMarkerCode.StartOfImage:
-                throw Util.CreateInvalidDataException(JpegLSError.DuplicateStartOfImageMarker);
+                throw Util.CreateInvalidDataException(ErrorCode.DuplicateStartOfImageMarker);
 
             case JpegMarkerCode.EndOfImage:
-                throw Util.CreateInvalidDataException(JpegLSError.UnexpectedEndOfImageMarker);
+                throw Util.CreateInvalidDataException(ErrorCode.UnexpectedEndOfImageMarker);
         }
 
-        if (IsRestartMarkerCode(markerCode))
-            throw Util.CreateInvalidDataException(JpegLSError.UnexpectedRestartMarker);
+        // Check explicit for one of the other common JPEG encodings.
+        if (IsKnownJpegSofMarker(markerCode))
+            throw Util.CreateInvalidDataException(ErrorCode.EncodingNotSupported);
 
-        throw Util.CreateInvalidDataException(JpegLSError.UnknownJpegMarkerFound);
+        if (IsRestartMarkerCode(markerCode))
+            throw Util.CreateInvalidDataException(ErrorCode.UnexpectedRestartMarker);
+
+        throw Util.CreateInvalidDataException(ErrorCode.UnknownJpegMarkerFound);
     }
 
     private static bool IsRestartMarkerCode(JpegMarkerCode markerCode)
@@ -367,7 +360,7 @@ internal class JpegStreamReader
     private void ReadSpiffDirectoryEntry(JpegMarkerCode markerCode)
     {
         if (markerCode != JpegMarkerCode.ApplicationData8)
-            throw Util.CreateInvalidDataException(JpegLSError.MissingEndOfSpiffDirectory);
+            throw Util.CreateInvalidDataException(ErrorCode.MissingEndOfSpiffDirectory);
 
         CheckMinimalSegmentSize(4);
         uint spiffDirectoryType = ReadUint32();
@@ -396,13 +389,13 @@ internal class JpegStreamReader
         };
 
         if (!Validation.IsBitsPerSampleValid(FrameInfo.BitsPerSample))
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterBitsPerSample);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidParameterBitsPerSample);
 
         if (FrameInfo.Height < 1 || FrameInfo.Width < 1)
-            throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+            throw Util.CreateInvalidDataException(ErrorCode.ParameterValueNotSupported);
 
         if (FrameInfo.ComponentCount < 1)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterComponentCount);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidParameterComponentCount);
 
         CheckSegmentSize(6 + (FrameInfo.ComponentCount * 3));
 
@@ -412,7 +405,7 @@ internal class JpegStreamReader
             AddComponent(ReadByte()); // Ci = Component identifier
             byte horizontalVerticalSamplingFactor = ReadByte(); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
             if (horizontalVerticalSamplingFactor != 0x11)
-                throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+                throw Util.CreateInvalidDataException(ErrorCode.ParameterValueNotSupported);
 
             SkipByte(); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
         }
@@ -451,13 +444,13 @@ internal class JpegStreamReader
                 return;
 
             case JpegLSPresetParametersType.ExtendedWidthAndHeight:
-                throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+                throw Util.CreateInvalidDataException(ErrorCode.ParameterValueNotSupported);
         }
 
         const byte jpegLSExtendedPresetParameterLast = 0xD; // defined in JPEG-LS Extended (ISO/IEC 14495-2) (first = 0x5)
         throw Util.CreateInvalidDataException(type <= jpegLSExtendedPresetParameterLast
-            ? JpegLSError.JpeglsPresetExtendedParameterTypeNotSupported
-            : JpegLSError.InvalidJpegLSPresetParameterType);
+            ? ErrorCode.JpeglsPresetExtendedParameterTypeNotSupported
+            : ErrorCode.InvalidJpegLSPresetParameterType);
     }
 
     private void ReadPresetCodingParameters()
@@ -471,7 +464,7 @@ internal class JpegStreamReader
             Threshold1 = ReadUint16(),
             Threshold2 = ReadUint16(),
             Threshold3 = ReadUint16(),
-            ResetValue = ReadUint16(),
+            ResetValue = ReadUint16()
         };
     }
 
@@ -500,7 +493,7 @@ internal class JpegStreamReader
     private void AddMappingTable(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
     {
         if (tableId == 0 || _mappingTables.FindIndex(entry => entry.TableId == tableId) != -1)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterMappingTableId);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidParameterMappingTableId);
 
         _mappingTables.Add(new MappingTableEntry(tableId, entrySize, tableData));
     }
@@ -510,7 +503,7 @@ internal class JpegStreamReader
         int index = _mappingTables.FindIndex(entry => entry.TableId == tableId);
 
         if (index == -1 || _mappingTables[index].EntrySize != entrySize)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterMappingTableContinuation);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidParameterMappingTableContinuation);
 
         MappingTableEntry tableEntry = _mappingTables[index];
         tableEntry.AddFragment(tableData);
@@ -526,7 +519,7 @@ internal class JpegStreamReader
             2 => (uint)ReadUint16(),
             3 => ReadUint24(),
             4 => ReadUint32(),
-            _ => throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize)
+            _ => throw Util.CreateInvalidDataException(ErrorCode.InvalidMarkerSegmentSize)
         };
     }
 
@@ -536,7 +529,7 @@ internal class JpegStreamReader
 
         int componentCountInScan = ReadByte();
         if (componentCountInScan != 1 && componentCountInScan != FrameInfo!.ComponentCount)
-            throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+            throw Util.CreateInvalidDataException(ErrorCode.ParameterValueNotSupported);
 
         CheckSegmentSize(4 + (2 * componentCountInScan));
 
@@ -545,18 +538,18 @@ internal class JpegStreamReader
             SkipByte(); // Skip scan component selector
             int mappingTableSelector = ReadByte();
             if (mappingTableSelector != 0)
-                throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+                throw Util.CreateInvalidDataException(ErrorCode.ParameterValueNotSupported);
         }
 
         _nearLossless = ReadByte(); // Read NEAR parameter
         if (_nearLossless > Util.ComputeMaximumNearLossless((int)(MaximumSampleValue)))
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterNearLossless);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidParameterNearLossless);
 
-        InterleaveMode = (JpegLSInterleaveMode)ReadByte(); // Read ILV parameter
+        InterleaveMode = (InterleaveMode)ReadByte(); // Read ILV parameter
         CheckInterleaveMode(InterleaveMode);
 
         if ((ReadByte() & 0xFU) != 0) // Read Ah (no meaning) and Al (point transform).
-            throw Util.CreateInvalidDataException(JpegLSError.ParameterValueNotSupported);
+            throw Util.CreateInvalidDataException(ErrorCode.ParameterValueNotSupported);
 
         _state = State.BitStreamSection;
     }
@@ -568,7 +561,7 @@ internal class JpegStreamReader
         var markerCode = ReadNextMarkerCode();
 
         if (markerCode != JpegMarkerCode.EndOfImage)
-            throw Util.CreateInvalidDataException(JpegLSError.EndOfImageMarkerNotFound);
+            throw Util.CreateInvalidDataException(ErrorCode.EndOfImageMarkerNotFound);
 
         //#ifdef DEBUG
         //        state_ = state::after_end_of_image;
@@ -639,27 +632,27 @@ internal class JpegStreamReader
     private void CheckMinimalSegmentSize(int minimumSize)
     {
         if (minimumSize > _segmentDataSize)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidMarkerSegmentSize);
     }
 
     private void CheckSegmentSize(int expectedSize)
     {
         if (expectedSize != _segmentDataSize)
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidMarkerSegmentSize);
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidMarkerSegmentSize);
     }
 
     private void AddComponent(int componentId)
     {
         if (_componentIds.Contains(componentId))
-            throw Util.CreateInvalidDataException(JpegLSError.DuplicateComponentIdInStartOfFrameSegment);
+            throw Util.CreateInvalidDataException(ErrorCode.DuplicateComponentIdInStartOfFrameSegment);
 
         _componentIds.Add(componentId);
     }
 
-    private void CheckInterleaveMode(JpegLSInterleaveMode mode)
+    private void CheckInterleaveMode(InterleaveMode mode)
     {
-        if (!Enum.IsDefined(mode) || (FrameInfo!.ComponentCount == 1 && mode != JpegLSInterleaveMode.None))
-            throw Util.CreateInvalidDataException(JpegLSError.InvalidParameterInterleaveMode);
+        if (!Enum.IsDefined(mode) || (FrameInfo!.ComponentCount == 1 && mode != InterleaveMode.None))
+            throw Util.CreateInvalidDataException(ErrorCode.InvalidParameterInterleaveMode);
     }
 
     private readonly struct MappingTableEntry
@@ -691,4 +684,39 @@ internal class JpegStreamReader
         internal byte TableId { get; }
         internal byte EntrySize { get; }
     }
+
+    private static bool IsKnownJpegSofMarker(JpegMarkerCode markerCode)
+    {
+        // The following start of frame (SOF) markers are defined in ISO/IEC 10918-1 | ITU T.81 (general JPEG standard).
+        const byte sofBaselineJpeg = 0xC0;            // SOF_0: Baseline jpeg encoded frame.
+        const byte sofExtendedSequential = 0xC1;      // SOF_1: Extended sequential Huffman encoded frame.
+        const byte sofProgressive = 0xC2;             // SOF_2: Progressive Huffman encoded frame.
+        const byte sofLossless = 0xC3;                // SOF_3: Lossless Huffman encoded frame.
+        const byte sofDifferentialSequential = 0xC5;  // SOF_5: Differential sequential Huffman encoded frame.
+        const byte sofDifferentialProgressive = 0xC6; // SOF_6: Differential progressive Huffman encoded frame.
+        const byte sofDifferentialLossless = 0xC7;    // SOF_7: Differential lossless Huffman encoded frame.
+        const byte sofExtendedArithmetic = 0xC9;      // SOF_9: Extended sequential arithmetic encoded frame.
+        const byte sofProgressiveArithmetic = 0xCA;   // SOF_10: Progressive arithmetic encoded frame.
+        const byte sofLosslessArithmetic = 0xCB;      // SOF_11: Lossless arithmetic encoded frame.
+        const byte sofJpegLSExtended = 0xF9;          // SOF_57: JPEG-LS extended (ISO/IEC 14495-2) encoded frame.
+
+        switch ((byte)markerCode)
+        {
+            case sofBaselineJpeg:
+            case sofExtendedSequential:
+            case sofProgressive:
+            case sofLossless:
+            case sofDifferentialSequential:
+            case sofDifferentialProgressive:
+            case sofDifferentialLossless:
+            case sofExtendedArithmetic:
+            case sofProgressiveArithmetic:
+            case sofLosslessArithmetic:
+            case sofJpegLSExtended:
+                return true;
+            default:
+                return false;
+        }
+    }
+
 }

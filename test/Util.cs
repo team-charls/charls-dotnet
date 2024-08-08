@@ -33,11 +33,11 @@ internal sealed class Util
         return result;
     }
 
-    internal static PortableAnymapFile ReadAnymapReferenceFile(string filename, JpegLSInterleaveMode interleaveMode, FrameInfo frameInfo)
+    internal static PortableAnymapFile ReadAnymapReferenceFile(string filename, InterleaveMode interleaveMode, FrameInfo frameInfo)
     {
         PortableAnymapFile referenceFile = new(filename);
 
-        if (interleaveMode == JpegLSInterleaveMode.None && frameInfo.ComponentCount == 3)
+        if (interleaveMode == InterleaveMode.None && frameInfo.ComponentCount == 3)
         {
             referenceFile.ImageData = TripletToPlanar(referenceFile.ImageData, frameInfo.Width, frameInfo.Height);
         }
@@ -166,7 +166,7 @@ internal sealed class Util
         }
 
         writer.WriteStartOfFrameSegment(600, 800, 8, 3);
-        writer.WriteStartOfScanSegment(0, 1, 0, JpegLSInterleaveMode.None);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
 
         return writer.GetBuffer();
     }
