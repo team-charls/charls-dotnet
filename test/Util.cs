@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Xunit;
 
 namespace CharLS.JpegLS.Test;
@@ -60,9 +61,9 @@ internal sealed class Util
 
         if (decoder.NearLossless == 0)
         {
-            for (int i = 0; i != uncompressedSource.Length; i++)
+            for (int i = 0; i != uncompressedSource.Length; ++i)
             {
-                if (uncompressedSource[i] != destination[i]) // AreEqual is very slow, pre-test to speed up 50X
+                if (uncompressedSource[i] != destination[i])
                 {
                     Assert.Equal(uncompressedSource[i], destination[i]);
                 }
@@ -70,36 +71,33 @@ internal sealed class Util
         }
         else
         {
-            throw new NotImplementedException();
+            var frameInfo = decoder.FrameInfo;
+            int nearLossless = decoder.NearLossless;
+
+            if (frameInfo.BitsPerSample <= 8)
+            {
+                for (int i = 0; i != uncompressedSource.Length; ++i)
+                {
+                    if (Math.Abs(uncompressedSource[i] - destination[i]) > nearLossless)
+                    {
+                        Assert.Equal(uncompressedSource[i], destination[i]);
+                    }
+                }
+            }
+            else
+            {
+                var source16 = MemoryMarshal.Cast<byte, ushort>(new ReadOnlySpan<byte>(uncompressedSource));
+                var destination16 = MemoryMarshal.Cast<byte, ushort>(new ReadOnlySpan<byte>(destination));
+
+                for (int i = 0; i != source16.Length; ++i)
+                {
+                    if (Math.Abs(source16[i] - destination16[i]) > nearLossless)
+                    {
+                        Assert.Equal(source16[i], destination16[i]);
+                    }
+                }
+            }
         }
-        //    const frameInfo frameInfo{ decoder.frameInfo()};
-        //    const auto near_lossless{ decoder.near_lossless()};
-
-        //    if (frameInfo.bits_per_sample <= 8)
-        //    {
-        //        for (size_t i{ }; i != uncompressed_source.size(); ++i)
-        //        {
-        //            if (abs(uncompressed_source[i] - destination[i]) >
-        //                near_lossless) // AreEqual is very slow, pre-test to speed up 50X
-        //            {
-        //                Assert::AreEqual(uncompressed_source[i], destination[i]);
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        const auto* source16 = reinterpret_cast <const uint16_t*> (uncompressed_source.data());
-        //        const auto* destination16 = reinterpret_cast <const uint16_t*> (destination.data());
-
-        //        for (size_t i{ }; i != uncompressed_source.size() / 2; ++i)
-        //        {
-        //            if (abs(source16[i] - destination16[i]) > near_lossless) // AreEqual is very slow, pre-test to speed up 50X
-        //            {
-        //                Assert::AreEqual(static_cast<int>(source16[i]), static_cast<int>(destination16[i]));
-        //            }
-        //        }
-        //    }
-        //}
     }
 
     internal static ReadOnlyMemory<byte> CreateTestSpiffHeader(byte highVersion = 2, byte lowVersion = 0, bool endOfDirectory = true, byte componentCount = 3)

@@ -8,7 +8,7 @@ internal abstract class Traits
     protected Traits(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetThreshold)
     {
         MaximumSampleValue = maximumSampleValue;
-        Range = (maximumSampleValue + 2 * nearLossless) / (2 * nearLossless + 1) + 1;
+        Range = Algorithm.ComputeRangeParameter(maximumSampleValue, nearLossless);
         NearLossless = nearLossless;
         QuantizedBitsPerSample = Algorithm.Log2Ceiling(Range);
         BitsPerSample = Algorithm.Log2Ceiling(maximumSampleValue);
@@ -17,16 +17,6 @@ internal abstract class Traits
         QuantizationRange = 1 << BitsPerSample;
     }
 
-    protected Traits(int bitsPerSample)
-    {
-        BitsPerSample = bitsPerSample;
-        QuantizedBitsPerSample = bitsPerSample;
-        Range = 1 << BitsPerSample;
-        MaximumSampleValue = (1 << BitsPerSample) - 1;
-        Limit = 2 * (bitsPerSample + Math.Max(8, bitsPerSample));
-        ResetThreshold = Constants.DefaultResetThreshold;
-        QuantizationRange = 1 << bitsPerSample;
-    }
 
     /// <summary>
     /// ISO 14495-1 MAX symbol: maximum possible image sample value over all components of a scan.

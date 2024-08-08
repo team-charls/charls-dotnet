@@ -24,7 +24,7 @@ internal class ScanCodecFactory
             switch (frameInfo.BitsPerSample)
             {
                 case 8:
-                    return new ScanDecoderImpl<byte, byte>(frameInfo, presetCodingParameters, codingParameters, new LosslessTraits8());
+                    return new ScanDecoderImpl<byte, byte>(frameInfo, presetCodingParameters, codingParameters, new LosslessTraits8(maximumSampleValue));
 
                 case 12:
                     return new ScanDecoderImpl<ushort, ushort>(frameInfo, presetCodingParameters, codingParameters,
@@ -37,7 +37,7 @@ internal class ScanCodecFactory
 
         if (frameInfo.BitsPerSample <= 8)
         {
-            var traits = new DefaultTraits(maximumSampleValue, frameInfo.BitsPerSample, codingParameters.NearLossless);
+            var traits = new DefaultTraits(maximumSampleValue, codingParameters.NearLossless);
             return new ScanDecoderImpl<byte, byte>(frameInfo, presetCodingParameters, codingParameters, traits);
         }
 

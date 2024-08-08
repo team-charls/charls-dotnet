@@ -12,8 +12,8 @@ internal class LosslessTraitsImplT : Traits
     {
     }
 
-    protected LosslessTraitsImplT(int bitsperpixel)
-        : base(bitsperpixel)
+    protected LosslessTraitsImplT(int maximumSampleValue)
+        : base(maximumSampleValue, 0)
     {
     }
 
@@ -57,8 +57,8 @@ internal class LosslessTraitsImplT : Traits
 
 internal class LosslessTraits8 : LosslessTraitsImplT
 {
-    public LosslessTraits8()
-        : base(8)
+    public LosslessTraits8(int maximumSampleValue)
+        : base(maximumSampleValue)
     {
     }
 
@@ -81,8 +81,8 @@ internal class LosslessTraits8 : LosslessTraitsImplT
 
 internal class LosslessTraits16 : LosslessTraitsImplT
 {
-    public LosslessTraits16(int bitsPerSample)
-        : base(bitsPerSample)
+    public LosslessTraits16(int maximumSampleValue)
+        : base(maximumSampleValue)
     {
     }
 

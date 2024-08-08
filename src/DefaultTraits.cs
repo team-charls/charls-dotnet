@@ -6,14 +6,9 @@ namespace CharLS.JpegLS;
 
 internal class DefaultTraits : Traits
 {
-    private readonly int _maximumSampleValue;
-    private readonly int _range;
-
-    internal DefaultTraits(int maximumSampleValue, int bitsPerPixel, int nearLossless)
-        : base(bitsPerPixel)
+    internal DefaultTraits(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetThreshold)
+        : base(maximumSampleValue, nearLossless, resetThreshold)
     {
-        _maximumSampleValue = maximumSampleValue;
-        _range = Algorithm.ComputeRangeParameter(_maximumSampleValue, nearLossless);
     }
 
     public override int ComputeErrVal(int e)
@@ -28,10 +23,10 @@ internal class DefaultTraits : Traits
 
     public override int CorrectPrediction(int predicted)
     {
-        if ((predicted & _maximumSampleValue) == predicted)
+        if ((predicted & MaximumSampleValue) == predicted)
             return predicted;
 
-        return (~(predicted >> (Constants.Int32BitCount - 1))) & _maximumSampleValue;
+        return (~(predicted >> (Constants.Int32BitCount - 1))) & MaximumSampleValue;
     }
 
     public override bool IsNear(int lhs, int rhs)
@@ -58,11 +53,11 @@ internal class DefaultTraits : Traits
     {
         if (value < -NearLossless)
         {
-            value = value + _range * (2 * NearLossless + 1);
+            value = value + Range * (2 * NearLossless + 1);
         }
-        else if (value > _maximumSampleValue + NearLossless)
+        else if (value > MaximumSampleValue + NearLossless)
         {
-            value = value - _range * (2 * NearLossless + 1);
+            value = value - Range * (2 * NearLossless + 1);
         }
 
         return CorrectPrediction(value);
