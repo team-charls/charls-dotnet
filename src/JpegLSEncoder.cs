@@ -1,10 +1,6 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
-
 namespace CharLS.JpegLS;
 
 /// <summary>
@@ -14,9 +10,27 @@ public sealed class JpegLSEncoder
 {
     private FrameInfo? _frameInfo;
     private int _nearLossless;
-    private JpegLSInterleaveMode _interleaveMode;
-    private JpegLSPresetCodingParameters? _presetCodingParameters;
+    private InterleaveMode _interleaveMode;
+    private JpegLSPresetCodingParameters? _userPresetCodingParameters;
     private Memory<byte> _destination;
+
+    private enum State
+    {
+        Initial,
+        DestinationSet,
+        SpiffHeader,
+        TablesAndMiscellaneous,
+        Completed
+    }
+
+    private State _state;
+
+    public static Memory<byte> Encode(ReadOnlyMemory<byte> source, FrameInfo frameInfo)
+    {
+        JpegLSEncoder encoder = new(frameInfo);
+        encoder.Encode(source);
+        return encoder.Destination[..encoder.BytesWritten];
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JpegLSEncoder"/> class.
@@ -33,15 +47,12 @@ public sealed class JpegLSEncoder
     /// <param name="bitsPerSample">The bits per sample of the image to encode.</param>
     /// <param name="componentCount">The component count of the image to encode.</param>
     /// <param name="allocateDestination">Flag to control if destination buffer should be allocated or not.</param>
+    /// <param name="extraBytes">Number of extra destination bytes. Comments and tables are not included in the estimate.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when one of the arguments is invalid.</exception>
     /// <exception cref="OutOfMemoryException">Thrown when memory allocation for the destination buffer fails.</exception>
-    public JpegLSEncoder(int width, int height, int bitsPerSample, int componentCount, bool allocateDestination = true)
+    public JpegLSEncoder(int width, int height, int bitsPerSample, int componentCount, bool allocateDestination = true, int extraBytes = 0) :
+        this(new FrameInfo(width, height, bitsPerSample, componentCount), allocateDestination, extraBytes)
     {
-        FrameInfo = new(width, height, bitsPerSample, componentCount);
-        if (allocateDestination)
-        {
-            Destination = new byte[EstimatedDestinationSize];
-        }
     }
 
     /// <summary>
@@ -49,11 +60,19 @@ public sealed class JpegLSEncoder
     /// </summary>
     /// <param name="frameInfo">The frameInfo of the image to encode.</param>
     /// <param name="allocateDestination">Flag to control if destination buffer should be allocated or not.</param>
+    /// <param name="extraBytes">Number of extra destination bytes. Comments and tables are not included in the estimate.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when one of the arguments is invalid.</exception>
     /// <exception cref="OutOfMemoryException">Thrown when memory allocation for the destination buffer fails.</exception>
-    public JpegLSEncoder(FrameInfo frameInfo, bool allocateDestination = true) :
-        this(frameInfo.Width, frameInfo.Height, frameInfo.BitsPerSample, frameInfo.ComponentCount, allocateDestination)
+    public JpegLSEncoder(FrameInfo frameInfo, bool allocateDestination = true, int extraBytes = 0)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(extraBytes);
+
+        FrameInfo = frameInfo;
+
+        if (allocateDestination)
+        {
+            Destination = new byte[EstimatedDestinationSize + extraBytes];
+        }
     }
 
     /// <summary>
@@ -70,9 +89,7 @@ public sealed class JpegLSEncoder
 
         set
         {
-            if (value is null)
-                throw new ArgumentNullException(nameof(value));
-
+            ArgumentNullException.ThrowIfNull(value);
             _frameInfo = value;
         }
     }
@@ -101,12 +118,15 @@ public sealed class JpegLSEncoder
     /// The interleave mode that should be used to encode the image. Default is None.
     /// </value>
     /// <exception cref="ArgumentException">Thrown when the passed value is invalid for the defined image.</exception>
-    public JpegLSInterleaveMode InterleaveMode
+    public InterleaveMode InterleaveMode
     {
         get => _interleaveMode;
 
         set
         {
+            if (!value.IsValid())
+                throw new ArgumentOutOfRangeException(nameof(value));
+
             _interleaveMode = value;
         }
     }
@@ -120,14 +140,13 @@ public sealed class JpegLSEncoder
     /// <exception cref="ArgumentNullException">value.</exception>
     public JpegLSPresetCodingParameters? PresetCodingParameters
     {
-        get => _presetCodingParameters;
+        get => _userPresetCodingParameters;
 
         set
         {
-            if (value is null)
-                throw new ArgumentNullException(nameof(value));
+            ArgumentNullException.ThrowIfNull(value);
 
-            _presetCodingParameters = value;
+            _userPresetCodingParameters = value;
         }
     }
 
@@ -142,7 +161,7 @@ public sealed class JpegLSEncoder
     {
         get
         {
-            return Convert.ToInt32(sizeInBytes);
+            return 0; // Convert.ToInt32(sizeInBytes);
         }
     }
 
@@ -161,6 +180,8 @@ public sealed class JpegLSEncoder
         {
             try
             {
+                if (!_destination.IsEmpty)
+                    throw new InvalidOperationException();
                 _destination = value;
             }
             catch
@@ -190,8 +211,9 @@ public sealed class JpegLSEncoder
     {
         get
         {
-            HandleJpegLSError(CharLSGetBytesWritten(_encoder, out nuint bytesWritten));
-            return Convert.ToInt32(bytesWritten);
+            //HandleJpegLSError(CharLSGetBytesWritten(_encoder, out nuint bytesWritten));
+            //return Convert.ToInt32(bytesWritten);
+            return 0;
         }
     }
 
@@ -200,8 +222,29 @@ public sealed class JpegLSEncoder
     /// </summary>
     /// <param name="source">The memory region that is the source input to the encoding process.</param>
     /// <param name="stride">The stride of the image pixel of the source input.</param>
-    public void Encode(ReadOnlySpan<byte> source, int stride = 0)
+    public void Encode(ReadOnlyMemory<byte> source, int stride = 0)
     {
+        if (source.IsEmpty)
+            throw new ArgumentException("", nameof(source));
+        CheckInterleaveModeAgainstComponentCount();
+
+        int maximumSampleValue = Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
+        if (!_userPresetCodingParameters!.IsValid(maximumSampleValue, NearLossless, out var presetCodingParameters))
+            throw new ArgumentException("TODO");
+
+        if (stride == Constants.AutoCalculateStride)
+        {
+            stride = CalculateStride();
+        }
+        else
+        {
+            ////check_stride(stride, source.size());
+        }
+
+        //transition_to_tables_and_miscellaneous_state();
+        //write_color_transform_segment();
+
+
         throw new NotImplementedException();
     }
 
@@ -229,5 +272,45 @@ public sealed class JpegLSEncoder
     public void WriteSpiffHeader(SpiffHeader spiffHeader)
     {
         throw new NotImplementedException();
+    }
+
+    private void TransitionToTablesAndMiscellaneousState()
+    {
+        if (_state == State.TablesAndMiscellaneous)
+            return;
+
+        if (_state == State.SpiffHeader)
+        {
+            ////writer_.write_spiff_end_of_directory_entry();
+        }
+        else
+        {
+            ////writer_.write_start_of_image();
+        }
+
+        //if (has_option(encoding_options::include_version_number))
+        //{
+        //    constexpr std::string_view version_number{
+        //        "charls " TO_STRING(CHARLS_VERSION_MAJOR) "." TO_STRING(
+        //            CHARLS_VERSION_MINOR) "." TO_STRING(CHARLS_VERSION_PATCH)};
+        //    writer_.write_comment_segment({ reinterpret_cast <const byte*> (version_number.data()), version_number.size() + 1});
+        //}
+
+        _state = State.TablesAndMiscellaneous;
+    }
+
+    private void CheckInterleaveModeAgainstComponentCount()
+    {
+        if (FrameInfo!.ComponentCount == 1 && InterleaveMode != InterleaveMode.None)
+            throw new ArgumentException("invalid_argument_interleave_mode");
+    }
+
+    private int CalculateStride()
+    {
+        int stride = FrameInfo!.Width * Algorithm.BitToByteCount(FrameInfo.BitsPerSample);
+        if (_interleaveMode == InterleaveMode.None)
+            return stride;
+
+        return stride * FrameInfo.ComponentCount;
     }
 }

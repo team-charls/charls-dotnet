@@ -20,6 +20,14 @@ internal static class Algorithm
         return isPowerOfTwo ? log2Floor : log2Floor + 1;
     }
 
+    /// <summary>
+    /// Computes how many bytes are needed to hold the number of bits.
+    /// </summary>
+    internal static int BitToByteCount(int bitCount)
+    {
+        return (bitCount + 7) / 8;
+    }
+
     // Computes the initial value for A. See ISO/IEC 14495-1, A.8, step 1.d and A.2.1
     internal static int InitializationValueForA(int range)
     {
