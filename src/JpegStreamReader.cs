@@ -471,7 +471,7 @@ internal class JpegStreamReader
             Threshold1 = ReadUint16(),
             Threshold2 = ReadUint16(),
             Threshold3 = ReadUint16(),
-            ResetValue = ReadUint16(),
+            ResetValue = ReadUint16()
         };
     }
 

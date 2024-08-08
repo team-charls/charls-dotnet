@@ -23,7 +23,7 @@ public sealed class JpegLSDecoder
         SpiffHeaderNotFound,
         HeaderRead,
         Completed
-    };
+    }
 
     private State _state = State.Initial;
 
