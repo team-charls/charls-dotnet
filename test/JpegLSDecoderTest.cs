@@ -8,7 +8,6 @@ namespace CharLS.JpegLS.Test;
 
 public class JpegLSDecoderTest
 {
-
     [Fact]
     public void SetSourceTwiceThrows()
     {

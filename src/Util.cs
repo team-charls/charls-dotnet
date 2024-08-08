@@ -52,6 +52,13 @@ internal static class Util
         return exception;
     }
 
+    internal static ArgumentException CreateArgumentException(ErrorCode errorCode)
+    {
+        var exception = new ArgumentException("TODO");
+        exception.Data.Add(nameof(ErrorCode), errorCode);
+        return exception;
+    }
+
     internal static int CalculateMaximumSampleValue(int bitsPerSample)
     {
         return 1 << bitsPerSample - 1;

@@ -33,5 +33,8 @@ internal static class Constants
     internal const byte JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0 to D7)
     internal const int JpegRestartMarkerRange = 8;
 
+    // The size in bytes of the segment length field.
+    internal const int SegmentLengthSize = sizeof(ushort);
+
     internal const int Int32BitCount = 32;
 }

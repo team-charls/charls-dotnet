@@ -12,7 +12,7 @@ public sealed class JpegLSEncoder
     private int _nearLossless;
     private InterleaveMode _interleaveMode;
     private JpegLSPresetCodingParameters? _userPresetCodingParameters;
-    private Memory<byte> _destination;
+    private readonly JpegStreamWriter _writer = new JpegStreamWriter();
 
     private enum State
     {
@@ -174,21 +174,13 @@ public sealed class JpegLSEncoder
     /// <exception cref="ArgumentException">Thrown when the passed value is an empty buffer.</exception>
     public Memory<byte> Destination
     {
-        get => _destination;
+        get => _writer.Destination;
 
         set
         {
-            try
-            {
-                if (!_destination.IsEmpty)
-                    throw new InvalidOperationException();
-                _destination = value;
-            }
-            catch
-            {
-                _destination = default;
-                throw;
-            }
+            if (!_writer.Destination.IsEmpty)
+                throw new InvalidOperationException();
+            _writer.Destination = value;
         }
     }
 
@@ -198,7 +190,7 @@ public sealed class JpegLSEncoder
     /// <value>
     /// The memory region with the encoded data.
     /// </value>
-    public ReadOnlyMemory<byte> EncodedData => _destination[..BytesWritten];
+    public ReadOnlyMemory<byte> EncodedData => Destination[..BytesWritten];
 
     /// <summary>
     /// Gets the bytes written to the destination buffer.
@@ -241,12 +233,64 @@ public sealed class JpegLSEncoder
             ////check_stride(stride, source.size());
         }
 
-        //transition_to_tables_and_miscellaneous_state();
-        //write_color_transform_segment();
+        TransitionToTablesAndMiscellaneousState();
+        ////write_color_transform_segment();
 
+        if (_writer.WriteStartOfFrameSegment(FrameInfo))
+        {
+            // Image dimensions are oversized and need to be written to a JPEG-LS preset parameters (LSE) segment.
+            ////_writer.write_jpegls_preset_parameters_segment(frame_info_.height, frame_info_.width);
+        }
 
-        throw new NotImplementedException();
+        //if (!is_default(user_preset_coding_parameters_, compute_default(maximum_sample_value, near_lossless_)) ||
+        //    (has_option(encoding_options::include_pc_parameters_jai) && frame_info_.bits_per_sample > 12))
+        //{
+        //    // Write the actual used values to the stream. The user parameters may use 0 (=default) values.
+        //    // This reduces the risk for decoding by other implementations.
+        //    writer_.write_jpegls_preset_parameters_segment(preset_coding_parameters_);
+        //}
+
+        if (InterleaveMode == InterleaveMode.None)
+        {
+            int byteCountComponent = stride * FrameInfo.Height;
+            int lastComponent = FrameInfo.ComponentCount -1;
+            for (int component = 0; component != FrameInfo.ComponentCount; ++component)
+            {
+                _writer.WriteStartOfScanSegment(1, NearLossless, InterleaveMode);
+                EncodeScan(source, stride, 1, presetCodingParameters);
+
+                // Synchronize the source stream (encode_scan works on a local copy)
+                if (component != lastComponent)
+                {
+                    source = source[byteCountComponent..];
+                }
+            }
+        }
+        else
+        {
+            //writer_.write_start_of_scan_segment(frame_info_.component_count, near_lossless_, interleave_mode_);
+            //encode_scan(source.data(), stride, frame_info_.component_count);
+        }
+
+        WriteEndOfImage();
     }
+
+    private void EncodeScan(ReadOnlyMemory<byte> source, int stride, int component_count, JpegLSPresetCodingParameters codingParameters)
+    {
+        var encoder = ScanCodecFactory.CreateScanEncoder(
+            new FrameInfo(FrameInfo!.Width, FrameInfo.Height, FrameInfo.BitsPerSample, component_count),
+            codingParameters,
+            new CodingParameters
+            {
+                InterleaveMode = InterleaveMode, NearLossless = NearLossless, RestartInterval = 0
+            });
+
+        int bytesWritten = encoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
+
+        // Synchronize the destination encapsulated in the writer (encode_scan works on a local copy)
+        ////_writer.seek(bytesWritten);
+    }
+
 
     /// <summary>
     /// Writes a standard SPIFF header to the destination. The additional values are computed from the current encoder settings.
@@ -297,6 +341,12 @@ public sealed class JpegLSEncoder
         //}
 
         _state = State.TablesAndMiscellaneous;
+    }
+
+    private void WriteEndOfImage()
+    {
+        _writer.WriteEndOfImage(false); ////(has_option(encoding_options::even_destination_size));
+        _state = State.Completed;
     }
 
     private void CheckInterleaveModeAgainstComponentCount()
