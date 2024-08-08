@@ -122,7 +122,7 @@ public sealed record JpegLSPresetCodingParameters
             return new JpegLSPresetCodingParameters(
                 maximumSampleValue, threshold1, threshold2,
                 Clamp(factor * (Constants.DefaultThreshold3 - 4) + 4 + 7 * nearLossless, threshold2, maximumSampleValue),
-                Constants.DefaultResetValue);
+                Constants.DefaultResetThreshold);
         }
         else
         {
@@ -137,7 +137,7 @@ public sealed record JpegLSPresetCodingParameters
             return new JpegLSPresetCodingParameters(
                 maximumSampleValue, threshold1, threshold2,
                 Clamp(Math.Max(4, Constants.DefaultThreshold3 / factor + 7 * nearLossless), threshold2, maximumSampleValue),
-                Constants.DefaultResetValue);
+                Constants.DefaultResetThreshold);
         }
     }
 

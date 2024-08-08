@@ -7,7 +7,7 @@ namespace CharLS.JpegLS;
 
 internal class LosslessTraitsImplT : Traits
 {
-    internal LosslessTraitsImplT(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetValue)
+    internal LosslessTraitsImplT(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetThreshold)
         : base(maximumSampleValue, nearLossless, resetThreshold)
     {
     }
@@ -35,7 +35,7 @@ internal class LosslessTraitsImplT : Traits
 
     public override int ModuloRange(int errorValue)
     {
-        return (errorValue << (Constants.Int32BitCount - bpp)) >> (Constants.Int32BitCount - bpp);
+        return (errorValue << (Constants.Int32BitCount - BitsPerSample)) >> (Constants.Int32BitCount - BitsPerSample);
     }
 
     public override int ComputeReconstructedSample(int predictedValue, int errorValue)
@@ -101,7 +101,7 @@ internal class LosslessTraits16 : LosslessTraitsImplT
 internal class LosslessTraitsTriplet<TSample> : LosslessTraitsImplT
     where TSample : struct, IBinaryInteger<TSample>
 {
-    public LosslessTraitsTriplet(int maximumSampleValue, int near, int reset = Constants.DefaultResetValue)
+    public LosslessTraitsTriplet(int maximumSampleValue, int near, int reset = Constants.DefaultResetThreshold)
         : base(maximumSampleValue, near, reset)
     {
     }

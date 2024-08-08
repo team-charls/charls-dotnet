@@ -448,7 +448,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         }
         else
         {
-            errorValue = Algorithm.UnmapErrorValue(DecodeValue(k, _traits.Limit, _traits.qbpp));
+            errorValue = Algorithm.UnmapErrorValue(DecodeValue(k, _traits.Limit, _traits.QuantizedBitsPerSample));
             if (Math.Abs(errorValue) > 65535)
                 throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
         }
@@ -649,7 +649,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
     private int DecodeRunInterruptionError(ref RunModeContext context)
     {
         int k = context.GetGolombCode();
-        int eMappedErrorValue = DecodeValue(k, _traits.Limit - J[RunIndex] - 1, _traits.qbpp);
+        int eMappedErrorValue = DecodeValue(k, _traits.Limit - J[RunIndex] - 1, _traits.QuantizedBitsPerSample);
         int errorValue = context.ComputeErrorValue(eMappedErrorValue + context.RunInterruptionType, k);
         context.UpdateVariables(errorValue, eMappedErrorValue, (byte)PresetCodingParameters.ResetValue);
         return errorValue;

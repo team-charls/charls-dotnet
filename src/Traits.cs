@@ -5,43 +5,64 @@ namespace CharLS.JpegLS;
 
 internal abstract class Traits
 {
-    protected Traits(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetValue)
+    protected Traits(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetThreshold)
     {
         MaximumSampleValue = maximumSampleValue;
         Range = (maximumSampleValue + 2 * nearLossless) / (2 * nearLossless + 1) + 1;
         NearLossless = nearLossless;
-        qbpp = Log2(Range);
-        bpp = Log2(maximumSampleValue);
-        Limit = 2 * (bpp + Math.Max(8, bpp));
+        QuantizedBitsPerSample = Algorithm.Log2Ceiling(Range);
+        BitsPerSample = Algorithm.Log2Ceiling(maximumSampleValue);
+        Limit = 2 * (BitsPerSample + Math.Max(8, BitsPerSample));
         ResetThreshold = resetThreshold;
-        QuantizationRange = 1 << bpp;
+        QuantizationRange = 1 << BitsPerSample;
     }
 
-    protected Traits(int bitsperpixel)
+    protected Traits(int bitsPerSample)
     {
-        bpp = bitsperpixel;
-        qbpp = bitsperpixel;
-        Range = 1 << bpp;
-        MaximumSampleValue = (1 << bpp) - 1;
-        Limit = 2 * (bitsperpixel + Math.Max(8, bitsperpixel));
-        ResetThreshold = Constants.DefaultResetValue;
-        QuantizationRange = 1 << bitsperpixel;
+        BitsPerSample = bitsPerSample;
+        QuantizedBitsPerSample = bitsPerSample;
+        Range = 1 << BitsPerSample;
+        MaximumSampleValue = (1 << BitsPerSample) - 1;
+        Limit = 2 * (bitsPerSample + Math.Max(8, bitsPerSample));
+        ResetThreshold = Constants.DefaultResetThreshold;
+        QuantizationRange = 1 << bitsPerSample;
     }
 
-    public int MaximumSampleValue { get; set; }
+    /// <summary>
+    /// ISO 14495-1 MAX symbol: maximum possible image sample value over all components of a scan.
+    /// </summary>
+    internal int MaximumSampleValue { get; set; }
 
-    public int Range { get; }
+    /// <summary>
+    /// ISO 14495-1 bpp symbol: number of bits needed to represent MAXVAL (not less than 2).
+    /// </summary>
+    internal int BitsPerSample { get; }
 
-    public int qbpp { get; }
+    /// <summary>
+    /// ISO 14495-1 RANGE symbol: range of prediction error representation.
+    /// </summary>
+    internal int Range { get; }
 
-    public int bpp { get; }
+    /// <summary>
+    /// ISO 14495-1 qbpp symbol: number of bits needed to represent a mapped error value.
+    /// </summary>
+    internal int QuantizedBitsPerSample { get; }
 
-    public int Limit { get; }
+    /// <summary>
+    /// ISO 14495-1 LIMIT symbol: the value of glimit for a sample encoded in regular mode.
+    /// </summary>
+    internal int Limit { get; }
 
-    public int ResetThreshold { get; }
+    /// <summary>
+    /// ISO 14495-1 RESET symbol: threshold value at which A, B, and N are halved.
+    /// </summary>
+    internal int ResetThreshold { get; }
 
-    public int QuantizationRange { get; }
+    internal int QuantizationRange { get; }
 
+    /// <summary>
+    /// ISO 14495-1 NEAR symbol: difference bound for near-lossless coding, 0 means lossless
+    /// </summary>
     public virtual int NearLossless { get; }
 
     public abstract int ComputeErrVal(int e);
@@ -58,16 +79,4 @@ internal abstract class Traits
     /// Returns the value of errorValue modulo RANGE. ITU.T.87, A.4.5 (code segment A.9)
     /// </summary>
     public abstract int ModuloRange(int errorValue);
-
-    private static int Log2(int n)
-    {
-        var x = 0;
-        while (n > 1 << x)
-        {
-            ++x;
-        }
-
-        return x;
-    }
 }
-

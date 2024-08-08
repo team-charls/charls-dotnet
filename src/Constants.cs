@@ -11,7 +11,7 @@ internal static class Constants
     internal const int DefaultThreshold2 = 7;  // BASIC_T2
     internal const int DefaultThreshold3 = 21; // BASIC_T3
 
-    internal const int DefaultResetValue = 64; // Default RESET value as defined in ISO/IEC 14495-1, table C.2
+    internal const int DefaultResetThreshold = 64; // Default RESET value as defined in ISO/IEC 14495-1, table C.2
 
     internal const int AutoCalculateStride = 0;
     internal const byte JpegMarkerStartByte = 0xFF;
