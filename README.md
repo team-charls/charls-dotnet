@@ -15,7 +15,7 @@ This project is considered work in progress and NOT ready for general use. The f
 * [X] Decode 8 bit images, interleave mode: none
 * [X] Decode 8 bit images, interleave mode: line
 * [X] Decode 8 bit images, interleave mode: sample
-* [ ] Decode 8 bit images, nearLossless != 0. interleave mode: none, line, sample
+* [X] Decode 8 bit images, nearLossless != 0. interleave mode: none, line, sample
 * [X] Decode 16 bit images, interleave mode: none
 * [ ] Decode 16 bit images, interleave mode: line
 * [ ] Decode 16 bit images, interleave mode: sample

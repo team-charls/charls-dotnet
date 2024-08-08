@@ -6,7 +6,7 @@ namespace CharLS.JpegLS;
 
 internal class DefaultTraits : Traits
 {
-    internal DefaultTraits(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetThreshold)
+    internal DefaultTraits(int maximumSampleValue, int nearLossless, int resetThreshold)
         : base(maximumSampleValue, nearLossless, resetThreshold)
     {
     }

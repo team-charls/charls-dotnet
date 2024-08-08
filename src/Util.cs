@@ -40,6 +40,7 @@ internal static class Util
             case ErrorCode.UnexpectedFailure:
             case ErrorCode.NotEnoughMemory:
             case ErrorCode.UnexpectedRestartMarker:
+            case ErrorCode.RestartMarkerNotFound:
                 exception = new InvalidDataException("TODO");
                 break;
 

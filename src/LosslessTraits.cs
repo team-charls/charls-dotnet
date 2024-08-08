@@ -1,19 +1,12 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using System.Numerics;
-
 namespace CharLS.JpegLS;
 
-internal class LosslessTraitsImplT : Traits
+internal class LosslessTraitsImpl : Traits
 {
-    internal LosslessTraitsImplT(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetThreshold)
+    internal LosslessTraitsImpl(int maximumSampleValue, int nearLossless, int resetThreshold)
         : base(maximumSampleValue, nearLossless, resetThreshold)
-    {
-    }
-
-    protected LosslessTraitsImplT(int maximumSampleValue)
-        : base(maximumSampleValue, 0)
     {
     }
 
@@ -55,10 +48,10 @@ internal class LosslessTraitsImplT : Traits
 }
 
 
-internal class LosslessTraits8 : LosslessTraitsImplT
+internal class LosslessTraits8 : LosslessTraitsImpl
 {
-    public LosslessTraits8(int maximumSampleValue)
-        : base(maximumSampleValue)
+    public LosslessTraits8(int maximumSampleValue, int nearLossless, int resetThreshold)
+        : base(maximumSampleValue, nearLossless, resetThreshold)
     {
     }
 
@@ -79,10 +72,10 @@ internal class LosslessTraits8 : LosslessTraitsImplT
 }
 
 
-internal class LosslessTraits16 : LosslessTraitsImplT
+internal class LosslessTraits16 : LosslessTraitsImpl
 {
-    public LosslessTraits16(int maximumSampleValue)
-        : base(maximumSampleValue)
+    public LosslessTraits16(int maximumSampleValue, int nearLossless, int resetThreshold)
+        : base(maximumSampleValue, nearLossless, resetThreshold)
     {
     }
 
@@ -98,11 +91,10 @@ internal class LosslessTraits16 : LosslessTraitsImplT
 }
 
 
-internal class LosslessTraitsTriplet<TSample> : LosslessTraitsImplT
-    where TSample : struct, IBinaryInteger<TSample>
+internal class LosslessTraitsTriplet : LosslessTraitsImpl
 {
-    public LosslessTraitsTriplet(int maximumSampleValue, int near, int reset = Constants.DefaultResetThreshold)
-        : base(maximumSampleValue, near, reset)
+    public LosslessTraitsTriplet(int maximumSampleValue, int nearLossless, int resetThreshold)
+        : base(maximumSampleValue, nearLossless, resetThreshold)
     {
     }
 
