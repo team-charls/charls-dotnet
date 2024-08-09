@@ -263,17 +263,17 @@ public sealed class JpegLSEncoder
         }
         else
         {
-            //writer_.write_start_of_scan_segment(frame_info_.component_count, near_lossless_, interleave_mode_);
-            //encode_scan(source.data(), stride, frame_info_.component_count);
+            _writer.WriteStartOfScanSegment(FrameInfo.ComponentCount, NearLossless, InterleaveMode);
+            EncodeScan(source, stride, FrameInfo.ComponentCount, presetCodingParameters);
         }
 
         WriteEndOfImage();
     }
 
-    private void EncodeScan(ReadOnlyMemory<byte> source, int stride, int component_count, JpegLSPresetCodingParameters codingParameters)
+    private void EncodeScan(ReadOnlyMemory<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
     {
         var encoder = ScanCodecFactory.CreateScanEncoder(
-            new FrameInfo(FrameInfo!.Width, FrameInfo.Height, FrameInfo.BitsPerSample, component_count),
+            new FrameInfo(FrameInfo!.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
             codingParameters,
             new CodingParameters
             {

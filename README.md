@@ -20,7 +20,7 @@ This project is considered work in progress and NOT ready for general use. The f
 * [ ] Decode 16 bit images, interleave mode: line
 * [ ] Decode 16 bit images, interleave mode: sample
 * [X] Encode 8 bit images, interleave mode: none
-* [ ] Encode 8 bit images, interleave mode: line
+* [X] Encode 8 bit images, interleave mode: line
 * [ ] Encode 8 bit images, interleave mode: sample
 * [X] Encode 16 bit images, interleave mode: none
 * [ ] Encode 16 bit images, interleave mode: line

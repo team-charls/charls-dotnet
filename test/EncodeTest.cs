@@ -37,10 +37,11 @@ public class EncodeTest
         Encode("conformance/test8.ppm", 102248);
     }
 
-    //public void encode_color_8_bit_interleave_line_lossless()
-    //{
-    //    Encode("DataFiles/test8.ppm", 100615, InterleaveMode.Line);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveLineLossless()
+    {
+        Encode("conformance/test8.ppm", 100615, InterleaveMode.Line);
+    }
 
     //TEST_METHOD(encode_color_8_bit_interleave_sample_lossless) // NOLINT
     //{
