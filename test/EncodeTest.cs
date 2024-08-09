@@ -79,11 +79,12 @@ public class EncodeTest
     //    encode("DataFiles/test8.ppm", 91862, interleave_mode::sample, color_transformation::hp3);
     //}
 
-    //TEST_METHOD(encode_color_16_bit_interleave_none) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60} };
-    //    encode({ 1, 1, 16, 3}, { data.cbegin(), data.cend()}, 66, interleave_mode::none);
-    //}
+    [Fact]
+    public void EncodeColor16BitInterleaveNone()
+    {
+        byte[] data = [ 10, 20, 30, 40, 50, 60 ];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 66, InterleaveMode.None);
+    }
 
     //TEST_METHOD(encode_color_16_bit_interleave_sample_hp1) // NOLINT
     //{
@@ -148,7 +149,7 @@ public class EncodeTest
             referenceFile.ImageData, expectedSize, interleaveMode/*, color_transformation*/);
     }
 
-    private static void Encode(FrameInfo frameInfo, Memory<byte> source, int expectedSize, InterleaveMode interleaveMode
+    private static void Encode(FrameInfo frameInfo, ReadOnlyMemory<byte> source, int expectedSize, InterleaveMode interleaveMode
     /*const color_transformation color_transformation = color_transformation::none*/)
     {
         JpegLSEncoder encoder = new() { FrameInfo = frameInfo, InterleaveMode = interleaveMode };

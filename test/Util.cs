@@ -111,8 +111,8 @@ internal sealed class Util
         }
     }
 
-    internal static void TestByDecoding(Memory<byte> encodedSource, FrameInfo sourceFrameInfo,
-        Memory<byte> expectedDestination,
+    internal static void TestByDecoding(ReadOnlyMemory<byte> encodedSource, FrameInfo sourceFrameInfo,
+        ReadOnlyMemory<byte> expectedDestination,
         InterleaveMode interleaveMode
         /*const color_transformation color_transformation = color_transformation::none*/)
     {

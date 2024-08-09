@@ -74,15 +74,12 @@ internal class ScanEncoderImpl : ScanEncoder
     private void EncodeLines8BitInterleaveModeNone(ReadOnlyMemory<byte> source)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int componentCount = CodingParameters.InterleaveMode == InterleaveMode.Line ? FrameInfo.ComponentCount : 1;
-
-        Span<int> runIndex = stackalloc int[componentCount];
-        Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
+        Span<byte> lineBuffer = new byte[pixelStride * 2];
 
         for (int line = 0; line < FrameInfo.Height; ++line)
         {
             var previousLine = lineBuffer;
-            var currentLine = lineBuffer[(componentCount * pixelStride)..];
+            var currentLine = lineBuffer[pixelStride..];
             bool oddLine = (line & 1) == 1;
             if (oddLine)
             {
@@ -94,27 +91,18 @@ internal class ScanEncoderImpl : ScanEncoder
             int bytesRead = OnLineBegin(source.Span, currentLine[1..], FrameInfo.Width);
             source = source[bytesRead..];
 
-            for (int component = 0; component < componentCount; ++component)
-            {
-                RunIndex = runIndex[component];
+            // initialize edge pixels used for prediction
+            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+            currentLine[0] = previousLine[1];
 
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
-
-                EncodeSampleLine(previousLine, currentLine);
-
-                runIndex[component] = RunIndex;
-                currentLine = currentLine[pixelStride..];
-                previousLine = previousLine[pixelStride..];
-            }
+            EncodeSampleLine(previousLine, currentLine);
         }
     }
 
     private void EncodeLines8BitInterleaveModeLine(ReadOnlyMemory<byte> source)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int componentCount = CodingParameters.InterleaveMode == InterleaveMode.Line ? FrameInfo.ComponentCount : 1;
+        int componentCount = FrameInfo.ComponentCount;
 
         Span<int> runIndex = stackalloc int[componentCount];
         Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
@@ -154,15 +142,13 @@ internal class ScanEncoderImpl : ScanEncoder
     private void EncodeLines8BitInterleaveModeSample(ReadOnlyMemory<byte> source)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int componentCount = CodingParameters.InterleaveMode == InterleaveMode.Line ? FrameInfo.ComponentCount : 1;
 
-        Span<int> runIndex = stackalloc int[componentCount];
-        Span<Triplet<byte>> lineBuffer = new Triplet<byte>[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
+        Span<Triplet<byte>> lineBuffer = new Triplet<byte>[pixelStride * 2];
 
         for (int line = 0; line < FrameInfo.Height; ++line)
         {
             var previousLine = lineBuffer;
-            var currentLine = lineBuffer[(componentCount * pixelStride)..];
+            var currentLine = lineBuffer[pixelStride..];
             bool oddLine = (line & 1) == 1;
             if (oddLine)
             {
@@ -174,20 +160,11 @@ internal class ScanEncoderImpl : ScanEncoder
             int bytesRead = OnLineBeginInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
             source = source[bytesRead..];
 
-            for (int component = 0; component < componentCount; ++component)
-            {
-                RunIndex = runIndex[component];
+            // initialize edge pixels used for prediction
+            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+            currentLine[0] = previousLine[1];
 
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
-
-                EncodeSampleLine(previousLine, currentLine);
-
-                runIndex[component] = RunIndex;
-                currentLine = currentLine[pixelStride..];
-                previousLine = previousLine[pixelStride..];
-            }
+            EncodeSampleLine(previousLine, currentLine);
         }
     }
 
@@ -293,8 +270,8 @@ internal class ScanEncoderImpl : ScanEncoder
         while (index <= FrameInfo.Width)
         {
             var ra = currentLine[index - 1];
-            var rc= previousLine[index - 1];
-            var rb= previousLine[index];
+            var rc = previousLine[index - 1];
+            var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
             int qs1 = Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
