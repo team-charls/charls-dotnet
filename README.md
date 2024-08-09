@@ -19,13 +19,17 @@ This project is considered work in progress and NOT ready for general use. The f
 * [X] Decode 16 bit images, interleave mode: none
 * [ ] Decode 16 bit images, interleave mode: line
 * [ ] Decode 16 bit images, interleave mode: sample
-* [ ] Encode 8 bit images, interleave mode: none
-* [ ] Encode 8 bit images, interleave mode: line
-* [ ] Encode 8 bit images, interleave mode: sample
-* [ ] Encode 16 bit images, interleave mode: none
+* [X] Encode 8 bit images, interleave mode: none
+* [X] Encode 8 bit images, interleave mode: line
+* [X] Encode 8 bit images, interleave mode: sample
+* [ ] Encode\Decode 8 bit images HP color transformation
+* [X] Encode 16 bit images, interleave mode: none
 * [ ] Encode 16 bit images, interleave mode: line
 * [ ] Encode 16 bit images, interleave mode: sample
+* [ ] Encode\Decode 16 bit images HP color transformation
+* [ ] Encode\Decode 4 component images
 * [ ] General code clean-up
+* [ ] Good code coverage
 * [ ] Performance tuning
 * [ ] Release NuGet package
 

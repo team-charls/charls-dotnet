@@ -13,6 +13,10 @@ internal static class Constants
 
     internal const int DefaultResetThreshold = 64; // Default RESET value as defined in ISO/IEC 14495-1, table C.2
 
+    internal const int MaximumComponentCount = 255;
+    internal const int MinimumBitsPerSample = 2;
+    internal const int MaximumBitsPerSample = 16;
+
     internal const int AutoCalculateStride = 0;
     internal const byte JpegMarkerStartByte = 0xFF;
     internal const int MaximumNearLossless = 255;
@@ -28,6 +32,12 @@ internal static class Constants
 
     internal const byte JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0 to D7)
     internal const int JpegRestartMarkerRange = 8;
+
+    // The size in bytes of the segment length field.
+    internal const int SegmentLengthSize = sizeof(ushort);
+
+    // The size of a SPIFF header when serialized to a JPEG byte stream.
+    internal const int SpiffHeaderSizeInBytes = 34;
 
     internal const int Int32BitCount = 32;
 }

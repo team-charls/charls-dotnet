@@ -46,6 +46,17 @@ internal sealed class Util
         return referenceFile;
     }
 
+    internal static PortableAnymapFile ReadAnymapReferenceFile(string filename, InterleaveMode interleaveMode)
+    {
+        PortableAnymapFile referenceFile = new(filename);
+
+        if (interleaveMode == InterleaveMode.None && referenceFile.ComponentCount == 3)
+        {
+            referenceFile.ImageData = TripletToPlanar(referenceFile.ImageData, referenceFile.Width, referenceFile.Height);
+        }
+
+        return referenceFile;
+    }
 
     internal static void TestCompliance(byte[] encodedSource, byte[] uncompressedSource, bool checkEncode)
     {
@@ -95,6 +106,41 @@ internal sealed class Util
                     {
                         Assert.Equal(source16[i], destination16[i]);
                     }
+                }
+            }
+        }
+    }
+
+    internal static void TestByDecoding(ReadOnlyMemory<byte> encodedSource, FrameInfo sourceFrameInfo,
+        ReadOnlyMemory<byte> expectedDestination,
+        InterleaveMode interleaveMode
+        /*const color_transformation color_transformation = color_transformation::none*/)
+    {
+        JpegLSDecoder decoder = new();
+        decoder.Source = encodedSource;
+        decoder.ReadHeader();
+
+        var frameInfo = decoder.FrameInfo;
+
+        Assert.Equal(sourceFrameInfo.Width, frameInfo.Width);
+        Assert.Equal(sourceFrameInfo.Height, frameInfo.Height);
+        Assert.Equal(sourceFrameInfo.BitsPerSample, frameInfo.BitsPerSample);
+        Assert.Equal(sourceFrameInfo.ComponentCount, frameInfo.ComponentCount);
+        Assert.Equal(interleaveMode, decoder.InterleaveMode);
+        ////Assert.True(color_transformation == decoder.color_transformation());
+
+        var destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        Assert.Equal(destination.Length, expectedDestination.Length);
+
+        if (decoder.NearLossless == 0)
+        {
+            for (int i = 0; i != expectedDestination.Length; ++i)
+            {
+                if (expectedDestination.Span[i] != destination[i])
+                {
+                    Assert.Equal(expectedDestination.Span[i], destination[i]);
                 }
             }
         }

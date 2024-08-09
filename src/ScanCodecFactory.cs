@@ -48,4 +48,12 @@ internal class ScanCodecFactory
             return new ScanDecoderImpl<ushort, ushort>(frameInfo, presetCodingParameters, codingParameters, traits);
         }
     }
+
+    internal static ScanEncoder CreateScanEncoder(FrameInfo frameInfo,
+        JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
+    {
+        int maximumSampleValue = Algorithm.CalculateMaximumSampleValue(frameInfo.BitsPerSample);
+        var traits = new DefaultTraits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue);
+        return new ScanEncoderImpl(frameInfo, presetCodingParameters, codingParameters, traits);
+    }
 }

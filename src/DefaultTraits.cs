@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 
+using System.Diagnostics;
+
 namespace CharLS.JpegLS;
 
 internal class DefaultTraits : Traits
@@ -11,9 +13,9 @@ internal class DefaultTraits : Traits
     {
     }
 
-    public override int ComputeErrVal(int e)
+    internal override int ComputeErrorValue(int e)
     {
-        throw new NotImplementedException();
+        return ModuloRange(Quantize(e));
     }
 
     public override int ComputeReconstructedSample(int predictedValue, int errorValue)
@@ -31,7 +33,7 @@ internal class DefaultTraits : Traits
 
     public override bool IsNear(int lhs, int rhs)
     {
-        throw new NotImplementedException();
+        return Math.Abs(lhs - rhs) <= NearLossless;
     }
 
     //public override bool IsNear(TPixel lhs, TPixel rhs)
@@ -41,7 +43,28 @@ internal class DefaultTraits : Traits
 
     public override int ModuloRange(int errorValue)
     {
-        throw new NotImplementedException();
+        Debug.Assert(Math.Abs(errorValue) <= Range);
+
+        if (errorValue < 0)
+        {
+            errorValue += Range;
+        }
+
+        if (errorValue >= (Range + 1) / 2)
+        {
+            errorValue -= Range;
+        }
+
+        Debug.Assert(-Range / 2 <= errorValue && errorValue <= ((Range + 1) / 2) - 1);
+        return errorValue;
+    }
+
+    private int Quantize(int errorValue)
+    {
+        if (errorValue > 0)
+            return (errorValue + NearLossless) / (2 * NearLossless + 1);
+
+        return -(NearLossless - errorValue) / (2 * NearLossless + 1);
     }
 
     private int Dequantize(int errorValue)

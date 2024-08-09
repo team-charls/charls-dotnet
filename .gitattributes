@@ -12,6 +12,8 @@
 *.jls binary
 *.bmp binary
 *.raw binary
+*.pgm binary
+*.ppm binary
 
 # Export ignore all files that are only needed for git and CI (used when downloading the repository as a zip file).
 .gitattributes export-ignore
