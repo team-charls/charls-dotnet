@@ -658,7 +658,7 @@ internal class JpegStreamReader
 
     private void CheckInterleaveMode(InterleaveMode mode)
     {
-        if (!Enum.IsDefined(mode) || (FrameInfo!.ComponentCount == 1 && mode != InterleaveMode.None))
+        if (!mode.IsValid() || (FrameInfo!.ComponentCount == 1 && mode != InterleaveMode.None))
             throw Util.CreateInvalidDataException(ErrorCode.InvalidParameterInterleaveMode);
     }
 

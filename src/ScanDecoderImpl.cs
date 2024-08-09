@@ -25,7 +25,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         _quantizationLut = InitializeQuantizationLut(traits, PresetCodingParameters.Threshold1,
             PresetCodingParameters.Threshold2, PresetCodingParameters.Threshold3);
 
-        ResetParameters(_traits.Range);
+        InitializeParameters(_traits.Range);
     }
 
     public override int DecodeScan(ReadOnlyMemory<byte> source, Span<byte> destination, int stride)
@@ -166,7 +166,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             // After a restart marker it is required to reset the decoder.
             Reset();
             lineBuffer.Clear();
-            ResetParameters(_traits.Range);
+            InitializeParameters(_traits.Range);
         }
     }
 
@@ -226,7 +226,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             Reset();
             lineBuffer.Clear();
             runIndex.Clear();
-            ResetParameters(_traits.Range);
+            InitializeParameters(_traits.Range);
         }
     }
 
@@ -272,7 +272,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             // After a restart marker it is required to reset the decoder.
             Reset();
             lineBuffer.Clear();
-            ResetParameters(_traits.Range);
+            InitializeParameters(_traits.Range);
         }
     }
 
@@ -321,7 +321,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             // After a restart marker it is required to reset the decoder.
             Reset();
             lineBuffer.Clear();
-            ResetParameters(_traits.Range);
+            InitializeParameters(_traits.Range);
         }
     }
 
@@ -348,7 +348,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                 QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
             if (qs != 0)
             {
-                currentLine[index] = (byte)DecodeRegular(qs, Algorithm.GetPredictedValue(ra, rb, rc));
+                currentLine[index] = (byte)DecodeRegular(qs, Algorithm.ComputePredictedValue(ra, rb, rc));
                 ++index;
             }
             else
@@ -377,7 +377,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                 QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
             if (qs != 0)
             {
-                currentLine[index] = (ushort)DecodeRegular(qs, Algorithm.GetPredictedValue(ra, rb, rc));
+                currentLine[index] = (ushort)DecodeRegular(qs, Algorithm.ComputePredictedValue(ra, rb, rc));
                 ++index;
             }
             else
@@ -419,9 +419,9 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
             else
             {
                 Triplet<byte> rx;
-                rx.V1 = (byte)DecodeRegular(qs1, Algorithm.GetPredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (byte)DecodeRegular(qs2, Algorithm.GetPredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (byte)DecodeRegular(qs3, Algorithm.GetPredictedValue(ra.V3, rb.V3, rc.V3));
+                rx.V1 = (byte)DecodeRegular(qs1, Algorithm.ComputePredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = (byte)DecodeRegular(qs2, Algorithm.ComputePredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = (byte)DecodeRegular(qs3, Algorithm.ComputePredictedValue(ra.V3, rb.V3, rc.V3));
                 currentLine[index] = rx;
                 ++index;
             }

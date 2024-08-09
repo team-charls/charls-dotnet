@@ -68,8 +68,8 @@ internal struct RunModeContext
         ++_n;
     }
 
-    /// <summary>Code segment A.21 – Computation of map for Errval mapping.</summary>
-    private bool ComputeMap(int errorValue, int k)
+    /// <summary>Code segment A.21 – Computation of map for error value mapping.</summary>
+    internal bool ComputeMap(int errorValue, int k)
     {
         if (k == 0 && errorValue > 0 && 2 * _nn < _n)
             return true;

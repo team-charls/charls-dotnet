@@ -52,12 +52,11 @@ internal static class Util
         return exception;
     }
 
-    /// <summary>
-    /// Computes how many bytes are needed to hold the number of bits.
-    /// </summary>
-    internal static int BitToByteCount(int bitCount)
+    internal static ArgumentException CreateArgumentException(ErrorCode errorCode)
     {
-        return (bitCount + 7) / 8;
+        var exception = new ArgumentException("TODO");
+        exception.Data.Add(nameof(ErrorCode), errorCode);
+        return exception;
     }
 
     internal static int CalculateMaximumSampleValue(int bitsPerSample)
@@ -69,4 +68,16 @@ internal static class Util
     {
         return Math.Min(Constants.MaximumNearLossless, maximumSampleValue / 2); // As defined by ISO/IEC 14495-1, C.2.3
     }
+
+    internal static bool IsValid(this InterleaveMode interleaveMode)
+    {
+        // MOre efficient than Enum.IsDefined as it doesn't use reflection.
+        return interleaveMode is >= InterleaveMode.None and <= InterleaveMode.Sample;
+    }
+
+    internal static int CheckedMul(int a, int b)
+    {
+        return a * b;
+    }
+
 }

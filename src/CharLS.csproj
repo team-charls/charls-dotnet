@@ -1,12 +1,13 @@
+<!--
+  Copyright (c) Team CharLS.
+  SPDX-License-Identifier: BSD-3-Clause
+-->
+
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="JpegLSEncoder.cs" />
-  </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="CharLS.Test" />

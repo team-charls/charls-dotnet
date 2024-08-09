@@ -150,7 +150,7 @@ public sealed class JpegLSDecoder
         if (stride == 0)
         {
             return FrameInfo.ComponentCount * FrameInfo.Height * FrameInfo.Width *
-                   BitToByteCount(FrameInfo.BitsPerSample);
+                   Algorithm.BitToByteCount(FrameInfo.BitsPerSample);
         }
 
         switch (InterleaveMode)
@@ -247,7 +247,7 @@ public sealed class JpegLSDecoder
         }
 
         // Compute the layout of the destination buffer.
-        int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * BitToByteCount(FrameInfo.BitsPerSample);
+        int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * Algorithm.BitToByteCount(FrameInfo.BitsPerSample);
         int planeCount = _reader.InterleaveMode == InterleaveMode.None ? FrameInfo.ComponentCount : 1;
         int minimumDestinationSize = (bytesPerPlane * planeCount) - (stride - minimumStride);
 
@@ -272,14 +272,6 @@ public sealed class JpegLSDecoder
         _state = State.Completed;
     }
 
-    /// <summary>
-    /// Computes how many bytes are needed to hold the number of bits.
-    /// </summary>
-    private static int BitToByteCount(int bitCount)
-    {
-        return (bitCount + 7) / 8;
-    }
-
     private static void CheckOperation(bool expression)
     {
         if (!expression)
@@ -299,6 +291,6 @@ public sealed class JpegLSDecoder
             _reader.InterleaveMode == InterleaveMode.None
             ? 1
             : FrameInfo.ComponentCount;
-        return componentsInPlaneCount * FrameInfo.Width * Util.BitToByteCount(FrameInfo.BitsPerSample);
+        return componentsInPlaneCount * FrameInfo.Width * Algorithm.BitToByteCount(FrameInfo.BitsPerSample);
     }
 }

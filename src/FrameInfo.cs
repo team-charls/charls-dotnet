@@ -8,6 +8,11 @@ namespace CharLS.JpegLS;
 /// </summary>
 public sealed record FrameInfo
 {
+    private readonly int _width;
+    private readonly int _height;
+    private readonly int _bitsPerSample;
+    private readonly int _componentCount;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="FrameInfo"/> record.
     /// </summary>
@@ -24,6 +29,11 @@ public sealed record FrameInfo
     /// <param name="componentCount">The number of components contained in a frame.</param>
     public FrameInfo(int width, int height, int bitsPerSample, int componentCount)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+        ArgumentOutOfRangeException.ThrowIfLessThan(bitsPerSample, 2);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(componentCount);
+
         Width = width;
         Height = height;
         BitsPerSample = bitsPerSample;
@@ -31,22 +41,56 @@ public sealed record FrameInfo
     }
 
     /// <summary>
-    /// Gets the width of the image, valid range is [1, 65535].
+    /// Gets the width of the image, valid range is [1, int.MaxValue].
     /// </summary>
-    public int Width { get; init; }
+    public int Width
+    {
+        get => _width;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _width = value;
+        }
+    }
 
     /// <summary>
-    /// Gets the height of the image, valid range is [1, 65535].
+    /// Gets the height of the image, valid range is [1, int.MaxValue].
     /// </summary>
-    public int Height { get; init; }
+    public int Height
+    {
+        get => _height;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _height = value;
+        }
+    }
 
     /// <summary>
     /// Gets the number of bits per sample, valid range is [2, 16].
     /// </summary>
-    public int BitsPerSample { get; init; }
+    public int BitsPerSample
+    {
+        get => _bitsPerSample;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(value, Constants.MinimumBitsPerSample);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value, Constants.MaximumBitsPerSample);
+            _bitsPerSample = value;
+        }
+    }
 
     /// <summary>
     /// Gets the number of components contained in the frame, valid range is [1, 255].
     /// </summary>
-    public int ComponentCount { get; init; }
+    public int ComponentCount
+    {
+        get => _componentCount;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value, Constants.MaximumComponentCount);
+            _componentCount = value;
+        }
+    }
 }
