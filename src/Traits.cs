@@ -61,6 +61,12 @@ internal abstract class Traits
 
     public abstract bool IsNear(int lhs, int rhs);
 
+    internal bool IsNear(Triplet<byte> lhs, Triplet<byte> rhs)
+    {
+        return Math.Abs(lhs.V1 - rhs.V1) <= NearLossless && Math.Abs(lhs.V2 - rhs.V2) <= NearLossless &&
+               Math.Abs(lhs.V3 - rhs.V3) <= NearLossless;
+    }
+
     //public abstract bool IsNear(TPixel lhs, TPixel rhs);
 
     public abstract int CorrectPrediction(int predicted);
