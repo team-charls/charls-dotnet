@@ -27,7 +27,7 @@ internal abstract class ScanEncoder(
         _compressedLength = destination.Length;
     }
 
-    protected void encode_run_pixels(int runLength, bool endOfLine)
+    protected void EncodeRunPixels(int runLength, bool endOfLine)
     {
         while (runLength >= 1 << J[RunIndex])
         {

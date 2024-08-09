@@ -1145,7 +1145,7 @@ public class JpegLSEncoderTest
     //        test_by_decoding(destination, frame_info, source.data(), source.size(), interleave_mode::none);
     //    }
 
-    [Fact (Skip = "WIP")]
+    [Fact]
     public void SimpleEncode16Bit()
     {
         byte[] source = [0, 1, 2, 3, 4, 5];
@@ -1153,7 +1153,7 @@ public class JpegLSEncoderTest
         var frameInfo = new FrameInfo(3, 1, 16, 1);
         var encoded = JpegLSEncoder.Encode(source, frameInfo);
 
-        TestByDecoding(encoded, frameInfo, source, InterleaveMode.None);
+        Util.TestByDecoding(encoded, frameInfo, source, InterleaveMode.None);
     }
 
     //    TEST_METHOD(encode_with_stride_interleave_none_8_bit) // NOLINT
@@ -1893,38 +1893,4 @@ public class JpegLSEncoderTest
     //return end;
     //    }
 
-    private static void TestByDecoding(Memory<byte> encodedSource, FrameInfo sourceFrameInfo,
-        Memory<byte> expectedDestination, 
-        InterleaveMode interleaveMode
-        /*const color_transformation color_transformation = color_transformation::none*/)
-    {
-        JpegLSDecoder decoder = new();
-        decoder.Source = encodedSource;
-        decoder.ReadHeader();
-
-        var frameInfo = decoder.FrameInfo;
-
-        Assert.Equal(sourceFrameInfo.Width, frameInfo.Width);
-        Assert.Equal(sourceFrameInfo.Height, frameInfo.Height);
-        Assert.Equal(sourceFrameInfo.BitsPerSample, frameInfo.BitsPerSample);
-        Assert.Equal(sourceFrameInfo.ComponentCount, frameInfo.ComponentCount);
-        Assert.Equal(interleaveMode, decoder.InterleaveMode);
-        ////Assert.True(color_transformation == decoder.color_transformation());
-
-        var destination = new byte[decoder.GetDestinationSize()];
-        decoder.Decode(destination);
-
-        Assert.Equal(destination.Length, expectedDestination.Length);
-
-        if (decoder.NearLossless == 0)
-        {
-            for (int i = 0; i != expectedDestination.Length; ++i)
-            {
-                if (expectedDestination.Span[i] != destination[i])
-                {
-                    Assert.Equal(expectedDestination.Span[i], destination[i]);
-                }
-            }
-        }
-    }
 }

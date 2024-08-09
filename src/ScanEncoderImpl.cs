@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace CharLS.JpegLS;
 
@@ -28,7 +29,29 @@ internal class ScanEncoderImpl : ScanEncoder
         _processLine = CreateProcessLine();
 
         Initialize(destination);
-        EncodeLines(source);
+
+        if (FrameInfo.BitsPerSample <= 8)
+        {
+            EncodeLines8BitInterleaveModeNone(source);
+        }
+        else
+        {
+            switch (CodingParameters.InterleaveMode)
+            {
+                case InterleaveMode.None:
+                    EncodeLines16BitInterleaveModeNone(source);
+                    break;
+
+                case InterleaveMode.Line:
+                    //DecodeLinesByteLine(destination);
+                    break;
+
+                case InterleaveMode.Sample:
+                    //DecodeLinesTripletByte(destination);
+                    break;
+            }
+        }
+
         EndScan();
 
         return GetLength();
@@ -37,7 +60,7 @@ internal class ScanEncoderImpl : ScanEncoder
     // In ILV_SAMPLE mode, multiple components are handled in do_line
     // In ILV_LINE mode, a call to do_line is made for every component
     // In ILV_NONE mode, do_scan is called for each component
-    private void EncodeLines(ReadOnlyMemory<byte> source)
+    private void EncodeLines8BitInterleaveModeNone(ReadOnlyMemory<byte> source)
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = CodingParameters.InterleaveMode == InterleaveMode.Line ? FrameInfo.ComponentCount : 1;
@@ -57,7 +80,48 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            OnLineBegin(source.Span, currentLine[1..], FrameInfo.Width);
+            int bytesRead = OnLineBegin(source.Span, currentLine[1..], FrameInfo.Width);
+            source = source[bytesRead..];
+
+            for (int component = 0; component < componentCount; ++component)
+            {
+                RunIndex = runIndex[component];
+
+                // initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                EncodeSampleLine(previousLine, currentLine);
+
+                runIndex[component] = RunIndex;
+                currentLine = currentLine[pixelStride..];
+                previousLine = previousLine[pixelStride..];
+            }
+        }
+    }
+
+    private void EncodeLines16BitInterleaveModeNone(ReadOnlyMemory<byte> source)
+    {
+        int pixelStride = FrameInfo.Width + 2;
+        int componentCount = CodingParameters.InterleaveMode == InterleaveMode.Line ? FrameInfo.ComponentCount : 1;
+
+        Span<int> runIndex = stackalloc int[componentCount];
+        Span<ushort> lineBuffer = new ushort[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
+
+        for (int line = 0; line < FrameInfo.Height; ++line)
+        {
+            var previousLine = lineBuffer;
+            var currentLine = lineBuffer[(componentCount * pixelStride)..];
+            bool oddLine = (line & 1) == 1;
+            if (oddLine)
+            {
+                var temp = previousLine;
+                previousLine = currentLine;
+                currentLine = temp;
+            }
+
+            int bytesRead = OnLineBegin(source.Span, currentLine[1..], FrameInfo.Width);
+            source = source[bytesRead..];
 
             for (int component = 0; component < componentCount; ++component)
             {
@@ -97,7 +161,35 @@ internal class ScanEncoderImpl : ScanEncoder
             }
             else
             {
-                index += encode_run_mode(index, previousLine, currentLine);
+                index += EncodeRunMode(index, previousLine, currentLine);
+                rb = previousLine[index - 1];
+                rd = previousLine[index];
+            }
+        }
+    }
+
+    private void EncodeSampleLine(Span<ushort> previousLine, Span<ushort> currentLine)
+    {
+        int index = 1;
+        int rb = previousLine[index - 1];
+        int rd = previousLine[index];
+
+        while (index <= FrameInfo.Width)
+        {
+            int ra = currentLine[index - 1];
+            int rc = rb;
+            rb = rd;
+            rd = previousLine[index + 1];
+
+            int qs = Algorithm.ComputeContextId(QuantizeGradient(rd - rb), QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
+            if (qs != 0)
+            {
+                currentLine[index] = (ushort)encode_regular(qs, currentLine[index], Algorithm.ComputePredictedValue(ra, rb, rc));
+                ++index;
+            }
+            else
+            {
+                index += EncodeRunMode(index, previousLine, currentLine);
                 rb = previousLine[index - 1];
                 rd = previousLine[index];
             }
@@ -119,32 +211,58 @@ internal class ScanEncoderImpl : ScanEncoder
         return _traits.ComputeReconstructedSample(predictedValue, Algorithm.ApplySign(errorValue, sign));
     }
 
-    int encode_run_mode(int startIndex, Span<byte> previousLine, Span<byte> currentLine)
+    private int EncodeRunMode(int startIndex, Span<byte> previousLine, Span<byte> currentLine)
     {
-        int count_type_remain = FrameInfo.Width - (startIndex - 1);
-        var type_prev_x = previousLine[startIndex..];
-        var type_cur_x = currentLine[startIndex..];
-
+        int countTypeRemain = FrameInfo.Width - (startIndex - 1);
+        var typePrevX = previousLine[startIndex..];
+        var typeCurX = currentLine[startIndex..];
         var ra = currentLine[startIndex - 1];
 
-        int run_length = 0;
-        while (_traits.IsNear(type_cur_x[run_length], ra))
+        int runLength = 0;
+        while (_traits.IsNear(typeCurX[runLength], ra))
         {
-            type_cur_x[run_length] = ra;
-            ++run_length;
+            typeCurX[runLength] = ra;
+            ++runLength;
 
-            if (run_length == count_type_remain)
+            if (runLength == countTypeRemain)
                 break;
         }
 
-        encode_run_pixels(run_length, run_length == count_type_remain);
+        EncodeRunPixels(runLength, runLength == countTypeRemain);
 
-        if (run_length == count_type_remain)
-            return run_length;
+        if (runLength == countTypeRemain)
+            return runLength;
 
-        type_cur_x[run_length] = (byte)encode_run_interruption_pixel(type_cur_x[run_length], ra, type_prev_x[run_length]);
+        typeCurX[runLength] = (byte)encode_run_interruption_pixel(typeCurX[runLength], ra, typePrevX[runLength]);
         DecrementRunIndex();
-        return run_length + 1;
+        return runLength + 1;
+    }
+
+    private int EncodeRunMode(int startIndex, Span<ushort> previousLine, Span<ushort> currentLine)
+    {
+        int countTypeRemain = FrameInfo.Width - (startIndex - 1);
+        var typePrevX = previousLine[startIndex..];
+        var typeCurX = currentLine[startIndex..];
+        var ra = currentLine[startIndex - 1];
+
+        int runLength = 0;
+        while (_traits.IsNear(typeCurX[runLength], ra))
+        {
+            typeCurX[runLength] = ra;
+            ++runLength;
+
+            if (runLength == countTypeRemain)
+                break;
+        }
+
+        EncodeRunPixels(runLength, runLength == countTypeRemain);
+
+        if (runLength == countTypeRemain)
+            return runLength;
+
+        typeCurX[runLength] = (ushort)encode_run_interruption_pixel(typeCurX[runLength], ra, typePrevX[runLength]);
+        DecrementRunIndex();
+        return runLength + 1;
     }
 
     private int encode_run_interruption_pixel(int x, int ra, int rb)
@@ -250,8 +368,17 @@ internal class ScanEncoderImpl : ScanEncoder
         //unreachable();
     }
 
-    private void OnLineBegin(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
+    private int OnLineBegin(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
     {
         _processLine!.NewLineRequested(source, destination, pixelCount);
+        return pixelCount;
     }
+
+    private int OnLineBegin(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
+    {
+        Span<byte> destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
+        _processLine!.NewLineRequested(source, destinationInBytes, pixelCount * 2);
+        return pixelCount * 2;
+    }
+
 }
