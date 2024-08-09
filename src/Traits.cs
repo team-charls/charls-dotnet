@@ -55,7 +55,7 @@ internal abstract class Traits
     /// </summary>
     public virtual int NearLossless { get; }
 
-    public abstract int ComputeErrVal(int e);
+    internal abstract int ComputeErrorValue(int e);
 
     public abstract int ComputeReconstructedSample(int predictedValue, int errorValue);
 

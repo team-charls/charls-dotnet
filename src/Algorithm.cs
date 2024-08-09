@@ -28,6 +28,12 @@ internal static class Algorithm
         return (bitCount + 7) / 8;
     }
 
+    internal static int CalculateMaximumSampleValue(int bitsPerSample)
+    {
+        Debug.Assert(bitsPerSample is > 0 and <= 16);
+        return (int)((1U << bitsPerSample) - 1);
+    }
+
     // Computes the initial value for A. See ISO/IEC 14495-1, A.8, step 1.d and A.2.1
     internal static int InitializationValueForA(int range)
     {
@@ -80,7 +86,7 @@ internal static class Algorithm
         return (maximumSampleValue + 2 * nearLossless) / (2 * nearLossless + 1) + 1;
     }
 
-    internal static int GetPredictedValue(int ra, int rb, int rc)
+    internal static int ComputePredictedValue(int ra, int rb, int rc)
     {
         // sign trick reduces the number of if statements (branches)
         int sign = BitWiseSign(rb - ra);
@@ -126,11 +132,4 @@ internal static class Algorithm
     {
         return (q1 * 9 + q2) * 9 + q3;
     }
-
-    internal static int CalculateMaximumSampleValue(int bitsPerSample)
-    {
-        //ASSERT(bits_per_sample > 0 && bits_per_sample <= 16);
-        return (int)((1U << bitsPerSample) - 1);
-    }
-
 }

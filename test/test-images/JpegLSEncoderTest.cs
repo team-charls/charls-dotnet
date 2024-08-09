@@ -1146,7 +1146,7 @@ public class JpegLSEncoderTest
     //    }
 
     [Fact (Skip = "WIP")]
-    public void SimpleEncode()
+    public void SimpleEncode16Bit()
     {
         byte[] source = [0, 1, 2, 3, 4, 5];
 
@@ -1911,24 +1911,20 @@ public class JpegLSEncoderTest
         Assert.Equal(interleaveMode, decoder.InterleaveMode);
         ////Assert.True(color_transformation == decoder.color_transformation());
 
+        var destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
 
-        throw new NotImplementedException();
-        //vector<byte> destination(decoder.destination_size());
-        //decoder.decode(destination);
+        Assert.Equal(destination.Length, expectedDestination.Length);
 
-        //Assert::AreEqual(destination.size(), expected_destination_size);
-
-        //if (decoder.near_lossless() == 0)
-        //{
-        //    const auto* expected_destination_byte{static_cast<const byte*>(expected_destination)};
-
-        //    for (size_t i{ }; i != expected_destination_size; ++i)
-        //    {
-        //        if (expected_destination_byte[i] != destination[i]) // AreEqual is very slow, pre-test to speed up 50X
-        //        {
-        //            Assert::AreEqual(expected_destination_byte[i], destination[i]);
-        //        }
-        //    }
-        //}
+        if (decoder.NearLossless == 0)
+        {
+            for (int i = 0; i != expectedDestination.Length; ++i)
+            {
+                if (expectedDestination.Span[i] != destination[i])
+                {
+                    Assert.Equal(expectedDestination.Span[i], destination[i]);
+                }
+            }
+        }
     }
 }

@@ -36,5 +36,8 @@ internal static class Constants
     // The size in bytes of the segment length field.
     internal const int SegmentLengthSize = sizeof(ushort);
 
+    // The size of a SPIFF header when serialized to a JPEG byte stream.
+    internal const int SpiffHeaderSizeInBytes = 34;
+
     internal const int Int32BitCount = 32;
 }

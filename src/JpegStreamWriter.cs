@@ -21,6 +21,12 @@ internal class JpegStreamWriter
     // ReSharper disable once ConvertToAutoPropertyWhenPossible
     internal int BytesWritten => _position;
 
+    internal void Seek(int byteCount)
+    {
+        Debug.Assert(_position + byteCount <= Destination.Length);
+        _position += byteCount;
+    }
+
     internal void WriteStartOfImage()
     {
         WriteSegmentWithoutData(JpegMarkerCode.StartOfImage);

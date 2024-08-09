@@ -21,14 +21,6 @@ internal abstract class ScanDecoder(
     private const int CacheBitCount = sizeof(ulong) * 8;
     private const int MaxReadableCacheBits = CacheBitCount - 8;
 
-    // Used to determine how large runs should be encoded at a time.
-    // Defined by the JPEG-LS standard, A.2.1., Initialization step 3.
-    protected static readonly int[] J =
-    [
-        0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 9, 10,
-        11, 12, 13, 14, 15
-    ];
-
     protected static readonly GolombCodeTable[] ColombCodeTable =
     [
         GolombCodeTable.Create(0), GolombCodeTable.Create(1), GolombCodeTable.Create(2), GolombCodeTable.Create(3),
@@ -64,19 +56,6 @@ internal abstract class ScanDecoder(
 
         _validBits -= bitCount; // Note: valid_bits_ may become negative to indicate that extra bits are needed.
         _readCache = _readCache << bitCount;
-    }
-
-    protected void ResetParameters(int range)
-    {
-        var regularModeContext = new RegularModeContext(range);
-        for (int i = 0; i < RegularModeContext.Length; i++)
-        {
-            RegularModeContext[i] = regularModeContext;
-        }
-
-        RunModeContexts[0] = new RunModeContext(0, range);
-        RunModeContexts[1] = new RunModeContext(1, range);
-        RunIndex = 0;
     }
 
     protected void EndScan()

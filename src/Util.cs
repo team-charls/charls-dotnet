@@ -74,4 +74,10 @@ internal static class Util
         // MOre efficient than Enum.IsDefined as it doesn't use reflection.
         return interleaveMode is >= InterleaveMode.None and <= InterleaveMode.Sample;
     }
+
+    internal static int CheckedMul(int a, int b)
+    {
+        return a * b;
+    }
+
 }

@@ -11,7 +11,7 @@ public sealed class JpegLSEncoder
     private FrameInfo? _frameInfo;
     private int _nearLossless;
     private InterleaveMode _interleaveMode;
-    private JpegLSPresetCodingParameters? _userPresetCodingParameters;
+    private JpegLSPresetCodingParameters? _userPresetCodingParameters = new JpegLSPresetCodingParameters();
     private readonly JpegStreamWriter _writer = new JpegStreamWriter();
 
     private enum State
@@ -161,7 +161,11 @@ public sealed class JpegLSEncoder
     {
         get
         {
-            return 0; // Convert.ToInt32(sizeInBytes);
+            Check.Operation(IsFrameInfoConfigured());
+
+            return Util.CheckedMul(Util.CheckedMul(Util.CheckedMul(FrameInfo!.Width, FrameInfo.Height), FrameInfo.ComponentCount),
+                       Algorithm.BitToByteCount(FrameInfo.BitsPerSample)) +
+                   1024 + Constants.SpiffHeaderSizeInBytes;
         }
     }
 
@@ -198,16 +202,7 @@ public sealed class JpegLSEncoder
     /// <value>
     /// The bytes written to the destination buffer.
     /// </value>
-    /// <exception cref="OverflowException">When the required size doesn't fit in an int.</exception>
-    public int BytesWritten
-    {
-        get
-        {
-            //HandleJpegLSError(CharLSGetBytesWritten(_encoder, out nuint bytesWritten));
-            //return Convert.ToInt32(bytesWritten);
-            return 0;
-        }
-    }
+    public int BytesWritten => _writer.BytesWritten;
 
     /// <summary>
     /// Encodes the passed image data into encoded JPEG-LS data.
@@ -288,9 +283,8 @@ public sealed class JpegLSEncoder
         int bytesWritten = encoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
 
         // Synchronize the destination encapsulated in the writer (encode_scan works on a local copy)
-        ////_writer.seek(bytesWritten);
+        _writer.Seek(bytesWritten);
     }
-
 
     /// <summary>
     /// Writes a standard SPIFF header to the destination. The additional values are computed from the current encoder settings.
@@ -329,7 +323,7 @@ public sealed class JpegLSEncoder
         }
         else
         {
-            ////writer_.write_start_of_image();
+            _writer.WriteStartOfImage();
         }
 
         //if (has_option(encoding_options::include_version_number))
@@ -362,5 +356,10 @@ public sealed class JpegLSEncoder
             return stride;
 
         return stride * FrameInfo.ComponentCount;
+    }
+
+    private bool IsFrameInfoConfigured()
+    {
+        return FrameInfo != null;
     }
 }

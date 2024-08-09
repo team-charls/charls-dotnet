@@ -10,9 +10,9 @@ internal class LosslessTraitsImpl : Traits
     {
     }
 
-    public override int ComputeErrVal(int d)
+    internal override int ComputeErrorValue(int errorValue)
     {
-        return ModuloRange(d);
+        return ModuloRange(errorValue);
     }
 
     public override bool IsNear(int lhs, int rhs)
@@ -60,7 +60,7 @@ internal class LosslessTraits8 : LosslessTraitsImpl
         return (sbyte)errorValue;
     }
 
-    public /*override*/ int ComputeErrorValue(int errorValue)
+    internal override int ComputeErrorValue(int errorValue)
     {
         return (sbyte)errorValue;
     }
@@ -79,7 +79,7 @@ internal class LosslessTraits16 : LosslessTraitsImpl
     {
     }
 
-    public /*override*/ int ComputeErrorValue(int errorValue)
+    internal override int ComputeErrorValue(int errorValue)
     {
         return (ushort)errorValue;
     }
