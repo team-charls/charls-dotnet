@@ -3,17 +3,19 @@
 
 namespace CharLS.JpegLS;
 
-internal struct Triplet<T>
+internal struct Quad<T>
     where T : struct
 {
     internal T V1;
     internal T V2;
     internal T V3;
+    internal T V4;
 
-    internal Triplet(T v1, T v2, T v3)
+    internal Quad(T v1, T v2, T v3, T v4)
     {
         V1 = v1;
         V2 = v2;
         V3 = v3;
+        V4 = v4;
     }
 }

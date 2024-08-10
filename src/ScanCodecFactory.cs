@@ -18,6 +18,11 @@ internal class ScanCodecFactory
                     var traits = new LosslessTraitsTriplet(maximumSampleValue, 0, presetCodingParameters.ResetValue);
                     return new ScanDecoderImpl<byte, Triplet<byte>>(frameInfo, presetCodingParameters, codingParameters, traits);
                 }
+                if (frameInfo.ComponentCount == 4 && frameInfo.BitsPerSample == 8)
+                {
+                    var traits = new LosslessTraitsQuad(maximumSampleValue, 0, presetCodingParameters.ResetValue);
+                    return new ScanDecoderImpl<byte, Quad<byte>>(frameInfo, presetCodingParameters, codingParameters, traits);
+                }
 
                 throw new NotImplementedException();
             }
