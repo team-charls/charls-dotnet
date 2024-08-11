@@ -103,11 +103,14 @@ public class EncodeTest
         Encode(new FrameInfo(1, 1, 16, 3), data, 45, InterleaveMode.Sample);
     }
 
-    //TEST_METHOD(encode_color_16_bit_interleave_sample_hp1) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60} };
-    //    encode({ 1, 1, 16, 3}, { data.cbegin(), data.cend()}, 59, interleave_mode::sample, color_transformation::hp1);
-    //}
+    [Fact]
+    public void EncodeColor16BitInterleaveSampleHp1()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Sample, ColorTransformation.HP1);
+    }
+
+    // TODO: HP1 by line
 
     //TEST_METHOD(encode_color_16_bit_interleave_sample_hp2) // NOLINT
     //{

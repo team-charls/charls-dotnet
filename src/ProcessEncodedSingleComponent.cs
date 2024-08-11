@@ -29,6 +29,22 @@ internal class ProcessEncodedSingleComponent8BitHP1 : IProcessLineEncoded
     }
 }
 
+internal class ProcessEncodedSingleComponent16BitHP1 : IProcessLineEncoded
+{
+    public void NewLineRequested(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
+    {
+        var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+        pixelCount = pixelCount / (3 * 2);
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            var pixel = sourceTriplet[i];
+            destinationTriplet[i] = ColorTransformations.TransformHP1(pixel.V1, pixel.V2, pixel.V3);
+        }
+    }
+}
+
 internal class ProcessEncodedSingleComponent8BitHP2 : IProcessLineEncoded
 {
     public void NewLineRequested(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)

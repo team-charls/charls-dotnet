@@ -888,7 +888,6 @@ internal class ScanEncoderImpl : ScanEncoder
                         case ColorTransformation.HP3:
                             return new ProcessEncodedSingleComponent8BitHP3();
                     }
-
                     break;
             }
         }
@@ -911,7 +910,18 @@ internal class ScanEncoderImpl : ScanEncoder
                     break;
 
                 case InterleaveMode.Sample:
-                    return new ProcessEncodedSingleComponent();
+                    switch (CodingParameters.ColorTransformation)
+                    {
+                        case ColorTransformation.None:
+                            return new ProcessEncodedSingleComponent();
+                        case ColorTransformation.HP1:
+                            return new ProcessEncodedSingleComponent16BitHP1();
+                        case ColorTransformation.HP2:
+                            return new ProcessEncodedSingleComponent8BitHP2(); // todo
+                        case ColorTransformation.HP3:
+                            return new ProcessEncodedSingleComponent8BitHP3(); // todo
+                    }
+                    break;
             }
         }
 

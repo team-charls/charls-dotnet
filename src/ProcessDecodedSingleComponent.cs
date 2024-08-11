@@ -207,6 +207,44 @@ internal class ProcessDecodedTripletComponent8BitHP1 : IProcessLineDecoded
     }
 }
 
+internal class ProcessDecodedTripletComponent16BitHP1 : IProcessLineDecoded
+{
+    private int _stride;
+    private int _bytesPerPixel;
+
+    internal ProcessDecodedTripletComponent16BitHP1(int stride, int bytesPerPixel)
+    {
+        _stride = stride;
+        _bytesPerPixel = bytesPerPixel;
+    }
+
+    public int LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+
+        int bytesCount = pixelCount * _bytesPerPixel;
+        Debug.Assert(bytesCount <= _stride);
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            var pixel = sourceTriplet[i];
+            destinationTriplet[i] = ColorTransformations.ReverseTransformHP1(pixel.V1, pixel.V2, pixel.V3);
+        }
+        return _stride;
+    }
+
+    public int LineDecoded(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int LineDecoded(Span<ushort> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+}
+
 
 internal class ProcessDecodedTripletComponent8BitHP2 : IProcessLineDecoded
 {
