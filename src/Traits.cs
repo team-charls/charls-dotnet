@@ -67,6 +67,12 @@ internal abstract class Traits
                Math.Abs(lhs.V3 - rhs.V3) <= NearLossless;
     }
 
+    internal bool IsNear(Triplet<ushort> lhs, Triplet<ushort> rhs)
+    {
+        return Math.Abs(lhs.V1 - rhs.V1) <= NearLossless && Math.Abs(lhs.V2 - rhs.V2) <= NearLossless &&
+               Math.Abs(lhs.V3 - rhs.V3) <= NearLossless;
+    }
+
     internal bool IsNear(Quad<byte> lhs, Quad<byte> rhs)
     {
         return Math.Abs(lhs.V1 - rhs.V1) <= NearLossless && Math.Abs(lhs.V2 - rhs.V2) <= NearLossless &&

@@ -72,7 +72,18 @@ internal class ProcessDecodedSingleComponentToLine3Components : IProcessLineDeco
 
     public int LineDecoded(Span<ushort> source, Span<byte> destination, int pixelCount, int sourceStride)
     {
-        throw new NotImplementedException();
+        var destinationQuad = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+
+        int bytesCount = pixelCount * _bytesPerPixel;
+        Debug.Assert(bytesCount <= _stride);
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            destinationQuad[i] = new Triplet<ushort>(
+                source[i], source[i + sourceStride], source[i + 2 * sourceStride]);
+        }
+
+        return _stride;
     }
 }
 
@@ -127,12 +138,12 @@ internal class ProcessDecodedSingleComponentToLine4Components : IProcessLineDeco
 }
 
 
-internal class ProcessDecodedTripletComponent : IProcessLineDecoded
+internal class ProcessDecodedTripletComponent8Bit : IProcessLineDecoded
 {
     private int _stride;
     private int _bytesPerPixel;
 
-    internal ProcessDecodedTripletComponent(int stride, int bytesPerPixel)
+    internal ProcessDecodedTripletComponent8Bit(int stride, int bytesPerPixel)
     {
         _stride = stride;
         _bytesPerPixel = bytesPerPixel;
@@ -158,6 +169,43 @@ internal class ProcessDecodedTripletComponent : IProcessLineDecoded
         throw new NotImplementedException();
     }
 }
+
+
+internal class ProcessDecodedTripletComponent16Bit : IProcessLineDecoded
+{
+    private int _stride;
+    private int _bytesPerPixel;
+
+    internal ProcessDecodedTripletComponent16Bit(int stride, int bytesPerPixel)
+    {
+        _stride = stride;
+        _bytesPerPixel = bytesPerPixel;
+    }
+
+    public int LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        int bytesCount = pixelCount * 3 * 2;
+        Debug.Assert(bytesCount <= _stride);
+        source[..bytesCount].CopyTo(destination);
+        return bytesCount;
+    }
+
+    public int LineDecoded(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
+
+        int bytesCount = pixelCount * _bytesPerPixel;
+        Debug.Assert(bytesCount <= _stride);
+        source[..pixelCount].CopyTo(destinationTriplet);
+        return _stride;
+    }
+
+    public int LineDecoded(Span<ushort> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+}
+
 
 internal class ProcessDecodedQuadComponent8Bit : IProcessLineDecoded
 {

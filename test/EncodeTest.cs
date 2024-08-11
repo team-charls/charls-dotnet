@@ -86,6 +86,20 @@ public class EncodeTest
         Encode(new FrameInfo(1, 1, 16, 3), data, 66, InterleaveMode.None);
     }
 
+    [Fact]
+    public void EncodeColor16BitInterleaveLine()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 45, InterleaveMode.Line);
+    }
+
+    [Fact]
+    public void EncodeColor16BitInterleaveSample()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 45, InterleaveMode.Sample);
+    }
+
     //TEST_METHOD(encode_color_16_bit_interleave_sample_hp1) // NOLINT
     //{
     //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60} };
