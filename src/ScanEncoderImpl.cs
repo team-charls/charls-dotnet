@@ -882,7 +882,9 @@ internal class ScanEncoderImpl : ScanEncoder
                         case ColorTransformation.None:
                             return new ProcessEncodedSingleComponent();
                         case ColorTransformation.HP1:
-                            return new ProcessEncodedSingleComponentHP18Bit();
+                            return new ProcessEncodedSingleComponent8BitHP1();
+                        case ColorTransformation.HP2:
+                            return new ProcessEncodedSingleComponent8BitHP2();
                     }
 
                     break;

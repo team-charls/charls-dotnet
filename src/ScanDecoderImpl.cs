@@ -133,6 +133,10 @@ internal class ScanDecoderImpl : ScanDecoder
 
                     case ColorTransformation.HP1:
                         return new ProcessDecodedTripletComponent8BitHP1(stride, 3);
+
+                    case ColorTransformation.HP2:
+                        return new ProcessDecodedTripletComponent8BitHP2(stride, 3);
+
                 }
                 break;
         }
