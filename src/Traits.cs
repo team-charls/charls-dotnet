@@ -73,6 +73,12 @@ internal abstract class Traits
                Math.Abs(lhs.V3 - rhs.V3) <= NearLossless && Math.Abs(lhs.V4 - rhs.V4) <= NearLossless;
     }
 
+    internal bool IsNear(Quad<ushort> lhs, Quad<ushort> rhs)
+    {
+        return Math.Abs(lhs.V1 - rhs.V1) <= NearLossless && Math.Abs(lhs.V2 - rhs.V2) <= NearLossless &&
+               Math.Abs(lhs.V3 - rhs.V3) <= NearLossless && Math.Abs(lhs.V4 - rhs.V4) <= NearLossless;
+    }
+
     //public abstract bool IsNear(TPixel lhs, TPixel rhs);
 
     public abstract int CorrectPrediction(int predicted);

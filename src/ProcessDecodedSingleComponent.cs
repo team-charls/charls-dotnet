@@ -159,12 +159,12 @@ internal class ProcessDecodedTripletComponent : IProcessLineDecoded
     }
 }
 
-internal class ProcessDecodedQuadComponent : IProcessLineDecoded
+internal class ProcessDecodedQuadComponent8Bit : IProcessLineDecoded
 {
     private int _stride;
     private int _bytesPerPixel;
 
-    internal ProcessDecodedQuadComponent(int stride, int bytesPerPixel)
+    internal ProcessDecodedQuadComponent8Bit(int stride, int bytesPerPixel)
     {
         _stride = stride;
         _bytesPerPixel = bytesPerPixel;
@@ -189,4 +189,33 @@ internal class ProcessDecodedQuadComponent : IProcessLineDecoded
     }
 }
 
+internal class ProcessDecodedQuadComponent16Bit : IProcessLineDecoded
+{
+    private int _stride;
+    private int _bytesPerPixel;
+
+    internal ProcessDecodedQuadComponent16Bit(int stride, int bytesPerPixel)
+    {
+        _stride = stride;
+        _bytesPerPixel = bytesPerPixel;
+    }
+
+    public int LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        int bytesCount = pixelCount * 4 * 2;
+        Debug.Assert(bytesCount <= _stride);
+        source[..bytesCount].CopyTo(destination);
+        return bytesCount;
+    }
+
+    public int LineDecoded(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int LineDecoded(Span<ushort> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+}
 

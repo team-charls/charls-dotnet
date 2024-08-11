@@ -139,11 +139,12 @@ public class EncodeTest
         Encode(new FrameInfo(1, 1, 16, 4), data, 52, InterleaveMode.Line);
     }
 
-    //TEST_METHOD(encode_4_components_16_bit_interleave_sample) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60}, byte{ 70}, byte{ 80} };
-    //    encode({ 1, 1, 16, 4}, { data.cbegin(), data.cend()}, 52, interleave_mode::sample);
-    //}
+    [Fact]
+    public void Encode4Components16BitInterleaveSample()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60, 70, 80];
+        Encode(new FrameInfo(1, 1, 16, 4), data, 52, InterleaveMode.Sample);
+    }
 
     private static void Encode(string filename, int expectedSize, InterleaveMode interleaveMode = InterleaveMode.None
     /*color_transformation color_transformation = color_transformation::none*/)
