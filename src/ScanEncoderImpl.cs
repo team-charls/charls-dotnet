@@ -877,7 +877,15 @@ internal class ScanEncoderImpl : ScanEncoder
                     break;
 
                 case InterleaveMode.Sample:
-                    return new ProcessEncodedSingleComponent();
+                    switch (CodingParameters.ColorTransformation)
+                    {
+                        case ColorTransformation.None:
+                            return new ProcessEncodedSingleComponent();
+                        case ColorTransformation.HP1:
+                            return new ProcessEncodedSingleComponentHP18Bit();
+                    }
+
+                    break;
             }
         }
         else

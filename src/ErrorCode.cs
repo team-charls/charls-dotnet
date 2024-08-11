@@ -245,6 +245,11 @@ public enum ErrorCode
     InvalidParameterJpeglsPresetCodingParameters = 206,
 
     /// <summary>
+    /// This error is returned when the stream contains an invalid color transformation segment or one that doesn't match with frame info.
+    /// </summary>
+    InvalidParameterColorTransformation = 207,
+
+    /// <summary>
     /// This error is returned when the stream contains a mapping table with an invalid ID.
     /// </summary>
     InvalidParameterMappingTableId = 208,

@@ -113,8 +113,8 @@ internal sealed class Util
 
     internal static void TestByDecoding(ReadOnlyMemory<byte> encodedSource, FrameInfo sourceFrameInfo,
         ReadOnlyMemory<byte> expectedDestination,
-        InterleaveMode interleaveMode
-        /*const color_transformation color_transformation = color_transformation::none*/)
+        InterleaveMode interleaveMode,
+        ColorTransformation colorTransformation = ColorTransformation.None)
     {
         JpegLSDecoder decoder = new();
         decoder.Source = encodedSource;

@@ -71,8 +71,14 @@ internal static class Util
 
     internal static bool IsValid(this InterleaveMode interleaveMode)
     {
-        // MOre efficient than Enum.IsDefined as it doesn't use reflection.
+        // More efficient than Enum.IsDefined as it doesn't use reflection.
         return interleaveMode is >= InterleaveMode.None and <= InterleaveMode.Sample;
+    }
+
+    internal static bool IsValid(this ColorTransformation colorTransformation)
+    {
+        // More efficient than Enum.IsDefined as it doesn't use reflection.
+        return colorTransformation is >= ColorTransformation.None and <= ColorTransformation.HP3;
     }
 
     internal static int CheckedMul(int a, int b)

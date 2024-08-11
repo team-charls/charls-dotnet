@@ -50,7 +50,7 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
-    /// Gets or sets the the source buffer that contains the encoded JPEG-LS bytes.
+    /// Gets or sets the source buffer that contains the encoded JPEG-LS bytes.
     /// </summary>
     /// <value>
     /// A region of memory that contains an encoded JPEG-LS image.
@@ -134,6 +134,17 @@ public sealed class JpegLSDecoder
     /// </value>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
     public JpegLSPresetCodingParameters PresetCodingParameters => _reader.JpegLSPresetCodingParameters ?? new JpegLSPresetCodingParameters();
+
+    /// <summary>
+    /// Returns the HP color transformation that was used to encode the scan.
+    /// </summary>
+    /// <value>
+    /// The color transformation that was used to encode the image.
+    /// </value>
+    public ColorTransformation ColorTransformation
+    {
+        get => _reader.ColorTransformation;
+    }
 
     /// <summary>
     /// Gets the required size of the destination buffer.

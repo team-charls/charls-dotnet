@@ -109,22 +109,30 @@ internal class ScanDecoderImpl : ScanDecoder
                 break;
 
             case InterleaveMode.Sample:
-                switch (FrameInfo.ComponentCount)
+                switch (CodingParameters.ColorTransformation)
                 {
-                    case 3:
-                        if (FrameInfo.BitsPerSample <= 8)
+                    case ColorTransformation.None:
+                        switch (FrameInfo.ComponentCount)
                         {
-                            return new ProcessDecodedTripletComponent8Bit(stride, 3);
-                        }
+                            case 3:
+                                if (FrameInfo.BitsPerSample <= 8)
+                                {
+                                    return new ProcessDecodedTripletComponent8Bit(stride, 3);
+                                }
 
-                        return new ProcessDecodedTripletComponent16Bit(stride, 3);
-                    case 4:
-                        if (FrameInfo.BitsPerSample <= 8)
-                        {
-                            return new ProcessDecodedQuadComponent8Bit(stride, 4);
-                        }
+                                return new ProcessDecodedTripletComponent16Bit(stride, 3);
+                            case 4:
+                                if (FrameInfo.BitsPerSample <= 8)
+                                {
+                                    return new ProcessDecodedQuadComponent8Bit(stride, 4);
+                                }
 
-                        return new ProcessDecodedQuadComponent16Bit(stride, 4);
+                                return new ProcessDecodedQuadComponent16Bit(stride, 4);
+                        }
+                        break;
+
+                    case ColorTransformation.HP1:
+                        return new ProcessDecodedTripletComponent8BitHP1(stride, 3);
                 }
                 break;
         }

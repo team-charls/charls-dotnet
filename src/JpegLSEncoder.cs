@@ -11,6 +11,7 @@ public sealed class JpegLSEncoder
     private FrameInfo? _frameInfo;
     private int _nearLossless;
     private InterleaveMode _interleaveMode;
+    private ColorTransformation _colorTransformation;
     private JpegLSPresetCodingParameters? _userPresetCodingParameters = new JpegLSPresetCodingParameters();
     private readonly JpegStreamWriter _writer = new JpegStreamWriter();
 
@@ -151,6 +152,28 @@ public sealed class JpegLSEncoder
     }
 
     /// <summary>
+    /// Gets or sets the HP color transformation the encoder should use
+    /// If not set the encoder will use no color transformation.
+    /// Color transformations are an HP extension and not defined by the JPEG-LS standard and can only be set for 3 component
+    /// </summary>
+    /// <value>
+    /// The color transformation that should be used to encode the image.
+    /// </value>
+    /// <exception cref="ArgumentOutOfRangeException">value.</exception>
+    public ColorTransformation ColorTransformation
+    {
+        get => _colorTransformation;
+
+        set
+        {
+            if (!value.IsValid())
+                throw new ArgumentOutOfRangeException(nameof(value));
+
+            _colorTransformation = value;
+        }
+    }
+
+    /// <summary>
     /// Gets the estimated size in bytes of the memory buffer that should used as output destination.
     /// </summary>
     /// <value>
@@ -229,7 +252,7 @@ public sealed class JpegLSEncoder
         }
 
         TransitionToTablesAndMiscellaneousState();
-        ////write_color_transform_segment();
+        WriteColorTransformSegment();
 
         if (_writer.WriteStartOfFrameSegment(FrameInfo))
         {
@@ -277,7 +300,7 @@ public sealed class JpegLSEncoder
             codingParameters,
             new CodingParameters
             {
-                InterleaveMode = InterleaveMode, NearLossless = NearLossless, RestartInterval = 0
+                InterleaveMode = InterleaveMode, NearLossless = NearLossless, RestartInterval = 0, ColorTransformation = ColorTransformation
             });
 
         int bytesWritten = encoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
@@ -335,6 +358,17 @@ public sealed class JpegLSEncoder
         //}
 
         _state = State.TablesAndMiscellaneous;
+    }
+
+    private void WriteColorTransformSegment()
+    {
+        if (ColorTransformation == ColorTransformation.None)
+            return;
+
+        if (!ColorTransformations.IsPossible(FrameInfo!))
+            throw new ArgumentException("TODO");
+
+        _writer.WriteColorTransformSegment(ColorTransformation);
     }
 
     private void WriteEndOfImage()

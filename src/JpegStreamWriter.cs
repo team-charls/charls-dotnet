@@ -32,6 +32,12 @@ internal class JpegStreamWriter
         WriteSegmentWithoutData(JpegMarkerCode.StartOfImage);
     }
 
+    internal void WriteColorTransformSegment(ColorTransformation colorTransformation)
+    {
+        byte[] segment = [(byte)'m', (byte)'r', (byte)'f', (byte)'x', (byte)colorTransformation];
+        WriteSegment(JpegMarkerCode.ApplicationData8, segment);
+    }
+
     internal void WriteCommentSegment(ReadOnlySpan<byte> comment)
     {
         WriteSegment(JpegMarkerCode.Comment, comment);

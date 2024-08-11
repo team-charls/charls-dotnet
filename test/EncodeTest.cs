@@ -54,10 +54,11 @@ public class EncodeTest
     //    encode("DataFiles/test8.ppm", 91617, interleave_mode::line, color_transformation::hp1);
     //}
 
-    //TEST_METHOD(encode_color_8_bit_interleave_sample_hp1) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91463, interleave_mode::sample, color_transformation::hp1);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveSampleHp1()
+    {
+        Encode("conformance/test8.ppm", 91463, InterleaveMode.Sample, ColorTransformation.HP1);
+    }
 
     //TEST_METHOD(encode_color_8_bit_interleave_line_hp2) // NOLINT
     //{
@@ -160,19 +161,19 @@ public class EncodeTest
         Encode(new FrameInfo(1, 1, 16, 4), data, 52, InterleaveMode.Sample);
     }
 
-    private static void Encode(string filename, int expectedSize, InterleaveMode interleaveMode = InterleaveMode.None
-    /*color_transformation color_transformation = color_transformation::none*/)
+    private static void Encode(string filename, int expectedSize, InterleaveMode interleaveMode = InterleaveMode.None,
+        ColorTransformation colorTransformation = ColorTransformation.None)
     {
         var referenceFile = Util.ReadAnymapReferenceFile(filename, interleaveMode);
 
         Encode(new FrameInfo(referenceFile.Width, referenceFile.Height, referenceFile.BitsPerSample, referenceFile.ComponentCount),
-            referenceFile.ImageData, expectedSize, interleaveMode/*, color_transformation*/);
+            referenceFile.ImageData, expectedSize, interleaveMode, colorTransformation);
     }
 
-    private static void Encode(FrameInfo frameInfo, ReadOnlyMemory<byte> source, int expectedSize, InterleaveMode interleaveMode
-    /*const color_transformation color_transformation = color_transformation::none*/)
+    private static void Encode(FrameInfo frameInfo, ReadOnlyMemory<byte> source, int expectedSize, InterleaveMode interleaveMode,
+        ColorTransformation colorTransformation = ColorTransformation.None)
     {
-        JpegLSEncoder encoder = new() { FrameInfo = frameInfo, InterleaveMode = interleaveMode };
+        JpegLSEncoder encoder = new() { FrameInfo = frameInfo, InterleaveMode = interleaveMode, ColorTransformation = colorTransformation};
 
         Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = encodedData;
