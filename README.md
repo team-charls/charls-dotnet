@@ -27,7 +27,7 @@ This project is considered work in progress and NOT ready for general use. The f
 * [ ] Encode 16 bit images, interleave mode: line
 * [ ] Encode 16 bit images, interleave mode: sample
 * [ ] Encode\Decode 16 bit images HP color transformation
-* [ ] Encode\Decode 4 component images
+* [X] Encode\Decode 4 component images
 * [ ] General code clean-up
 * [ ] Good code coverage
 * [ ] Performance tuning

@@ -2,14 +2,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace CharLS.JpegLS;
 
-internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
-    where TSample : struct, IBinaryInteger<TSample>
-    where TPixel : struct
+internal class ScanDecoderImpl : ScanDecoder
 {
     private int _restartInterval;
     private readonly Traits _traits;
