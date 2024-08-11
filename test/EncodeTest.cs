@@ -104,41 +104,47 @@ public class EncodeTest
     //    encode({ 1, 1, 16, 3}, { data.cbegin(), data.cend()}, 55, interleave_mode::sample, color_transformation::hp3);
     //}
 
-    //TEST_METHOD(encode_4_components_8_bit_interleave_none) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40} };
-    //    encode({ 1, 1, 8, 4}, { data.cbegin(), data.cend()}, 75, interleave_mode::none);
-    //}
+    [Fact]
+    public void Encode4Components8BitInterleaveNone()
+    {
+        byte[] data = [ 10, 20, 30, 40];
+        Encode(new FrameInfo(1, 1, 8, 4), data, 75, InterleaveMode.None);
+    }
 
-    //TEST_METHOD(encode_4_components_8_bit_interleave_line) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40} };
-    //    encode({ 1, 1, 8, 4}, { data.cbegin(), data.cend()}, 47, interleave_mode::line);
-    //}
+    [Fact]
+    public void Encode4Components8BitInterleaveLine()
+    {
+        byte[] data = [10, 20, 30, 40];
+        Encode(new FrameInfo(1, 1, 8, 4), data, 47, InterleaveMode.Line);
+    }
 
-    //TEST_METHOD(encode_4_components_8_bit_interleave_sample) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40} };
-    //    encode({ 1, 1, 8, 4}, { data.cbegin(), data.cend()}, 47, interleave_mode::sample);
-    //}
+    [Fact]
+    public void Encode4Components8BitInterleaveSample()
+    {
+        byte[] data = [10, 20, 30, 40];
+        Encode(new FrameInfo(1, 1, 8, 4), data, 47, InterleaveMode.Sample);
+    }
 
-    //TEST_METHOD(encode_4_components_16_bit_interleave_none) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60}, byte{ 70}, byte{ 80} };
-    //    encode({ 1, 1, 16, 4}, { data.cbegin(), data.cend()}, 86, interleave_mode::none);
-    //}
+    [Fact]
+    public void Encode4Components16BitInterleaveNone()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60, 70,  80];
+        Encode(new FrameInfo(1, 1, 16, 4), data, 86, InterleaveMode.None);
+    }
 
-    //TEST_METHOD(encode_4_components_16_bit_interleave_line) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60}, byte{ 70}, byte{ 80} };
-    //    encode({ 1, 1, 16, 4}, { data.cbegin(), data.cend()}, 52, interleave_mode::line);
-    //}
+    [Fact]
+    public void Encode4Components16BitInterleaveLine()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60, 70, 80];
+        Encode(new FrameInfo(1, 1, 16, 4), data, 52, InterleaveMode.Line);
+    }
 
-    //TEST_METHOD(encode_4_components_16_bit_interleave_sample) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60}, byte{ 70}, byte{ 80} };
-    //    encode({ 1, 1, 16, 4}, { data.cbegin(), data.cend()}, 52, interleave_mode::sample);
-    //}
+    [Fact]
+    public void Encode4Components16BitInterleaveSample()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60, 70, 80];
+        Encode(new FrameInfo(1, 1, 16, 4), data, 52, InterleaveMode.Sample);
+    }
 
     private static void Encode(string filename, int expectedSize, InterleaveMode interleaveMode = InterleaveMode.None
     /*color_transformation color_transformation = color_transformation::none*/)

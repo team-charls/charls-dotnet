@@ -98,14 +98,21 @@ internal class LosslessTraitsTriplet : LosslessTraitsImpl
     {
     }
 
-    //public override bool IsNear(Triplet<TSample> lhs, Triplet<TSample> rhs)
-    //{
-    //    return lhs.Equals(rhs);
-    //}
-
     public override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
         return predictedValue + errorValue;
     }
 }
 
+internal class LosslessTraitsQuad : LosslessTraitsImpl
+{
+    public LosslessTraitsQuad(int maximumSampleValue, int nearLossless, int resetThreshold)
+        : base(maximumSampleValue, nearLossless, resetThreshold)
+    {
+    }
+
+    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
+    {
+        return predictedValue + errorValue;
+    }
+}

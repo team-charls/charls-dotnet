@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/team-charls/charls-dotnet/blob/main/LICENSE.md)
 [![Build and Test](https://github.com/team-charls/charls-dotnet/actions/workflows/dotnet.yml/badge.svg)](https://github.com/team-charls/charls-dotnet/actions/workflows/dotnet.yml)
 
-CharLS .NET is an C# JPEG-LS library implementation.  
+CharLS .NET is a C# JPEG-LS library implementation.  
 JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard for continuous-tone images.
 
 ## IMPORTANT : WORK IN PROGRESS
@@ -27,7 +27,7 @@ This project is considered work in progress and NOT ready for general use. The f
 * [ ] Encode 16 bit images, interleave mode: line
 * [ ] Encode 16 bit images, interleave mode: sample
 * [ ] Encode\Decode 16 bit images HP color transformation
-* [ ] Encode\Decode 4 component images
+* [X] Encode\Decode 4 component images
 * [ ] General code clean-up
 * [ ] Good code coverage
 * [ ] Performance tuning
