@@ -76,10 +76,11 @@ public class EncodeTest
     //    encode("DataFiles/test8.ppm", 91993, interleave_mode::line, color_transformation::hp3);
     //}
 
-    //TEST_METHOD(encode_color_8_bit_interleave_sample_hp3) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91862, interleave_mode::sample, color_transformation::hp3);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveSampleHp3()
+    {
+        Encode("conformance/test8.ppm", 91862, InterleaveMode.Sample, ColorTransformation.HP3);
+    }
 
     [Fact]
     public void EncodeColor16BitInterleaveNone()
