@@ -64,6 +64,7 @@ internal class ScanEncoderImpl : ScanEncoder
                     break;
 
                 case InterleaveMode.Line:
+                    EncodeLines16BitInterleaveModeLine(source);
                     break;
 
                 case InterleaveMode.Sample:
@@ -128,6 +129,46 @@ internal class ScanEncoderImpl : ScanEncoder
             }
 
             int bytesRead = OnLineBeginInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width);
+            source = source[bytesRead..];
+
+            for (int component = 0; component < componentCount; ++component)
+            {
+                RunIndex = runIndex[component];
+
+                // initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                EncodeSampleLine(previousLine, currentLine);
+
+                runIndex[component] = RunIndex;
+                currentLine = currentLine[pixelStride..];
+                previousLine = previousLine[pixelStride..];
+            }
+        }
+    }
+
+    private void EncodeLines16BitInterleaveModeLine(ReadOnlyMemory<byte> source)
+    {
+        int pixelStride = FrameInfo.Width + 2;
+        int componentCount = FrameInfo.ComponentCount;
+
+        Span<int> runIndex = stackalloc int[componentCount];
+        Span<ushort> lineBuffer = new ushort[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
+
+        for (int line = 0; line < FrameInfo.Height; ++line)
+        {
+            var previousLine = lineBuffer;
+            var currentLine = lineBuffer[(componentCount * pixelStride)..];
+            bool oddLine = (line & 1) == 1;
+            if (oddLine)
+            {
+                var temp = previousLine;
+                previousLine = currentLine;
+                currentLine = temp;
+            }
+
+            int bytesRead = OnLineBeginInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width, componentCount);
             source = source[bytesRead..];
 
             for (int component = 0; component < componentCount; ++component)
@@ -591,23 +632,49 @@ internal class ScanEncoderImpl : ScanEncoder
     // Factory function for ProcessLine objects to copy/transform un encoded pixels to/from our scan line buffers.
     private IProcessLineEncoded CreateProcessLine()
     {
-        switch (CodingParameters.InterleaveMode)
+        if (FrameInfo.BitsPerSample <= 8)
         {
-            case InterleaveMode.None:
-                return new ProcessEncodedSingleComponent();
+            switch (CodingParameters.InterleaveMode)
+            {
+                case InterleaveMode.None:
+                    return new ProcessEncodedSingleComponent();
 
-            case InterleaveMode.Line:
-                switch (FrameInfo.ComponentCount)
-                {
-                    case 3:
-                        return new ProcessEncodedSingleComponentToLine3Components();
-                    case 4:
-                        return new ProcessEncodedSingleComponentToLine4Components();
-                }
-                break;
+                case InterleaveMode.Line:
+                    switch (FrameInfo.ComponentCount)
+                    {
+                        case 3:
+                            return new ProcessEncodedSingleComponentToLine8Bit3Components();
+                        case 4:
+                            return new ProcessEncodedSingleComponentToLine8Bit4Components();
+                    }
 
-            case InterleaveMode.Sample:
-                return new ProcessEncodedSingleComponent();
+                    break;
+
+                case InterleaveMode.Sample:
+                    return new ProcessEncodedSingleComponent();
+            }
+        }
+        else
+        {
+            switch (CodingParameters.InterleaveMode)
+            {
+                case InterleaveMode.None:
+                    return new ProcessEncodedSingleComponent();
+
+                case InterleaveMode.Line:
+                    switch (FrameInfo.ComponentCount)
+                    {
+                        case 3:
+                            return new ProcessEncodedSingleComponentToLine8Bit3Components();
+                        case 4:
+                            return new ProcessEncodedSingleComponentToLine16Bit4Components();
+                    }
+
+                    break;
+
+                case InterleaveMode.Sample:
+                    return new ProcessEncodedSingleComponent();
+            }
         }
 
         throw new NotImplementedException();
@@ -649,6 +716,13 @@ internal class ScanEncoderImpl : ScanEncoder
     {
         _processLine!.NewLineRequested(source, destination, pixelCount);
         return pixelCount * 3;
+    }
+
+    private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount, int componentCount)
+    {
+        Span<byte> destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
+        _processLine!.NewLineRequested(source, destinationInBytes, pixelCount);
+        return pixelCount * componentCount;
     }
 
     private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<byte>> destination, int pixelCount)

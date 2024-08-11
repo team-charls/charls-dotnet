@@ -46,7 +46,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                     break;
 
                 case InterleaveMode.Line:
-                    DecodeLinesByteLine(destination);
+                    DecodeLines8BitInterleaveModeLine(destination);
                     break;
 
                 case InterleaveMode.Sample:
@@ -71,7 +71,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
                     break;
 
                 case InterleaveMode.Line:
-                    //DecodeLinesByteLine(destination);
+                    DecodeLines16BitInterleaveModeLine(destination);
                     break;
 
                 case InterleaveMode.Sample:
@@ -192,7 +192,7 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         }
     }
 
-    private void DecodeLinesByteLine(Span<byte> destination)
+    private void DecodeLines8BitInterleaveModeLine(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = FrameInfo.ComponentCount;
@@ -234,6 +234,66 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
 
                 int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
                 int bytesWritten = on_line_end(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
+                destination = destination[bytesWritten..];
+            }
+
+            if (line == FrameInfo.Height)
+                break;
+
+            // At this point in the byte stream a restart marker should be present: process it.
+            ReadRestartMarker(restartIntervalCounter);
+            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+
+            // After a restart marker it is required to reset the decoder.
+            Reset();
+            lineBuffer.Clear();
+            runIndex.Clear();
+            InitializeParameters(_traits.Range);
+        }
+    }
+
+    private void DecodeLines16BitInterleaveModeLine(Span<byte> destination)
+    {
+        int pixelStride = FrameInfo.Width + 2;
+        int componentCount = FrameInfo.ComponentCount;
+        int restartIntervalCounter = 0;
+
+        Span<int> runIndex = stackalloc int[componentCount];
+        Span<ushort> lineBuffer = new ushort[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
+
+        for (int line = 0; ;)
+        {
+            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            {
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[(componentCount * pixelStride)..];
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                for (int component = 0; component < componentCount; ++component)
+                {
+                    RunIndex = runIndex[component];
+
+                    // initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    DecodeSampleLine(previousLine, currentLine);
+
+                    runIndex[component] = RunIndex;
+                    currentLine = currentLine[pixelStride..];
+                    previousLine = previousLine[pixelStride..];
+                }
+
+                int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
+                int bytesWritten = on_line_end_interleave_line(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -841,6 +901,11 @@ internal class ScanDecoderImpl<TSample, TPixel> : ScanDecoder
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
 
         return _processLineDecoded!.LineDecoded(sourceInBytes, destination, pixelCount * 2, pixelStride);
+    }
+
+    private int on_line_end_interleave_line(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
+    {
+        return _processLineDecoded!.LineDecoded(source, destination, pixelCount, pixelStride);
     }
 
     private int on_line_end(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
