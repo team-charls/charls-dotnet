@@ -108,6 +108,10 @@ internal class ScanDecoderImpl : ScanDecoder
                                 return new ProcessDecodedSingleComponentToLine3Components(stride, 3);
                             case ColorTransformation.HP1:
                                 return new ProcessDecodedSingleComponentToLine3ComponentsHP1(stride, 3);
+                            case ColorTransformation.HP2:
+                                return new ProcessDecodedSingleComponentToLine3ComponentsHP2(stride, 3);
+                            case ColorTransformation.HP3:
+                                return new ProcessDecodedSingleComponentToLine3ComponentsHP3(stride, 3);
                         }
                         break;
                     case 4:

@@ -61,21 +61,23 @@ public class EncodeTest
         Encode("conformance/test8.ppm", 91463, InterleaveMode.Sample, ColorTransformation.HP1);
     }
 
-    //TEST_METHOD(encode_color_8_bit_interleave_line_hp2) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91693, interleave_mode::line, color_transformation::hp2);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveLineHp2()
+    {
+        Encode("conformance/test8.ppm", 91693, InterleaveMode.Line, ColorTransformation.HP2);
+    }
 
     [Fact]
-    public void EncodeColor8BitInterleaveSampleHp2() // NOLINT
+    public void EncodeColor8BitInterleaveSampleHp2()
     {
         Encode("conformance/test8.ppm", 91457, InterleaveMode.Sample, ColorTransformation.HP2);
     }
 
-    //TEST_METHOD(encode_color_8_bit_interleave_line_hp3) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91993, interleave_mode::line, color_transformation::hp3);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveLineHp3()
+    {
+        Encode("conformance/test8.ppm", 91993, InterleaveMode.Line, ColorTransformation.HP3);
+    }
 
     [Fact]
     public void EncodeColor8BitInterleaveSampleHp3()
