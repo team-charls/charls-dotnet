@@ -149,11 +149,18 @@ internal class ScanDecoderImpl : ScanDecoder
                         return new ProcessDecodedTripletComponent16BitHP1(stride, 3);
 
                     case ColorTransformation.HP2:
-                        return new ProcessDecodedTripletComponent8BitHP2(stride, 3);
+                        if (FrameInfo.BitsPerSample <= 8)
+                        {
+                            return new ProcessDecodedTripletComponent8BitHP2(stride, 3);
+                        }
+                        return new ProcessDecodedTripletComponent16BitHP2(stride, 3);
 
                     case ColorTransformation.HP3:
-                        return new ProcessDecodedTripletComponent8BitHP3(stride, 3);
-
+                        if (FrameInfo.BitsPerSample <= 8)
+                        {
+                            return new ProcessDecodedTripletComponent8BitHP3(stride, 3);
+                        }
+                        return new ProcessDecodedTripletComponent16BitHP3(stride, 3);
                 }
                 break;
         }

@@ -927,41 +927,15 @@ internal class ScanEncoderImpl : ScanEncoder
                         case ColorTransformation.HP1:
                             return new ProcessEncodedSingleComponent16BitHP1();
                         case ColorTransformation.HP2:
-                            return new ProcessEncodedSingleComponent8BitHP2(); // todo
+                            return new ProcessEncodedSingleComponent16BitHP2();
                         case ColorTransformation.HP3:
-                            return new ProcessEncodedSingleComponent8BitHP3(); // todo
+                            return new ProcessEncodedSingleComponent16BitHP3();
                     }
                     break;
             }
         }
 
         throw new NotImplementedException();
-
-        //if (parameters().interleave_mode == interleave_mode::none)
-        //{
-        //    return std::make_unique<process_decoded_single_component>(destination, stride, sizeof(pixel_type));
-        //}
-
-        //switch (parameters().transformation)
-        //{
-        //    case color_transformation::none:
-        //        return std::make_unique<process_decoded_transformed<transform_none<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //    case color_transformation::hp1:
-        //        ASSERT(color_transformation_possible(frame_info()));
-        //        return std::make_unique<process_decoded_transformed<transform_hp1<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //    case color_transformation::hp2:
-        //        ASSERT(color_transformation_possible(frame_info()));
-        //        return std::make_unique<process_decoded_transformed<transform_hp2<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //    case color_transformation::hp3:
-        //        ASSERT(color_transformation_possible(frame_info()));
-        //        return std::make_unique<process_decoded_transformed<transform_hp3<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //}
-
-        //unreachable();
     }
 
     private int OnLineBegin(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)

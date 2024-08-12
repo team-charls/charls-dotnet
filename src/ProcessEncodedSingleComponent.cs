@@ -61,6 +61,22 @@ internal class ProcessEncodedSingleComponent8BitHP2 : IProcessLineEncoded
     }
 }
 
+internal class ProcessEncodedSingleComponent16BitHP2 : IProcessLineEncoded
+{
+    public void NewLineRequested(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
+    {
+        var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+        pixelCount = pixelCount / (3 * 2);
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            var pixel = sourceTriplet[i];
+            destinationTriplet[i] = ColorTransformations.TransformHP2(pixel.V1, pixel.V2, pixel.V3);
+        }
+    }
+}
+
 internal class ProcessEncodedSingleComponent8BitHP3 : IProcessLineEncoded
 {
     public void NewLineRequested(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
@@ -68,6 +84,22 @@ internal class ProcessEncodedSingleComponent8BitHP3 : IProcessLineEncoded
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
         pixelCount = pixelCount / 3;
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            var pixel = sourceTriplet[i];
+            destinationTriplet[i] = ColorTransformations.TransformHP3(pixel.V1, pixel.V2, pixel.V3);
+        }
+    }
+}
+
+internal class ProcessEncodedSingleComponent16BitHP3 : IProcessLineEncoded
+{
+    public void NewLineRequested(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
+    {
+        var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+        pixelCount = pixelCount / (3 * 2);
 
         for (int i = 0; i < pixelCount; ++i)
         {

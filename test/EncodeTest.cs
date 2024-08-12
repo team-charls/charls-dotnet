@@ -50,37 +50,37 @@ public class EncodeTest
     }
 
     [Fact]
-    public void EncodeColor8BitInterleaveLineHp1()
+    public void EncodeColor8BitInterleaveLineHP1()
     {
         Encode("conformance/test8.ppm", 91617, InterleaveMode.Line, ColorTransformation.HP1);
     }
 
     [Fact]
-    public void EncodeColor8BitInterleaveSampleHp1()
+    public void EncodeColor8BitInterleaveSampleHP1()
     {
         Encode("conformance/test8.ppm", 91463, InterleaveMode.Sample, ColorTransformation.HP1);
     }
 
     [Fact]
-    public void EncodeColor8BitInterleaveLineHp2()
+    public void EncodeColor8BitInterleaveLineHP2()
     {
         Encode("conformance/test8.ppm", 91693, InterleaveMode.Line, ColorTransformation.HP2);
     }
 
     [Fact]
-    public void EncodeColor8BitInterleaveSampleHp2()
+    public void EncodeColor8BitInterleaveSampleHP2()
     {
         Encode("conformance/test8.ppm", 91457, InterleaveMode.Sample, ColorTransformation.HP2);
     }
 
     [Fact]
-    public void EncodeColor8BitInterleaveLineHp3()
+    public void EncodeColor8BitInterleaveLineHP3()
     {
         Encode("conformance/test8.ppm", 91993, InterleaveMode.Line, ColorTransformation.HP3);
     }
 
     [Fact]
-    public void EncodeColor8BitInterleaveSampleHp3()
+    public void EncodeColor8BitInterleaveSampleHP3()
     {
         Encode("conformance/test8.ppm", 91862, InterleaveMode.Sample, ColorTransformation.HP3);
     }
@@ -107,7 +107,7 @@ public class EncodeTest
     }
 
     [Fact]
-    public void EncodeColor16BitInterleaveSampleHp1()
+    public void EncodeColor16BitInterleaveSampleHP1()
     {
         byte[] data = [10, 20, 30, 40, 50, 60];
         Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Sample, ColorTransformation.HP1);
@@ -115,11 +115,12 @@ public class EncodeTest
 
     // TODO: HP1 by line
 
-    //TEST_METHOD(encode_color_16_bit_interleave_sample_hp2) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60} };
-    //    encode({ 1, 1, 16, 3}, { data.cbegin(), data.cend()}, 59, interleave_mode::sample, color_transformation::hp2);
-    //}
+    [Fact]
+    public void EncodeColor16BitInterleaveSampleHP2()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Sample, ColorTransformation.HP2);
+    }
 
     //TEST_METHOD(encode_color_16_bit_interleave_sample_hp3) // NOLINT
     //{
