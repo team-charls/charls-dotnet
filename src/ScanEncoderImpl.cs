@@ -869,11 +869,21 @@ internal class ScanEncoderImpl : ScanEncoder
                     switch (FrameInfo.ComponentCount)
                     {
                         case 3:
-                            return new ProcessEncodedSingleComponentToLine8Bit3Components();
+                            switch (CodingParameters.ColorTransformation)
+                            {
+                                case ColorTransformation.None:
+                                    return new ProcessEncodedSingleComponentToLine8Bit3Components();
+                                case ColorTransformation.HP1:
+                                    return new ProcessEncodedSingleComponentToLine8Bit3ComponentsHP1();
+                                case ColorTransformation.HP2:
+                                    return new ProcessEncodedSingleComponentToLine8Bit3ComponentsHP2();
+                                case ColorTransformation.HP3:
+                                    return new ProcessEncodedSingleComponentToLine8Bit3ComponentsHP3();
+                            }
+                            break;
                         case 4:
                             return new ProcessEncodedSingleComponentToLine8Bit4Components();
                     }
-
                     break;
 
                 case InterleaveMode.Sample:

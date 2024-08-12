@@ -102,7 +102,14 @@ internal class ScanDecoderImpl : ScanDecoder
                 switch (FrameInfo.ComponentCount)
                 {
                     case 3:
-                        return new ProcessDecodedSingleComponentToLine3Components(stride, 3);
+                        switch (CodingParameters.ColorTransformation)
+                        {
+                            case ColorTransformation.None:
+                                return new ProcessDecodedSingleComponentToLine3Components(stride, 3);
+                            case ColorTransformation.HP1:
+                                return new ProcessDecodedSingleComponentToLine3ComponentsHP1(stride, 3);
+                        }
+                        break;
                     case 4:
                         return new ProcessDecodedSingleComponentToLine4Components(stride, 4);
                 }
