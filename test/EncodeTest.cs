@@ -107,19 +107,38 @@ public class EncodeTest
     }
 
     [Fact]
+    public void EncodeColor16BitInterleaveLineHP1()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Line, ColorTransformation.HP1);
+    }
+
+    [Fact]
     public void EncodeColor16BitInterleaveSampleHP1()
     {
         byte[] data = [10, 20, 30, 40, 50, 60];
         Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Sample, ColorTransformation.HP1);
     }
 
-    // TODO: HP1 by line
+    [Fact]
+    public void EncodeColor16BitInterleaveLineHP2()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Line, ColorTransformation.HP2);
+    }
 
     [Fact]
     public void EncodeColor16BitInterleaveSampleHP2()
     {
         byte[] data = [10, 20, 30, 40, 50, 60];
         Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Sample, ColorTransformation.HP2);
+    }
+
+    [Fact]
+    public void EncodeColor16BitInterleaveLineHP3()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 55, InterleaveMode.Line, ColorTransformation.HP3);
     }
 
     [Fact]

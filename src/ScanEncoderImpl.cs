@@ -137,7 +137,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBeginInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width);
+            int bytesRead = OnLineBeginInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width, componentCount);
             source = source[bytesRead..];
 
             for (int component = 0; component < componentCount; ++component)
@@ -912,7 +912,19 @@ internal class ScanEncoderImpl : ScanEncoder
                     switch (FrameInfo.ComponentCount)
                     {
                         case 3:
-                            return new ProcessEncodedSingleComponentToLine16Bit3Components();
+                            switch (CodingParameters.ColorTransformation)
+                            {
+                                case ColorTransformation.None:
+                                    return new ProcessEncodedSingleComponentToLine16Bit3Components();
+                                case ColorTransformation.HP1:
+                                    return new ProcessEncodedSingleComponentToLine16Bit3ComponentsHP1();
+                                case ColorTransformation.HP2:
+                                    return new ProcessEncodedSingleComponentToLine16Bit3ComponentsHP2();
+                                case ColorTransformation.HP3:
+                                    return new ProcessEncodedSingleComponentToLine16Bit3ComponentsHP3();
+                            }
+                            break;
+
                         case 4:
                             return new ProcessEncodedSingleComponentToLine16Bit4Components();
                     }
@@ -944,17 +956,17 @@ internal class ScanEncoderImpl : ScanEncoder
         return pixelCount;
     }
 
-    private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
+    private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int componentCount)
     {
         _processLine!.NewLineRequested(source, destination, pixelCount);
-        return pixelCount * 3;
+        return pixelCount * componentCount;
     }
 
     private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount, int componentCount)
     {
         Span<byte> destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
         _processLine!.NewLineRequested(source, destinationInBytes, pixelCount);
-        return pixelCount * componentCount;
+        return pixelCount * componentCount * 2;
     }
 
     private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<byte>> destination, int pixelCount)

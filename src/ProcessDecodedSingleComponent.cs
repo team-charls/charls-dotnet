@@ -87,12 +87,12 @@ internal class ProcessDecodedSingleComponentToLine3Components : IProcessLineDeco
     }
 }
 
-internal class ProcessDecodedSingleComponentToLine3ComponentsHP1 : IProcessLineDecoded
+internal class ProcessDecodedSingleComponentToLine3Components8BitHP1 : IProcessLineDecoded
 {
     private int _stride;
     private int _bytesPerPixel;
 
-    internal ProcessDecodedSingleComponentToLine3ComponentsHP1(int stride, int bytesPerPixel)
+    internal ProcessDecodedSingleComponentToLine3Components8BitHP1(int stride, int bytesPerPixel)
     {
         _stride = stride;
         _bytesPerPixel = bytesPerPixel;
@@ -126,12 +126,51 @@ internal class ProcessDecodedSingleComponentToLine3ComponentsHP1 : IProcessLineD
     }
 }
 
-internal class ProcessDecodedSingleComponentToLine3ComponentsHP2 : IProcessLineDecoded
+internal class ProcessDecodedSingleComponentToLine3Components16BitHP1 : IProcessLineDecoded
 {
     private int _stride;
     private int _bytesPerPixel;
 
-    internal ProcessDecodedSingleComponentToLine3ComponentsHP2(int stride, int bytesPerPixel)
+    internal ProcessDecodedSingleComponentToLine3Components16BitHP1(int stride, int bytesPerPixel)
+    {
+        _stride = stride;
+        _bytesPerPixel = bytesPerPixel;
+    }
+
+    public int LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int LineDecoded(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int LineDecoded(Span<ushort> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+
+        int bytesCount = pixelCount * _bytesPerPixel;
+        Debug.Assert(bytesCount <= _stride);
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            destinationTriplet[i] =
+                ColorTransformations.ReverseTransformHP1(source[i], source[i + sourceStride],
+                    source[i + 2 * sourceStride]);
+        }
+
+        return _stride;
+    }
+}
+
+internal class ProcessDecodedSingleComponentToLine3Components8BitHP2 : IProcessLineDecoded
+{
+    private int _stride;
+    private int _bytesPerPixel;
+
+    internal ProcessDecodedSingleComponentToLine3Components8BitHP2(int stride, int bytesPerPixel)
     {
         _stride = stride;
         _bytesPerPixel = bytesPerPixel;
@@ -165,12 +204,51 @@ internal class ProcessDecodedSingleComponentToLine3ComponentsHP2 : IProcessLineD
     }
 }
 
-internal class ProcessDecodedSingleComponentToLine3ComponentsHP3 : IProcessLineDecoded
+internal class ProcessDecodedSingleComponentToLine3Components16BitHP2 : IProcessLineDecoded
 {
     private int _stride;
     private int _bytesPerPixel;
 
-    internal ProcessDecodedSingleComponentToLine3ComponentsHP3(int stride, int bytesPerPixel)
+    internal ProcessDecodedSingleComponentToLine3Components16BitHP2(int stride, int bytesPerPixel)
+    {
+        _stride = stride;
+        _bytesPerPixel = bytesPerPixel;
+    }
+
+    public int LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int LineDecoded(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int LineDecoded(Span<ushort> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+
+        int bytesCount = pixelCount * _bytesPerPixel;
+        Debug.Assert(bytesCount <= _stride);
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            destinationTriplet[i] =
+                ColorTransformations.ReverseTransformHP2(source[i], source[i + sourceStride],
+                    source[i + 2 * sourceStride]);
+        }
+
+        return _stride;
+    }
+}
+
+internal class ProcessDecodedSingleComponentToLine3Components8BitHP3 : IProcessLineDecoded
+{
+    private int _stride;
+    private int _bytesPerPixel;
+
+    internal ProcessDecodedSingleComponentToLine3Components8BitHP3(int stride, int bytesPerPixel)
     {
         _stride = stride;
         _bytesPerPixel = bytesPerPixel;
@@ -201,6 +279,45 @@ internal class ProcessDecodedSingleComponentToLine3ComponentsHP3 : IProcessLineD
     public int LineDecoded(Span<ushort> source, Span<byte> destination, int pixelCount, int sourceStride)
     {
         throw new NotImplementedException();
+    }
+}
+
+internal class ProcessDecodedSingleComponentToLine3Components16BitHP3 : IProcessLineDecoded
+{
+    private int _stride;
+    private int _bytesPerPixel;
+
+    internal ProcessDecodedSingleComponentToLine3Components16BitHP3(int stride, int bytesPerPixel)
+    {
+        _stride = stride;
+        _bytesPerPixel = bytesPerPixel;
+    }
+
+    public int LineDecoded(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int LineDecoded(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int LineDecoded(Span<ushort> source, Span<byte> destination, int pixelCount, int sourceStride)
+    {
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+
+        int bytesCount = pixelCount * _bytesPerPixel;
+        Debug.Assert(bytesCount <= _stride);
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            destinationTriplet[i] =
+                ColorTransformations.ReverseTransformHP3(source[i], source[i + sourceStride],
+                    source[i + 2 * sourceStride]);
+        }
+
+        return _stride;
     }
 }
 
