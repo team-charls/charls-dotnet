@@ -99,4 +99,75 @@ public sealed record SpiffHeader
     /// The horizontal resolution.
     /// </value>
     public int HorizontalResolution { get; init; }
+
+    private bool IsValid(FrameInfo frameInfo)
+    {
+        if (CompressionType != SpiffCompressionType.JpegLS)
+            return false;
+
+        if (ProfileId != SpiffProfileId.None)
+            return false;
+
+        if (!IsValidResolutionUnits(ResolutionUnit))
+            return false;
+
+        if (HorizontalResolution == 0 || VerticalResolution == 0)
+            return false;
+
+        if (ComponentCount != frameInfo.ComponentCount)
+            return false;
+
+        if (!IsValidColorSpace(ColorSpace, ComponentCount))
+            return false;
+
+        if (BitsPerSample != frameInfo.BitsPerSample)
+            return false;
+
+        if (Height != frameInfo.Height)
+            return false;
+
+        return Width == frameInfo.Width;
+    }
+
+    private static bool IsValidResolutionUnits(SpiffResolutionUnit resolutionUnits)
+    {
+        return resolutionUnits switch
+        {
+            SpiffResolutionUnit.AspectRatio or
+            SpiffResolutionUnit.DotsPerInch or
+            SpiffResolutionUnit.DotsPerCentimeter => true,
+            _ => false
+        };
+    }
+
+    private static bool IsValidColorSpace(SpiffColorSpace colorSpace, int componentCount)
+    {
+        switch (colorSpace)
+        {
+            case SpiffColorSpace.None:
+                return true;
+
+            case SpiffColorSpace.BiLevelBlack:
+            case SpiffColorSpace.BiLevelWhite:
+                return false; // not supported for JPEG-LS.
+
+            case SpiffColorSpace.Grayscale:
+                return componentCount == 1;
+
+            case SpiffColorSpace.YcbcrItuBT709Video:
+            case SpiffColorSpace.YcbcrItuBT6011Rgb:
+            case SpiffColorSpace.YcbcrItuBT6011Video:
+            case SpiffColorSpace.Rgb:
+            case SpiffColorSpace.Cmy:
+            case SpiffColorSpace.PhotoYcc:
+            case SpiffColorSpace.CieLab:
+                return componentCount == 3;
+
+            case SpiffColorSpace.Cmyk:
+            case SpiffColorSpace.Ycck:
+                return componentCount == 4;
+        }
+
+        return false;
+    }
 }

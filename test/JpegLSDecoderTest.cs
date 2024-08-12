@@ -18,12 +18,14 @@ public class JpegLSDecoderTest
         Assert.False(string.IsNullOrEmpty(exception.Message));
     }
 
-    //TEST_METHOD(read_spiff_header_without_source) // NOLINT
-    //{
-    //    jpegls_decoder decoder;
+    [Fact]
+    public void ReadHeaderWithoutSource()
+    {
+        JpegLSDecoder decoder = new();
 
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { decoder.read_spiff_header(); });
-    //}
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+    }
 
     [Fact]
     public void DestinationSizeWithoutReadingHeader()
@@ -64,31 +66,36 @@ public class JpegLSDecoderTest
         Assert.False(string.IsNullOrEmpty(exception.Message));
     }
 
-    //TEST_METHOD(interleave_mode_without_read_header) // NOLINT
-    //{
-    //    const vector<uint8_t> source(2000);
-    //    const jpegls_decoder decoder{ source, false};
+    [Fact]
+    public void InterleaveModeWithoutReadHeader()
+    {
+        var buffer = new byte[2000];
+        JpegLSDecoder decoder = new() { Source = buffer };
 
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { ignore = decoder.interleave_mode(); });
-    //}
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.InterleaveMode);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+    }
 
-    //TEST_METHOD(near_lossless_without_read_header) // NOLINT
-    //{
-    //    const vector<uint8_t> source(2000);
-    //    const jpegls_decoder decoder{ source, false};
+    [Fact]
+    public void near_lossless_without_read_header()
+    {
+        var buffer = new byte[2000];
+        JpegLSDecoder decoder = new() { Source = buffer };
 
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { ignore = decoder.near_lossless(); });
-    //}
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.NearLossless);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+    }
 
-    //TEST_METHOD(preset_coding_parameters_without_read_header) // NOLINT
-    //{
-    //    jpegls_decoder decoder;
+    [Fact]
+    public void preset_coding_parameters_without_read_header()
+    {
+        var buffer = new byte[2000];
+        JpegLSDecoder decoder = new() { Source = buffer };
 
-    //    const vector<uint8_t> source(2000);
-    //    decoder.source(source);
 
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { ignore = decoder.preset_coding_parameters(); });
-    //}
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.PresetCodingParameters);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+    }
 
     [Fact]
     public void DestinationSize()
