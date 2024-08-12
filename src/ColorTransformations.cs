@@ -107,10 +107,10 @@ internal static class ColorTransformations
 
     internal static Triplet<ushort> TransformHP3(ushort red, ushort green, ushort blue)
     {
-        const int range = 1 << (sizeof(byte) * 8);
+        const int range = 1 << (sizeof(ushort) * 8);
 
-        var v2 = (byte)(blue - green + range / 2);
-        var v3 = (byte)(red - green + range / 2);
+        var v2 = (ushort)(blue - green + range / 2);
+        var v3 = (ushort)(red - green + range / 2);
 
         return new Triplet<ushort>(
             (ushort)(green + ((v2 + v3) >> 2) - range / 4),
@@ -132,7 +132,7 @@ internal static class ColorTransformations
 
     internal static Triplet<ushort> ReverseTransformHP3(ushort v1, ushort v2, ushort v3)
     {
-        const int range = 1 << (sizeof(byte) * 8);
+        const int range = 1 << (sizeof(ushort) * 8);
 
         var g = (v1 - ((v3 + v2) >> 2) + range / 4);
 
