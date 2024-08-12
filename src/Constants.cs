@@ -39,5 +39,8 @@ internal static class Constants
     // The size of a SPIFF header when serialized to a JPEG byte stream.
     internal const int SpiffHeaderSizeInBytes = 34;
 
+    // The maximum size of the data bytes that fit in a segment.
+    internal const int SegmentMaxDataSize = ushort.MaxValue - SegmentLengthSize;
+
     internal const int Int32BitCount = 32;
 }

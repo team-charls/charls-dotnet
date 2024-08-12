@@ -13,13 +13,19 @@ internal class JpegStreamWriter
 
     internal Memory<byte> Destination { get; set; }
 
+    // ReSharper disable once ConvertToAutoPropertyWhenPossible
+    internal int BytesWritten => _position;
+
     internal Memory<byte> GetRemainingDestination()
     {
         return Destination[_position..];
     }
 
-    // ReSharper disable once ConvertToAutoPropertyWhenPossible
-    internal int BytesWritten => _position;
+    internal void Rewind()
+    {
+        _position = 0;
+        _componentIndex = 0;
+    }
 
     internal void Seek(int byteCount)
     {
@@ -30,6 +36,56 @@ internal class JpegStreamWriter
     internal void WriteStartOfImage()
     {
         WriteSegmentWithoutData(JpegMarkerCode.StartOfImage);
+    }
+
+    /// <summary>
+    /// Write a JPEG SPIFF (APP8 + spiff) segment.
+    /// This segment is documented in ISO/IEC 10918-3, Annex F.
+    /// </summary>
+    internal void WriteSpiffHeaderSegment(SpiffHeader header)
+    {
+        Debug.Assert(header.Height > 0);
+        Debug.Assert(header.Width > 0);
+
+        Span<byte> spiffMagicId = [(byte)'S', (byte)'P', (byte)'I', (byte)'F', (byte)'F', (byte)'\0'];
+
+        // Create a JPEG APP8 segment in Still Picture Interchange File Format (SPIFF), v2.0
+        WriteSegmentHeader(JpegMarkerCode.ApplicationData8, 30);
+        WriteBytes(spiffMagicId);
+        WriteByte(Constants.SpiffMajorRevisionNumber);
+        WriteByte(Constants.SpiffMinorRevisionNumber);
+        WriteByte((byte)header.ProfileId);
+        WriteByte((byte)header.ComponentCount);
+        WriteUint32(header.Height);
+        WriteUint32(header.Width);
+        WriteByte((byte)header.ColorSpace);
+        WriteByte((byte)header.BitsPerSample);
+        WriteByte((byte)header.CompressionType);
+        WriteByte((byte)header.ResolutionUnit);
+        WriteUint32(header.VerticalResolution);
+        WriteUint32(header.HorizontalResolution);
+    }
+
+    internal void WriteSpiffDirectoryEntry(int entryTag, Span<byte> entryData)
+    {
+        WriteSegmentHeader(JpegMarkerCode.ApplicationData8, sizeof(int) + entryData.Length);
+        WriteUint32(entryTag);
+        WriteBytes(entryData);
+    }
+
+    internal void WriteSpiffEndOfDirectoryEntry()
+    {
+        // Note: ISO/IEC 10918-3, Annex F.2.2.3 documents that the EOD entry segment should have a length of 8
+        // but only 6 data bytes. This approach allows to wrap existing bit streams\encoders with a SPIFF header.
+        // In this implementation the SOI marker is added as data bytes to simplify the stream writer design.
+        Span<byte> spiffEndOfDirectory =
+        [
+            0, 0,
+            0, Constants.SpiffEndOfDirectoryEntryType,
+            0xFF, (byte) JpegMarkerCode.StartOfImage
+        ];
+
+        WriteSegment(JpegMarkerCode.ApplicationData8, spiffEndOfDirectory);
     }
 
     internal void WriteColorTransformSegment(ColorTransformation colorTransformation)
@@ -128,7 +184,7 @@ internal class JpegStreamWriter
     private void WriteSegmentWithoutData(JpegMarkerCode markerCode)
     {
         if (_position + 2 > Destination.Length)
-            throw Util.CreateInvalidDataException(ErrorCode.DestinationBufferTooSmall);
+            ThrowHelper.ThrowArgumentOutOfRangeException(ErrorCode.DestinationBufferTooSmall);
 
         WriteByte(Constants.JpegMarkerStartByte);
         WriteByte((byte)markerCode);
@@ -142,15 +198,14 @@ internal class JpegStreamWriter
 
     private void WriteSegmentHeader(JpegMarkerCode markerCode, int dataSize)
     {
-        // ASSERT(data_size <= segment_max_data_size);
+        Debug.Assert(dataSize <= Constants.SegmentMaxDataSize);
 
         // Check if there is enough room in the destination to write the complete segment.
         // Other methods assume that the checking in done here and don't check again.
-        //const int markerCodeSize = 2;
-        //int totalSegmentSize = markerCodeSize + Constants.SegmentLengthSize + dataSize;
-        //if (const size_t total_segment_size{marker_code_size + segment_length_size + data_size};
-        //UNLIKELY(byte_offset_ + total_segment_size > destination_.size()))
-        //impl::throw_jpegls_error(jpegls_errc::destination_buffer_too_small);
+        const int markerCodeSize = 2;
+        int totalSegmentSize = markerCodeSize + Constants.SegmentLengthSize + dataSize;
+        if (_position + totalSegmentSize > Destination.Length)
+            ThrowHelper.ThrowArgumentOutOfRangeException(ErrorCode.DestinationBufferTooSmall);
 
         WriteMarker(markerCode);
         WriteUint16(Constants.SegmentLengthSize + dataSize);
