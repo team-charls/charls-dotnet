@@ -12,6 +12,7 @@ public sealed class JpegLSEncoder
     private int _nearLossless;
     private InterleaveMode _interleaveMode;
     private ColorTransformation _colorTransformation;
+    private EncodingOptions _encodingOptions;
     private JpegLSPresetCodingParameters? _userPresetCodingParameters = new JpegLSPresetCodingParameters();
     private readonly JpegStreamWriter _writer = new JpegStreamWriter();
 
@@ -129,6 +130,25 @@ public sealed class JpegLSEncoder
                 throw new ArgumentOutOfRangeException(nameof(value));
 
             _interleaveMode = value;
+        }
+    }
+
+    /// <summary>
+    /// Configures the encoding options the encoder should use.
+    /// </summary>
+    /// <value>
+    /// Options to use. Options can be combined. Default is None.
+    /// </value>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the passed enum value is invalid.</exception>
+    public EncodingOptions EncodingOptions
+    {
+        get => _encodingOptions;
+
+        set
+        {
+            if (!value.IsValid())
+                throw new ArgumentOutOfRangeException(nameof(value));
+            _encodingOptions = value;
         }
     }
 
@@ -253,20 +273,8 @@ public sealed class JpegLSEncoder
 
         TransitionToTablesAndMiscellaneousState();
         WriteColorTransformSegment();
-
-        if (_writer.WriteStartOfFrameSegment(FrameInfo))
-        {
-            // Image dimensions are oversized and need to be written to a JPEG-LS preset parameters (LSE) segment.
-            ////_writer.write_jpegls_preset_parameters_segment(frame_info_.height, frame_info_.width);
-        }
-
-        //if (!is_default(user_preset_coding_parameters_, compute_default(maximum_sample_value, near_lossless_)) ||
-        //    (has_option(encoding_options::include_pc_parameters_jai) && frame_info_.bits_per_sample > 12))
-        //{
-        //    // Write the actual used values to the stream. The user parameters may use 0 (=default) values.
-        //    // This reduces the risk for decoding by other implementations.
-        //    writer_.write_jpegls_preset_parameters_segment(preset_coding_parameters_);
-        //}
+        WriteStartOfFrameSegment();
+        WriteJpegLSPresetParametersSegment(maximumSampleValue, presetCodingParameters);
 
         if (InterleaveMode == InterleaveMode.None)
         {
@@ -371,9 +379,30 @@ public sealed class JpegLSEncoder
         _writer.WriteColorTransformSegment(ColorTransformation);
     }
 
+    private void WriteStartOfFrameSegment()
+    {
+        if (_writer.WriteStartOfFrameSegment(FrameInfo!))
+        {
+            // Image dimensions are oversized and need to be written to a JPEG-LS preset parameters (LSE) segment.
+            _writer.WriteJpegLSPresetParametersSegment(FrameInfo!.Height, FrameInfo.Width);
+        }
+    }
+
+    private void WriteJpegLSPresetParametersSegment(int maximumSampleValue, JpegLSPresetCodingParameters presetCodingParameters)
+    {
+
+        if (!_userPresetCodingParameters!.IsDefault(maximumSampleValue, NearLossless) ||
+            (EncodingOptions.HasFlag(EncodingOptions.IncludePCParametersJai) && FrameInfo!.BitsPerSample > 12))
+        {
+            // Write the actual used values to the stream, not zero's.
+            // Explicit values reduces the risk for decoding by other implementations.
+            _writer.WriteJpegLSPresetParametersSegment(presetCodingParameters);
+        }
+    }
+
     private void WriteEndOfImage()
     {
-        _writer.WriteEndOfImage(false); ////(has_option(encoding_options::even_destination_size));
+        _writer.WriteEndOfImage(EncodingOptions.HasFlag(EncodingOptions.EvenDestinationSize));
         _state = State.Completed;
     }
 

@@ -453,7 +453,7 @@ internal class JpegStreamReader
                 ReadMappingTableContinuation();
                 return;
 
-            case JpegLSPresetParametersType.ExtendedWidthAndHeight:
+            case JpegLSPresetParametersType.OversizeImageDimension:
                 throw Util.CreateInvalidDataException(ErrorCode.ParameterValueNotSupported);
         }
 

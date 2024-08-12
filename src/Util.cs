@@ -81,6 +81,13 @@ internal static class Util
         return colorTransformation is >= ColorTransformation.None and <= ColorTransformation.HP3;
     }
 
+    internal static bool IsValid(this EncodingOptions encodingOptions)
+    {
+        // More efficient than Enum.IsDefined as it doesn't use reflection.
+        return encodingOptions is >= EncodingOptions.None and <=
+            (EncodingOptions.EvenDestinationSize | EncodingOptions.IncludeVersionNumber | EncodingOptions.IncludePCParametersJai);
+    }
+
     internal static int CheckedMul(int a, int b)
     {
         return a * b;
