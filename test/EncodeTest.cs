@@ -49,35 +49,41 @@ public class EncodeTest
         Encode("conformance/test8.ppm", 99734, InterleaveMode.Sample);
     }
 
-    //TEST_METHOD(encode_color_8_bit_interleave_line_hp1) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91617, interleave_mode::line, color_transformation::hp1);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveLineHP1()
+    {
+        Encode("conformance/test8.ppm", 91617, InterleaveMode.Line, ColorTransformation.HP1);
+    }
 
-    //TEST_METHOD(encode_color_8_bit_interleave_sample_hp1) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91463, interleave_mode::sample, color_transformation::hp1);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveSampleHP1()
+    {
+        Encode("conformance/test8.ppm", 91463, InterleaveMode.Sample, ColorTransformation.HP1);
+    }
 
-    //TEST_METHOD(encode_color_8_bit_interleave_line_hp2) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91693, interleave_mode::line, color_transformation::hp2);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveLineHP2()
+    {
+        Encode("conformance/test8.ppm", 91693, InterleaveMode.Line, ColorTransformation.HP2);
+    }
 
-    //TEST_METHOD(encode_color_8_bit_interleave_sample_hp2) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91457, interleave_mode::sample, color_transformation::hp2);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveSampleHP2()
+    {
+        Encode("conformance/test8.ppm", 91457, InterleaveMode.Sample, ColorTransformation.HP2);
+    }
 
-    //TEST_METHOD(encode_color_8_bit_interleave_line_hp3) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91993, interleave_mode::line, color_transformation::hp3);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveLineHP3()
+    {
+        Encode("conformance/test8.ppm", 91993, InterleaveMode.Line, ColorTransformation.HP3);
+    }
 
-    //TEST_METHOD(encode_color_8_bit_interleave_sample_hp3) // NOLINT
-    //{
-    //    encode("DataFiles/test8.ppm", 91862, interleave_mode::sample, color_transformation::hp3);
-    //}
+    [Fact]
+    public void EncodeColor8BitInterleaveSampleHP3()
+    {
+        Encode("conformance/test8.ppm", 91862, InterleaveMode.Sample, ColorTransformation.HP3);
+    }
 
     [Fact]
     public void EncodeColor16BitInterleaveNone()
@@ -100,23 +106,47 @@ public class EncodeTest
         Encode(new FrameInfo(1, 1, 16, 3), data, 45, InterleaveMode.Sample);
     }
 
-    //TEST_METHOD(encode_color_16_bit_interleave_sample_hp1) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60} };
-    //    encode({ 1, 1, 16, 3}, { data.cbegin(), data.cend()}, 59, interleave_mode::sample, color_transformation::hp1);
-    //}
+    [Fact]
+    public void EncodeColor16BitInterleaveLineHP1()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Line, ColorTransformation.HP1);
+    }
 
-    //TEST_METHOD(encode_color_16_bit_interleave_sample_hp2) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60} };
-    //    encode({ 1, 1, 16, 3}, { data.cbegin(), data.cend()}, 59, interleave_mode::sample, color_transformation::hp2);
-    //}
+    [Fact]
+    public void EncodeColor16BitInterleaveSampleHP1()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Sample, ColorTransformation.HP1);
+    }
 
-    //TEST_METHOD(encode_color_16_bit_interleave_sample_hp3) // NOLINT
-    //{
-    //    constexpr array data{ byte{ 10}, byte{ 20}, byte{ 30}, byte{ 40}, byte{ 50}, byte{ 60} };
-    //    encode({ 1, 1, 16, 3}, { data.cbegin(), data.cend()}, 55, interleave_mode::sample, color_transformation::hp3);
-    //}
+    [Fact]
+    public void EncodeColor16BitInterleaveLineHP2()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Line, ColorTransformation.HP2);
+    }
+
+    [Fact]
+    public void EncodeColor16BitInterleaveSampleHP2()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 59, InterleaveMode.Sample, ColorTransformation.HP2);
+    }
+
+    [Fact]
+    public void EncodeColor16BitInterleaveLineHP3()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 55, InterleaveMode.Line, ColorTransformation.HP3);
+    }
+
+    [Fact]
+    public void EncodeColor16BitInterleaveSampleHP3()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60];
+        Encode(new FrameInfo(1, 1, 16, 3), data, 55, InterleaveMode.Sample, ColorTransformation.HP3);
+    }
 
     [Fact]
     public void Encode4Components8BitInterleaveNone()
@@ -160,19 +190,19 @@ public class EncodeTest
         Encode(new FrameInfo(1, 1, 16, 4), data, 52, InterleaveMode.Sample);
     }
 
-    private static void Encode(string filename, int expectedSize, InterleaveMode interleaveMode = InterleaveMode.None
-    /*color_transformation color_transformation = color_transformation::none*/)
+    private static void Encode(string filename, int expectedSize, InterleaveMode interleaveMode = InterleaveMode.None,
+        ColorTransformation colorTransformation = ColorTransformation.None)
     {
         var referenceFile = Util.ReadAnymapReferenceFile(filename, interleaveMode);
 
         Encode(new FrameInfo(referenceFile.Width, referenceFile.Height, referenceFile.BitsPerSample, referenceFile.ComponentCount),
-            referenceFile.ImageData, expectedSize, interleaveMode/*, color_transformation*/);
+            referenceFile.ImageData, expectedSize, interleaveMode, colorTransformation);
     }
 
-    private static void Encode(FrameInfo frameInfo, ReadOnlyMemory<byte> source, int expectedSize, InterleaveMode interleaveMode
-    /*const color_transformation color_transformation = color_transformation::none*/)
+    private static void Encode(FrameInfo frameInfo, ReadOnlyMemory<byte> source, int expectedSize, InterleaveMode interleaveMode,
+        ColorTransformation colorTransformation = ColorTransformation.None)
     {
-        JpegLSEncoder encoder = new() { FrameInfo = frameInfo, InterleaveMode = interleaveMode };
+        JpegLSEncoder encoder = new() { FrameInfo = frameInfo, InterleaveMode = interleaveMode, ColorTransformation = colorTransformation};
 
         Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = encodedData;

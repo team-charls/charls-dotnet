@@ -137,7 +137,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBeginInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width);
+            int bytesRead = OnLineBeginInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width, componentCount);
             source = source[bytesRead..];
 
             for (int component = 0; component < componentCount; ++component)
@@ -869,15 +869,36 @@ internal class ScanEncoderImpl : ScanEncoder
                     switch (FrameInfo.ComponentCount)
                     {
                         case 3:
-                            return new ProcessEncodedSingleComponentToLine8Bit3Components();
+                            switch (CodingParameters.ColorTransformation)
+                            {
+                                case ColorTransformation.None:
+                                    return new ProcessEncodedSingleComponentToLine8Bit3Components();
+                                case ColorTransformation.HP1:
+                                    return new ProcessEncodedSingleComponentToLine8Bit3ComponentsHP1();
+                                case ColorTransformation.HP2:
+                                    return new ProcessEncodedSingleComponentToLine8Bit3ComponentsHP2();
+                                case ColorTransformation.HP3:
+                                    return new ProcessEncodedSingleComponentToLine8Bit3ComponentsHP3();
+                            }
+                            break;
                         case 4:
                             return new ProcessEncodedSingleComponentToLine8Bit4Components();
                     }
-
                     break;
 
                 case InterleaveMode.Sample:
-                    return new ProcessEncodedSingleComponent();
+                    switch (CodingParameters.ColorTransformation)
+                    {
+                        case ColorTransformation.None:
+                            return new ProcessEncodedSingleComponent();
+                        case ColorTransformation.HP1:
+                            return new ProcessEncodedSingleComponent8BitHP1();
+                        case ColorTransformation.HP2:
+                            return new ProcessEncodedSingleComponent8BitHP2();
+                        case ColorTransformation.HP3:
+                            return new ProcessEncodedSingleComponent8BitHP3();
+                    }
+                    break;
             }
         }
         else
@@ -891,7 +912,19 @@ internal class ScanEncoderImpl : ScanEncoder
                     switch (FrameInfo.ComponentCount)
                     {
                         case 3:
-                            return new ProcessEncodedSingleComponentToLine16Bit3Components();
+                            switch (CodingParameters.ColorTransformation)
+                            {
+                                case ColorTransformation.None:
+                                    return new ProcessEncodedSingleComponentToLine16Bit3Components();
+                                case ColorTransformation.HP1:
+                                    return new ProcessEncodedSingleComponentToLine16Bit3ComponentsHP1();
+                                case ColorTransformation.HP2:
+                                    return new ProcessEncodedSingleComponentToLine16Bit3ComponentsHP2();
+                                case ColorTransformation.HP3:
+                                    return new ProcessEncodedSingleComponentToLine16Bit3ComponentsHP3();
+                            }
+                            break;
+
                         case 4:
                             return new ProcessEncodedSingleComponentToLine16Bit4Components();
                     }
@@ -899,37 +932,22 @@ internal class ScanEncoderImpl : ScanEncoder
                     break;
 
                 case InterleaveMode.Sample:
-                    return new ProcessEncodedSingleComponent();
+                    switch (CodingParameters.ColorTransformation)
+                    {
+                        case ColorTransformation.None:
+                            return new ProcessEncodedSingleComponent();
+                        case ColorTransformation.HP1:
+                            return new ProcessEncodedSingleComponent16BitHP1();
+                        case ColorTransformation.HP2:
+                            return new ProcessEncodedSingleComponent16BitHP2();
+                        case ColorTransformation.HP3:
+                            return new ProcessEncodedSingleComponent16BitHP3();
+                    }
+                    break;
             }
         }
 
         throw new NotImplementedException();
-
-        //if (parameters().interleave_mode == interleave_mode::none)
-        //{
-        //    return std::make_unique<process_decoded_single_component>(destination, stride, sizeof(pixel_type));
-        //}
-
-        //switch (parameters().transformation)
-        //{
-        //    case color_transformation::none:
-        //        return std::make_unique<process_decoded_transformed<transform_none<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //    case color_transformation::hp1:
-        //        ASSERT(color_transformation_possible(frame_info()));
-        //        return std::make_unique<process_decoded_transformed<transform_hp1<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //    case color_transformation::hp2:
-        //        ASSERT(color_transformation_possible(frame_info()));
-        //        return std::make_unique<process_decoded_transformed<transform_hp2<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //    case color_transformation::hp3:
-        //        ASSERT(color_transformation_possible(frame_info()));
-        //        return std::make_unique<process_decoded_transformed<transform_hp3<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //}
-
-        //unreachable();
     }
 
     private int OnLineBegin(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
@@ -938,17 +956,17 @@ internal class ScanEncoderImpl : ScanEncoder
         return pixelCount;
     }
 
-    private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
+    private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int componentCount)
     {
         _processLine!.NewLineRequested(source, destination, pixelCount);
-        return pixelCount * 3;
+        return pixelCount * componentCount;
     }
 
     private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount, int componentCount)
     {
         Span<byte> destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
         _processLine!.NewLineRequested(source, destinationInBytes, pixelCount);
-        return pixelCount * componentCount;
+        return pixelCount * componentCount * 2;
     }
 
     private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<byte>> destination, int pixelCount)

@@ -45,6 +45,8 @@ internal class JpegStreamReader
 
     internal InterleaveMode InterleaveMode { get; private set; }
 
+    internal ColorTransformation ColorTransformation { get; private set; }
+
     internal int MappingTableCount => _mappingTables.Count;
 
     private int SegmentBytesToRead => (_segmentStartPosition + _segmentDataSize) - Position;
@@ -94,7 +96,8 @@ internal class JpegStreamReader
         {
             NearLossless = _nearLossless,
             InterleaveMode = InterleaveMode,
-            RestartInterval = (int)RestartInterval
+            RestartInterval = (int)RestartInterval,
+            ColorTransformation = ColorTransformation
         };
     }
 
@@ -450,7 +453,7 @@ internal class JpegStreamReader
                 ReadMappingTableContinuation();
                 return;
 
-            case JpegLSPresetParametersType.ExtendedWidthAndHeight:
+            case JpegLSPresetParametersType.OversizeImageDimension:
                 throw Util.CreateInvalidDataException(ErrorCode.ParameterValueNotSupported);
         }
 
@@ -581,7 +584,7 @@ internal class JpegStreamReader
 
         if (_segmentDataSize == 5)
         {
-            //try_read_hp_color_transform_segment();
+            try_read_hp_color_transform_segment();
         }
         else if (_segmentDataSize >= 30)
         {
@@ -589,6 +592,35 @@ internal class JpegStreamReader
         }
 
         SkipRemainingSegmentData();
+    }
+
+    private void try_read_hp_color_transform_segment()
+    {
+        Debug.Assert(SegmentBytesToRead == 5);
+
+        var segmentData = ReadBytes(5);
+
+        byte[] mrfxTag = [(byte)'m', (byte)'r', (byte)'f', (byte)'x'];
+        if (!segmentData[..4].Span.SequenceEqual(mrfxTag))
+            return;
+
+        byte transformation = segmentData.Span[4];
+        switch (transformation)
+        {
+            case (byte)(ColorTransformation.None):
+            case (byte)(ColorTransformation.HP1):
+            case (byte)(ColorTransformation.HP2):
+            case (byte)(ColorTransformation.HP3):
+                ColorTransformation = (ColorTransformation)transformation;
+                return;
+
+            case 4: // RgbAsYuvLossy: the standard lossy RGB to YCbCr transform used in JPEG.
+            case 5: // Matrix: transformation is controlled using a matrix that is also stored in the segment.
+                throw Util.CreateInvalidDataException(ErrorCode.ColorTransformNotSupported);
+
+            default:
+                throw Util.CreateInvalidDataException(ErrorCode.InvalidParameterColorTransformation);
+        }
     }
 
     private void TryReadSpiffHeaderSegment()

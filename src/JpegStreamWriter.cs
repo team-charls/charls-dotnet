@@ -32,33 +32,55 @@ internal class JpegStreamWriter
         WriteSegmentWithoutData(JpegMarkerCode.StartOfImage);
     }
 
+    internal void WriteColorTransformSegment(ColorTransformation colorTransformation)
+    {
+        byte[] segment = [(byte)'m', (byte)'r', (byte)'f', (byte)'x', (byte)colorTransformation];
+        WriteSegment(JpegMarkerCode.ApplicationData8, segment);
+    }
+
     internal void WriteCommentSegment(ReadOnlySpan<byte> comment)
     {
         WriteSegment(JpegMarkerCode.Comment, comment);
     }
 
-    internal bool WriteStartOfFrameSegment(FrameInfo frame)
+    internal void WriteJpegLSPresetParametersSegment(JpegLSPresetCodingParameters presetCodingParameters)
     {
-        //ASSERT(frame.width > 0);
-        //ASSERT(frame.height > 0);
-        //ASSERT(frame.bits_per_sample >= minimum_bits_per_sample && frame.bits_per_sample <= maximum_bits_per_sample);
-        //ASSERT(frame.component_count > 0 && frame.component_count <= numeric_limits<uint8_t>::max());
+        WriteSegmentHeader(JpegMarkerCode.JpegLSPresetParameters, 1 + 5 * sizeof(ushort));
+        WriteByte((byte)JpegLSPresetParametersType.PresetCodingParameters);
+        WriteUint16(presetCodingParameters.MaximumSampleValue);
+        WriteUint16(presetCodingParameters.Threshold1);
+        WriteUint16(presetCodingParameters.Threshold2);
+        WriteUint16(presetCodingParameters.Threshold3);
+        WriteUint16(presetCodingParameters.ResetValue);
+    }
 
+    public void WriteJpegLSPresetParametersSegment(int height, int width)
+    {
+        // Format is defined in ISO/IEC 14495-1, C.2.4.1.4
+        WriteSegmentHeader(JpegMarkerCode.JpegLSPresetParameters, 1 + 1 + 2 * sizeof(uint));
+        WriteByte((byte)JpegLSPresetParametersType.OversizeImageDimension);
+        WriteByte(sizeof(uint)); // Wxy: number of bytes used to represent Ye and Xe [2..4]. Always 4 for simplicity.
+        WriteUint32(height);     // Ye: number of lines in the image.
+        WriteUint32(width);      // Xe: number of columns in the image.
+    }
+
+    internal bool WriteStartOfFrameSegment(FrameInfo frameInfo)
+    {
         // Create a Frame Header as defined in ISO/IEC 14495-1, C.2.2 and T.81, B.2.2
-        int dataSize = 6 + frame.ComponentCount * 3;
+        int dataSize = 6 + frameInfo.ComponentCount * 3;
         WriteSegmentHeader(JpegMarkerCode.StartOfFrameJpegLS, dataSize);
-        WriteByte((byte)frame.BitsPerSample); // P = Sample precision
+        WriteByte((byte)frameInfo.BitsPerSample); // P = Sample precision
 
-        bool oversizedImage = frame.Width > ushort.MaxValue || frame.Height > ushort.MaxValue;
-        WriteUint16(oversizedImage ? 0 : frame.Height); // Y = Number of lines
-        WriteUint16(oversizedImage ? 0 : frame.Width);  // X = Number of samples per line
+        bool oversizedImage = frameInfo.Width > ushort.MaxValue || frameInfo.Height > ushort.MaxValue;
+        WriteUint16(oversizedImage ? 0 : frameInfo.Height); // Y = Number of lines
+        WriteUint16(oversizedImage ? 0 : frameInfo.Width);  // X = Number of samples per line
 
         // Components
-        WriteByte((byte)frame.ComponentCount); // Nf = Number of image components in frame
+        WriteByte((byte)frameInfo.ComponentCount); // Nf = Number of image components in frame
 
         // Use by default 1 as the start component identifier to remain compatible with the
         // code sample of ISO/IEC 14495-1, H.4 and the JPEG-LS ISO conformance sample files.
-        for (int componentId = 1; componentId <= frame.ComponentCount; ++componentId)
+        for (int componentId = 1; componentId <= frameInfo.ComponentCount; ++componentId)
         {
             // Component Specification parameters
             WriteByte((byte)componentId); // Ci = Component identifier
@@ -158,6 +180,13 @@ internal class JpegStreamWriter
         Debug.Assert(value is >= 0 and <= ushort.MaxValue);
         BinaryPrimitives.WriteUInt16BigEndian(Destination.Span[_position..], (ushort)value);
         _position += sizeof(ushort);
+    }
+
+    private void WriteUint32(int value)
+    {
+        Debug.Assert(value >= 0);
+        BinaryPrimitives.WriteUInt32BigEndian(Destination.Span[_position..], (uint)value);
+        _position += sizeof(uint);
     }
 
     private byte MappingTableSelector()

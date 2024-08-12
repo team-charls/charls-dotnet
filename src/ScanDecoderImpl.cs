@@ -93,69 +93,122 @@ internal class ScanDecoderImpl : ScanDecoder
     // Factory function for ProcessLine objects to copy/transform un encoded pixels to/from our scan line buffers.
     private IProcessLineDecoded CreateProcessLine(int stride)
     {
-        switch (CodingParameters.InterleaveMode)
+        if (FrameInfo.BitsPerSample <= 8)
         {
-            case InterleaveMode.None:
-                return new ProcessDecodedSingleComponent(stride, 1);
+            switch (CodingParameters.InterleaveMode)
+            {
+                case InterleaveMode.None:
+                    return new ProcessDecodedSingleComponent(stride, 1);
 
-            case InterleaveMode.Line:
-                switch (FrameInfo.ComponentCount)
-                {
-                    case 3:
-                        return new ProcessDecodedSingleComponentToLine3Components(stride, 3);
-                    case 4:
-                        return new ProcessDecodedSingleComponentToLine4Components(stride, 4);
-                }
-                break;
+                case InterleaveMode.Line:
+                    switch (FrameInfo.ComponentCount)
+                    {
+                        case 3:
+                            switch (CodingParameters.ColorTransformation)
+                            {
+                                case ColorTransformation.None:
+                                    return new ProcessDecodedSingleComponentToLine3Components(stride, 3);
+                                case ColorTransformation.HP1:
+                                    return new ProcessDecodedSingleComponentToLine3Components8BitHP1(stride, 3);
+                                case ColorTransformation.HP2:
+                                    return new ProcessDecodedSingleComponentToLine3Components8BitHP2(stride, 3);
+                                case ColorTransformation.HP3:
+                                    return new ProcessDecodedSingleComponentToLine3Components8BitHP3(stride, 3);
+                            }
 
-            case InterleaveMode.Sample:
-                switch (FrameInfo.ComponentCount)
-                {
-                    case 3:
-                        if (FrameInfo.BitsPerSample <= 8)
-                        {
-                            return new ProcessDecodedTripletComponent8Bit(stride, 3);
-                        }
+                            break;
+                        case 4:
+                            return new ProcessDecodedSingleComponentToLine4Components(stride, 4);
+                    }
 
-                        return new ProcessDecodedTripletComponent16Bit(stride, 3);
-                    case 4:
-                        if (FrameInfo.BitsPerSample <= 8)
-                        {
-                            return new ProcessDecodedQuadComponent8Bit(stride, 4);
-                        }
+                    break;
 
-                        return new ProcessDecodedQuadComponent16Bit(stride, 4);
-                }
-                break;
+                case InterleaveMode.Sample:
+                    switch (CodingParameters.ColorTransformation)
+                    {
+                        case ColorTransformation.None:
+                            switch (FrameInfo.ComponentCount)
+                            {
+                                case 3:
+                                    return new ProcessDecodedTripletComponent8Bit(stride, 3);
+
+                                case 4:
+                                    return new ProcessDecodedQuadComponent8Bit(stride, 4);
+                            }
+                            break;
+
+                        case ColorTransformation.HP1:
+                            return new ProcessDecodedTripletComponent8BitHP1(stride, 3);
+
+                        case ColorTransformation.HP2:
+                            return new ProcessDecodedTripletComponent8BitHP2(stride, 3);
+
+                        case ColorTransformation.HP3:
+                            return new ProcessDecodedTripletComponent8BitHP3(stride, 3);
+                    }
+                    break;
+            }
+        }
+        else
+        {
+            switch (CodingParameters.InterleaveMode)
+            {
+                case InterleaveMode.None:
+                    return new ProcessDecodedSingleComponent(stride, 1);
+
+                case InterleaveMode.Line:
+                    switch (FrameInfo.ComponentCount)
+                    {
+                        case 3:
+                            switch (CodingParameters.ColorTransformation)
+                            {
+                                case ColorTransformation.None:
+                                    return new ProcessDecodedSingleComponentToLine3Components(stride, 3);
+                                case ColorTransformation.HP1:
+                                    return new ProcessDecodedSingleComponentToLine3Components16BitHP1(stride, 3);
+                                case ColorTransformation.HP2:
+                                    return new ProcessDecodedSingleComponentToLine3Components16BitHP2(stride, 3);
+                                case ColorTransformation.HP3:
+                                    return new ProcessDecodedSingleComponentToLine3Components16BitHP3(stride, 3);
+                            }
+
+                            break;
+                        case 4:
+                            return new ProcessDecodedSingleComponentToLine4Components(stride, 4);
+                    }
+
+                    break;
+
+                case InterleaveMode.Sample:
+                    switch (CodingParameters.ColorTransformation)
+                    {
+                        case ColorTransformation.None:
+                            switch (FrameInfo.ComponentCount)
+                            {
+                                case 3:
+                                    return new ProcessDecodedTripletComponent16Bit(stride, 3);
+
+                                case 4:
+                                    return new ProcessDecodedQuadComponent16Bit(stride, 4);
+                            }
+
+                            break;
+
+                        case ColorTransformation.HP1:
+                            return new ProcessDecodedTripletComponent16BitHP1(stride, 3);
+
+                        case ColorTransformation.HP2:
+                            return new ProcessDecodedTripletComponent16BitHP2(stride, 3);
+
+                        case ColorTransformation.HP3:
+                            return new ProcessDecodedTripletComponent16BitHP3(stride, 3);
+                    }
+
+                    break;
+            }
         }
 
         throw new NotImplementedException();
-
-        //if (parameters().interleave_mode == interleave_mode::none)
-        //{
-        //    return std::make_unique<process_decoded_single_component>(destination, stride, sizeof(pixel_type));
-        //}
-
-        //switch (parameters().transformation)
-        //{
-        //    case color_transformation::none:
-        //        return std::make_unique<process_decoded_transformed<transform_none<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //    case color_transformation::hp1:
-        //        ASSERT(color_transformation_possible(frame_info()));
-        //        return std::make_unique<process_decoded_transformed<transform_hp1<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //    case color_transformation::hp2:
-        //        ASSERT(color_transformation_possible(frame_info()));
-        //        return std::make_unique<process_decoded_transformed<transform_hp2<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //    case color_transformation::hp3:
-        //        ASSERT(color_transformation_possible(frame_info()));
-        //        return std::make_unique<process_decoded_transformed<transform_hp3<sample_type>>>(
-        //            destination, stride, frame_info().component_count, parameters().interleave_mode);
-        //}
-
-        //unreachable();
     }
 
     // In ILV_SAMPLE mode, multiple components are handled in do_line
