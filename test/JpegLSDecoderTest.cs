@@ -18,12 +18,14 @@ public class JpegLSDecoderTest
         Assert.False(string.IsNullOrEmpty(exception.Message));
     }
 
-    //TEST_METHOD(read_spiff_header_without_source) // NOLINT
-    //{
-    //    jpegls_decoder decoder;
+    [Fact]
+    public void ReadHeaderWithoutSource()
+    {
+        JpegLSDecoder decoder = new();
 
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { decoder.read_spiff_header(); });
-    //}
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+    }
 
     [Fact]
     public void DestinationSizeWithoutReadingHeader()
@@ -64,31 +66,35 @@ public class JpegLSDecoderTest
         Assert.False(string.IsNullOrEmpty(exception.Message));
     }
 
-    //TEST_METHOD(interleave_mode_without_read_header) // NOLINT
-    //{
-    //    const vector<uint8_t> source(2000);
-    //    const jpegls_decoder decoder{ source, false};
+    [Fact]
+    public void InterleaveModeWithoutReadHeader()
+    {
+        var buffer = new byte[2000];
+        JpegLSDecoder decoder = new() { Source = buffer };
 
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { ignore = decoder.interleave_mode(); });
-    //}
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.InterleaveMode);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+    }
 
-    //TEST_METHOD(near_lossless_without_read_header) // NOLINT
-    //{
-    //    const vector<uint8_t> source(2000);
-    //    const jpegls_decoder decoder{ source, false};
+    [Fact]
+    public void NearLosslessWithoutReadHeader()
+    {
+        var buffer = new byte[2000];
+        JpegLSDecoder decoder = new() { Source = buffer };
 
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { ignore = decoder.near_lossless(); });
-    //}
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.NearLossless);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+    }
 
-    //TEST_METHOD(preset_coding_parameters_without_read_header) // NOLINT
-    //{
-    //    jpegls_decoder decoder;
+    [Fact]
+    public void PresetCodingParametersWithoutReadHeader()
+    {
+        var buffer = new byte[2000];
+        JpegLSDecoder decoder = new() { Source = buffer };
 
-    //    const vector<uint8_t> source(2000);
-    //    decoder.source(source);
-
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { ignore = decoder.preset_coding_parameters(); });
-    //}
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.PresetCodingParameters);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+    }
 
     [Fact]
     public void DestinationSize()
@@ -107,7 +113,7 @@ public class JpegLSDecoderTest
 
     //    constexpr size_t stride{ 512};
     //    constexpr size_t expected_destination_size{ stride * 256 * 3};
-    //    Assert::AreEqual(expected_destination_size, decoder.destination_size(stride));
+    //    Assert.Equal(expected_destination_size, decoder.destination_size(stride));
     //}
 
     //TEST_METHOD(destination_size_stride_interleave_line) // NOLINT
@@ -118,7 +124,7 @@ public class JpegLSDecoderTest
 
     //    constexpr size_t stride{ 1024};
     //    constexpr size_t expected_destination_size{ stride * 256};
-    //    Assert::AreEqual(expected_destination_size, decoder.destination_size(stride));
+    //    Assert.Equal(expected_destination_size, decoder.destination_size(stride));
     //}
 
     //TEST_METHOD(destination_size_stride_interleave_sample) // NOLINT
@@ -129,7 +135,7 @@ public class JpegLSDecoderTest
 
     //    constexpr size_t stride = 1024;
     //    constexpr size_t expected_destination_size{ stride * 256};
-    //    Assert::AreEqual(expected_destination_size, decoder.destination_size(stride));
+    //    Assert.Equal(expected_destination_size, decoder.destination_size(stride));
     //}
 
     //TEST_METHOD(decode_reference_file_from_buffer) // NOLINT
@@ -147,7 +153,7 @@ public class JpegLSDecoderTest
     //    const auto&reference_image_data = reference_file.image_data();
     //    for (size_t i{ }; i != destination.size(); ++i)
     //    {
-    //        Assert::AreEqual(reference_image_data[i], destination[i]);
+    //        Assert.Equal(reference_image_data[i], destination[i]);
     //    }
     //}
 
@@ -167,7 +173,7 @@ public class JpegLSDecoderTest
     //    const auto&reference_image_data = reference_file.image_data();
     //    for (size_t i{ }; i != destination.size(); ++i)
     //    {
-    //        Assert::AreEqual(reference_image_data[i], destination[i]);
+    //        Assert.Equal(reference_image_data[i], destination[i]);
     //    }
     //}
 
@@ -183,7 +189,7 @@ public class JpegLSDecoderTest
     //    const auto&reference_image_data{ reference_file.image_data()};
     //    for (size_t i{ }; i != destination.size(); ++i)
     //    {
-    //        Assert::AreEqual(reference_image_data[i], destination[i]);
+    //        Assert.Equal(reference_image_data[i], destination[i]);
     //    }
     //}
 
@@ -200,7 +206,7 @@ public class JpegLSDecoderTest
     //    const auto* destination_as_bytes{ reinterpret_cast <const uint8_t*> (destination.data())};
     //    for (size_t i{ }; i != reference_image_data.size(); ++i)
     //    {
-    //        Assert::AreEqual(reference_image_data[i], destination_as_bytes[i]);
+    //        Assert.Equal(reference_image_data[i], destination_as_bytes[i]);
     //    }
     //}
 
@@ -226,45 +232,26 @@ public class JpegLSDecoderTest
     //    assert_expect_exception(jpegls_errc::parameter_value_not_supported, [&decoder] { decoder.read_header(); });
     //}
 
-    //TEST_METHOD(read_spiff_header) // NOLINT
-    //{
-    //    const vector<uint8_t> source = create_test_spiff_header();
-    //    const jpegls_decoder decoder{ source, true};
+    [Fact (Skip = "WIP")]
+    public void ReadSpiffHeader()
+    {
+        var source = Util.CreateTestSpiffHeader();
+        JpegLSDecoder decoder = new(source);
 
-    //    Assert::IsTrue(decoder.spiff_header_has_value());
+        Assert.NotNull(decoder.SpiffHeader);
 
-    //    const auto&header{ decoder.spiff_header()};
-    //    Assert::AreEqual(static_cast<int32_t>(spiff_profile_id::none), static_cast<int32_t>(header.profile_id));
-    //    Assert::AreEqual(3, header.component_count);
-    //    Assert::AreEqual(800U, header.height);
-    //    Assert::AreEqual(600U, header.width);
-    //    Assert::AreEqual(static_cast<int32_t>(spiff_color_space::rgb), static_cast<int32_t>(header.color_space));
-    //    Assert::AreEqual(8, header.bits_per_sample);
-    //    Assert::AreEqual(static_cast<int32_t>(spiff_compression_type::jpeg_ls),
-    //                     static_cast<int32_t>(header.compression_type));
-    //    Assert::AreEqual(static_cast<int32_t>(spiff_resolution_units::dots_per_inch),
-    //                     static_cast<int32_t>(header.resolution_units));
-    //    Assert::AreEqual(96U, header.vertical_resolution);
-    //    Assert::AreEqual(1024U, header.horizontal_resolution);
-    //}
-
-    //TEST_METHOD(read_spiff_header_from_temporary_object) // NOLINT
-    //{
-    //    const spiff_header header{ create_decoder(create_test_spiff_header()).spiff_header()};
-
-    //    Assert::AreEqual(static_cast<int32_t>(spiff_profile_id::none), static_cast<int32_t>(header.profile_id));
-    //    Assert::AreEqual(3, header.component_count);
-    //    Assert::AreEqual(800U, header.height);
-    //    Assert::AreEqual(600U, header.width);
-    //    Assert::AreEqual(static_cast<int32_t>(spiff_color_space::rgb), static_cast<int32_t>(header.color_space));
-    //    Assert::AreEqual(8, header.bits_per_sample);
-    //    Assert::AreEqual(static_cast<int32_t>(spiff_compression_type::jpeg_ls),
-    //                     static_cast<int32_t>(header.compression_type));
-    //    Assert::AreEqual(static_cast<int32_t>(spiff_resolution_units::dots_per_inch),
-    //                     static_cast<int32_t>(header.resolution_units));
-    //    Assert::AreEqual(96U, header.vertical_resolution);
-    //    Assert::AreEqual(1024U, header.horizontal_resolution);
-    //}
+        var header = decoder.SpiffHeader;
+        Assert.Equal(SpiffProfileId.None, header.ProfileId);
+        Assert.Equal(3, header.ComponentCount);
+        Assert.Equal(800, header.Height);
+        Assert.Equal(600, header.Width);
+        Assert.Equal(SpiffColorSpace.Rgb, header.ColorSpace);
+        Assert.Equal(8, header.BitsPerSample);
+        Assert.Equal(SpiffCompressionType.JpegLS, header.CompressionType);
+        Assert.Equal(SpiffResolutionUnit.DotsPerInch, header.ResolutionUnit);
+        Assert.Equal(96, header.VerticalResolution);
+        Assert.Equal(1024, header.HorizontalResolution);
+    }
 
     //TEST_METHOD(read_spiff_header_from_non_jpegls_data) // NOLINT
     //{
@@ -287,10 +274,10 @@ public class JpegLSDecoderTest
 
     //    const frame_info&frame_info{ decoder.frame_info()};
 
-    //    Assert::AreEqual(3, frame_info.component_count);
-    //    Assert::AreEqual(8, frame_info.bits_per_sample);
-    //    Assert::AreEqual(256U, frame_info.height);
-    //    Assert::AreEqual(256U, frame_info.width);
+    //    Assert.Equal(3, frame_info.component_count);
+    //    Assert.Equal(8, frame_info.bits_per_sample);
+    //    Assert.Equal(256U, frame_info.height);
+    //    Assert.Equal(256U, frame_info.width);
     //}
 
     //TEST_METHOD(read_header_twice) // NOLINT
@@ -311,14 +298,14 @@ public class JpegLSDecoderTest
     //    interleave_mode interleave_mode;
     //    tie(frame_info, interleave_mode) = jpegls_decoder::decode(encoded_source, decoded_destination);
 
-    //    Assert::AreEqual(3, frame_info.component_count);
-    //    Assert::AreEqual(8, frame_info.bits_per_sample);
-    //    Assert::AreEqual(256U, frame_info.height);
-    //    Assert::AreEqual(256U, frame_info.width);
-    //    Assert::AreEqual(interleave_mode::none, interleave_mode);
+    //    Assert.Equal(3, frame_info.component_count);
+    //    Assert.Equal(8, frame_info.bits_per_sample);
+    //    Assert.Equal(256U, frame_info.height);
+    //    Assert.Equal(256U, frame_info.width);
+    //    Assert.Equal(interleave_mode::none, interleave_mode);
 
     //    const size_t expected_size = static_cast<size_t>(frame_info.height) * frame_info.width * frame_info.component_count;
-    //    Assert::AreEqual(expected_size, decoded_destination.size());
+    //    Assert.Equal(expected_size, decoded_destination.size());
     //}
 
     //TEST_METHOD(simple_decode_to_uint16_buffer) // NOLINT
@@ -330,14 +317,14 @@ public class JpegLSDecoderTest
     //    interleave_mode interleave_mode;
     //    tie(frame_info, interleave_mode) = jpegls_decoder::decode(encoded_source, decoded_destination);
 
-    //    Assert::AreEqual(3, frame_info.component_count);
-    //    Assert::AreEqual(8, frame_info.bits_per_sample);
-    //    Assert::AreEqual(256U, frame_info.height);
-    //    Assert::AreEqual(256U, frame_info.width);
-    //    Assert::AreEqual(interleave_mode::none, interleave_mode);
+    //    Assert.Equal(3, frame_info.component_count);
+    //    Assert.Equal(8, frame_info.bits_per_sample);
+    //    Assert.Equal(256U, frame_info.height);
+    //    Assert.Equal(256U, frame_info.width);
+    //    Assert.Equal(interleave_mode::none, interleave_mode);
 
     //    const size_t expected_size{ static_cast<size_t>(frame_info.height) * frame_info.width * frame_info.component_count};
-    //    Assert::AreEqual(expected_size, decoded_destination.size() * sizeof(uint16_t));
+    //    Assert.Equal(expected_size, decoded_destination.size() * sizeof(uint16_t));
     //}
 
     //TEST_METHOD(decode_file_with_ff_in_entropy_data) // NOLINT
@@ -347,10 +334,10 @@ public class JpegLSDecoderTest
     //    const jpegls_decoder decoder{ source, true};
 
     //    const auto&frame_info{ decoder.frame_info()};
-    //    Assert::AreEqual(1, frame_info.component_count);
-    //    Assert::AreEqual(12, frame_info.bits_per_sample);
-    //    Assert::AreEqual(1216U, frame_info.height);
-    //    Assert::AreEqual(968U, frame_info.width);
+    //    Assert.Equal(1, frame_info.component_count);
+    //    Assert.Equal(12, frame_info.bits_per_sample);
+    //    Assert.Equal(1216U, frame_info.height);
+    //    Assert.Equal(968U, frame_info.width);
 
     //    vector<uint8_t> destination(decoder.destination_size());
 
@@ -365,10 +352,10 @@ public class JpegLSDecoderTest
     //    const jpegls_decoder decoder{ source, true};
 
     //    const auto&frame_info{ decoder.frame_info()};
-    //    Assert::AreEqual(3, frame_info.component_count);
-    //    Assert::AreEqual(16, frame_info.bits_per_sample);
-    //    Assert::AreEqual(65516U, frame_info.height);
-    //    Assert::AreEqual(1U, frame_info.width);
+    //    Assert.Equal(3, frame_info.component_count);
+    //    Assert.Equal(16, frame_info.bits_per_sample);
+    //    Assert.Equal(65516U, frame_info.height);
+    //    Assert.Equal(1U, frame_info.width);
 
     //    vector<uint8_t> destination(decoder.destination_size());
 
@@ -447,7 +434,7 @@ public class JpegLSDecoderTest
 
     //    decoder.read_header();
 
-    //    Assert::AreEqual(static_cast<size_t>(5), actual_size);
+    //    Assert.Equal(static_cast<size_t>(5), actual_size);
     //    Assert::IsTrue(memcmp("hello", actual_data, actual_size) == 0);
     //}
 
