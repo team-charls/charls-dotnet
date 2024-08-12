@@ -11,7 +11,6 @@ namespace CharLS.JpegLS;
 public sealed class JpegLSDecoder
 {
     private FrameInfo? _frameInfo;
-    //private JpegLSInterleaveMode? _interleaveMode;
     private readonly JpegStreamReader _reader = new();
 
     private enum State

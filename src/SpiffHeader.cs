@@ -100,7 +100,7 @@ public sealed record SpiffHeader
     /// </value>
     public int HorizontalResolution { get; init; }
 
-    private bool IsValid(FrameInfo frameInfo)
+    internal bool IsValid(FrameInfo frameInfo)
     {
         if (CompressionType != SpiffCompressionType.JpegLS)
             return false;
