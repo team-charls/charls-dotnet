@@ -1,6 +1,9 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Reflection;
+using System.Text;
+
 namespace CharLS.JpegLS;
 
 /// <summary>
@@ -357,13 +360,14 @@ public sealed class JpegLSEncoder
             _writer.WriteStartOfImage();
         }
 
-        //if (has_option(encoding_options::include_version_number))
-        //{
-        //    constexpr std::string_view version_number{
-        //        "charls " TO_STRING(CHARLS_VERSION_MAJOR) "." TO_STRING(
-        //            CHARLS_VERSION_MINOR) "." TO_STRING(CHARLS_VERSION_PATCH)};
-        //    writer_.write_comment_segment({ reinterpret_cast <const byte*> (version_number.data()), version_number.size() + 1});
-        //}
+        if (EncodingOptions.HasFlag(EncodingOptions.IncludeVersionNumber))
+        {
+            var informationVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            byte[] utfBytes = Encoding.UTF8.GetBytes(informationVersion!);
+
+            var versionNumber = "charls-dotnet "u8.ToArray().Concat(utfBytes).ToArray();
+            _writer.WriteCommentSegment(versionNumber);
+        }
 
         _state = State.TablesAndMiscellaneous;
     }
