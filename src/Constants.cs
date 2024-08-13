@@ -17,6 +17,12 @@ internal static class Constants
     internal const int MinimumBitsPerSample = 2;
     internal const int MaximumBitsPerSample = 16;
 
+    // The following limits for mapping tables are defined in ISO/IEC 14495-1, C.2.4.1.2, table C.4.
+    internal const int MinimumTableId = 1;
+    internal const int MaximumTableId = 255;
+    internal const int MinimumEntrySize = 1;
+    internal const int MaximumEntrySize = 255;
+
     internal const int AutoCalculateStride = 0;
     internal const byte JpegMarkerStartByte = 0xFF;
     internal const int MaximumNearLossless = 255;

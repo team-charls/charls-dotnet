@@ -317,7 +317,7 @@ public sealed class JpegLSEncoder
         int bytesWritten = encoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
 
         // Synchronize the destination encapsulated in the writer (encode_scan works on a local copy)
-        _writer.Seek(bytesWritten);
+        _writer.AdvancePosition(bytesWritten);
     }
 
     /// <summary>

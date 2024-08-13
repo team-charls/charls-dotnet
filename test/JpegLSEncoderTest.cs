@@ -1021,7 +1021,7 @@ public class JpegLSEncoderTest
     //                                [&encoder] { encoder.color_transformation(static_cast<color_transformation>(100)); });
     //    }
 
-    //    TEST_METHOD(set_table_id) // NOLINT
+    //    TEST_METHOD(SetTableId) // NOLINT
     //    {
     //        constexpr array source{ byte{ 0}, byte{ 1}, byte{ 2}, byte{ 3}, byte{ 4}, byte{ 5} };
     //        constexpr frame_info frame_info{ 3, 1, 16, 1};
@@ -1030,7 +1030,7 @@ public class JpegLSEncoderTest
     //        vector<byte> destination(encoder.estimated_destination_size());
     //        encoder.destination(destination);
 
-    //        encoder.set_table_id(0, 1);
+    //        encoder.SetTableId(0, 1);
 
     //        const size_t bytes_written{ encoder.encode(source)};
     //        destination.resize(bytes_written);
@@ -1049,8 +1049,8 @@ public class JpegLSEncoderTest
     //        vector<byte> destination(encoder.estimated_destination_size());
     //        encoder.destination(destination);
 
-    //        encoder.set_table_id(0, 1);
-    //        encoder.set_table_id(0, 0);
+    //        encoder.SetTableId(0, 1);
+    //        encoder.SetTableId(0, 0);
 
     //        const size_t bytes_written{ encoder.encode(source)};
     //        destination.resize(bytes_written);
@@ -1064,14 +1064,14 @@ public class JpegLSEncoderTest
     //    {
     //        jpegls_encoder encoder;
 
-    //        assert_expect_exception(jpegls_errc::invalid_argument, [&encoder] { encoder.set_table_id(-1, 0); });
+    //        assert_expect_exception(jpegls_errc::invalid_argument, [&encoder] { encoder.SetTableId(-1, 0); });
     //    }
 
     //    TEST_METHOD(set_table_id_bad_id_throws) // NOLINT
     //    {
     //        jpegls_encoder encoder;
 
-    //        assert_expect_exception(jpegls_errc::invalid_argument, [&encoder] { encoder.set_table_id(0, -1); });
+    //        assert_expect_exception(jpegls_errc::invalid_argument, [&encoder] { encoder.SetTableId(0, -1); });
     //    }
 
     //    TEST_METHOD(encode_without_destination_throws) // NOLINT
