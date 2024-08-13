@@ -1,3 +1,6 @@
+# Copyright (c) Team CharLS.
+# SPDX-License-Identifier: BSD-3-Clause
+
 name: Coverage Report
 
 on:
@@ -28,7 +31,7 @@ jobs:
 
     # Add coverlet.collector nuget package to test project - 'dotnet add <TestProject.cspoj> package coverlet
     - name: Test
-      run: dotnet test --no-build -c Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory coverage --settings .github/workflows/coverlet.runsettings
+      run: dotnet test --no-build -c Release --verbosity normal --collect:"XPlat Code Coverage;Format=lcov,cobertura" --logger trx --results-directory coverage --settings .github/workflows/coverlet.runsettings
 
     - name: Code Coverage Summary Report
       uses: irongut/CodeCoverageSummary@v1.3.0
@@ -47,6 +50,12 @@ jobs:
 
     - name: Write to Job Summary
       run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ github.workspace }}/coverage/*/coverage.info
 
   build-reportgenerator:
 
