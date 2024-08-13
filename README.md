@@ -4,6 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/team-charls/charls-dotnet/blob/main/LICENSE.md)
 [![Build and Test](https://github.com/team-charls/charls-dotnet/actions/workflows/dotnet.yml/badge.svg)](https://github.com/team-charls/charls-dotnet/actions/workflows/dotnet.yml)
+[![Coverage Status](https://coveralls.io/repos/github/team-charls/charls-dotnet/badge.svg)](https://coveralls.io/github/team-charls/charls-dotnet)
 
 CharLS .NET is a C# JPEG-LS library implementation.  
 JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard for continuous-tone images.
