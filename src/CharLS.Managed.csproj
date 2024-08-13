@@ -1,0 +1,80 @@
+<!--
+  Copyright (c) Team CharLS.
+  SPDX-License-Identifier: BSD-3-Clause
+-->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Version>1.0.0-alpha.1</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Copyright>Copyright 2024 Team CharLS</Copyright>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CharLS.Managed</RootNamespace>
+
+    <!-- Use strong naming -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>CharLS.Managed.KeyPair.snk</AssemblyOriginatorKeyFile>
+
+    <!-- Configure NuGet package settings  -->
+    <Company>Team CharLS</Company>
+    <Authors>Team CharLS</Authors>
+    <Description>CharLS.Managed is a .NET implementation of JPEG-LS, a lossless/near-lossless compression standard for continuous-tone images.</Description>
+    <PackageTags>jpeg-ls;compression;codec</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageProjectUrl>https://github.com/team-charls/charls-dotnet</PackageProjectUrl>
+    <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/nuget-release-notes.txt"))</PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/team-charls/charls-dotnet.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Configure NuGet symbol package -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Source Link settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <_CertificateThumbprint>$(CertificateThumbprint)</_CertificateThumbprint>
+    <_CertificateThumbprint Condition="'$(_CertificateThumbprint)' == ''">b834c6c1d7e0ae8e76cadcf9e2e7a273133a5df6</_CertificateThumbprint>
+    <_TimestampUrl>$(TimestampUrl)</_TimestampUrl>
+    <_TimestampUrl Condition="'$(_TimestampUrl)' == ''">http://time.certum.pl/</_TimestampUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\docs\jpeg_ls_logo.png" Pack="true" PackagePath="\icon.png" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CharLS.Managed.Test, PublicKey = 002400000480000094000000060200000024000052534131000400000100010015b9558a3d86b76370af6ffa68b97a0c9a4cc0c25fea9fbb3df9a3c4fc432125bd92aaaa8d22f036ba0c08380a2dce7273e7b95c22f6d97629b9fa27efdfc8393d594f731969499669f39a2f335501acd56f4200026c4925f474e8b50ad7eafe0fa5e235dababad076e09a796489bd3d6432ef1c76d0851992de77a0fd3970b4" />
+    <AssemblyAttribute Include="CLSCompliantAttribute">
+      <_Parameter1>true</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <PackageReference Condition="'$(TargetFramework)'=='net48'" Include="System.Memory" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Net.Http" />
+  </ItemGroup>
+
+  <Target Name="SignAssemblies" BeforeTargets="GenerateNuspec" Condition="'$(MSBuildRuntimeType)'=='Full'">
+    <!-- Use TargetFrameworkVersion=v4.5 to sign with SHA256 -->
+    <Message Text="Signing CharLS.Managed.dll (.NET 8.0)" />
+    <SignFile CertificateThumbprint="$(_CertificateThumbprint)" TimestampUrl="$(_TimestampUrl)" SigningTarget="$(OutputPath)CharLS.Managed.dll" TargetFrameworkVersion="v4.5" />
+  </Target>
+
+  <Target Name="SignPackage" AfterTargets="Pack" Condition="'$(MSBuildRuntimeType)'=='Full'">
+    <Exec Command="nuget sign $(OutputPath)..\$(PackageId).$(Version).nupkg -Timestamper $(_TimestampUrl) -CertificateFingerprint $(_CertificateThumbprint)" />
+    <Exec Command="nuget sign $(OutputPath)..\$(PackageId).$(Version).snupkg -Timestamper $(_TimestampUrl) -CertificateFingerprint $(_CertificateThumbprint)" />
+  </Target>
+
+</Project>

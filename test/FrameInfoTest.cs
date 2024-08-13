@@ -1,9 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using Xunit;
-
-namespace CharLS.JpegLS.Test;
+namespace CharLS.Managed.Test;
 
 public class FrameInfoTest
 {

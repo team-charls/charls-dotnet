@@ -3,7 +3,7 @@
 
 using System.Diagnostics;
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 internal abstract class ScanEncoder(
     FrameInfo frameInfo,

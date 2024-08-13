@@ -4,7 +4,7 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 
-namespace CharLS.JpegLS.Benchmark;
+namespace CharLS.Managed.Benchmark;
 
 public class JpegLSDecoders
 {

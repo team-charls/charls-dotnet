@@ -22,11 +22,10 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
 
     <!-- Static Analysis -->
-    <!--<AnalysisLevel>latest</AnalysisLevel> --> <!-- Use the latest analysis leve (.NET 5.0 and newer feature) -->
-    <!-- <AnalysisMode>AllEnabledByDefault</AnalysisMode> --> <!-- Enable all CAxxx code quality rules -->
+    <!--<AnalysisLevel>latest-All</AnalysisLevel> --> <!-- TODO: enable Use the latest analysis leve (.NET 5.0 and newer feature) -->
     <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
-    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild> <!--Enable when development is far enough -->
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors> <!--Enable when development is far enough -->
-    <WarningLevel>5</WarningLevel> <!-- Use the highest warning level (4 is default) -->
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild> <!--TODO: Enable when development is far enough -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors> <!--TODO: Enable when development is far enough -->
+    <WarningLevel>5</WarningLevel> <!-- TODO : remove (not needed anymore) Use the highest warning level (4 is default) -->
   </PropertyGroup>
 </Project>

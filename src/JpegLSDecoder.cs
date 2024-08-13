@@ -3,7 +3,7 @@
 
 using System.Diagnostics;
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 /// <summary>
 /// JPEG-LS Decoder that uses the native CharLS implementation to decode JPEG-LS images.

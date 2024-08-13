@@ -4,7 +4,7 @@
 using System.Diagnostics;
 using System.Numerics;
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 internal static class Algorithm
 {
