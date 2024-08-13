@@ -1,7 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 /// <summary>
 /// Defines the resolution units for the VRES and HRES parameters, as defined in ISO/IEC 10918-3, F.2.1.

@@ -1,7 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 /// <summary>
 /// Defines the color space options that can be used in a SPIFF header v2, as defined in ISO/IEC 10918-3, F.2.1.1.

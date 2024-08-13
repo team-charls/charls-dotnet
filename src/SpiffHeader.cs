@@ -1,7 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 /// <summary>
 /// Holds the information for a SPIFF (Still Picture Interchange File Format) header.

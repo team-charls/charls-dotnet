@@ -1,8 +1,11 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
+/// <summary>
+/// Defines the information that describes a mapping table.
+/// </summary>
 public sealed record MappingTableInfo
 {
     /// <summary>

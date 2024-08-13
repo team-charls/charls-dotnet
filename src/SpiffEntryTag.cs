@@ -1,7 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 /// <summary>
 /// Official defined SPIFF tags defined in Table F.5 (ISO/IEC 10918-3)

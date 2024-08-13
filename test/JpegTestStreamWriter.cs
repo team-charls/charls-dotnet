@@ -3,7 +3,7 @@
 
 using System.Diagnostics;
 
-namespace CharLS.JpegLS.Test;
+namespace CharLS.Managed.Test;
 
 internal sealed class JpegTestStreamWriter
 {

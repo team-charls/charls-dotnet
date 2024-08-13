@@ -4,7 +4,7 @@
 
 using System.Diagnostics;
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 internal class DefaultTraits : Traits
 {

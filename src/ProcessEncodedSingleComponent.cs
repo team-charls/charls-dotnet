@@ -3,7 +3,7 @@
 
 using System.Runtime.InteropServices;
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 internal class ProcessEncodedSingleComponent : IProcessLineEncoded
 {

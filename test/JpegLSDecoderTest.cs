@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Reflection;
-using Xunit;
 
-namespace CharLS.JpegLS.Test;
+namespace CharLS.Managed.Test;
 
 public class JpegLSDecoderTest
 {

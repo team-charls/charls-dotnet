@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 /// <summary>
 /// JPEG-LS Encoder that uses the native CharLS implementation to encode JPEG-LS images.
@@ -31,6 +31,9 @@ public sealed class JpegLSEncoder
 
     private State _state;
 
+    /// <summary>
+    /// Encodes the passed image data into encoded JPEG-LS data.
+    /// </summary>
     public static Memory<byte> Encode(ReadOnlyMemory<byte> source, FrameInfo frameInfo,
         InterleaveMode interleaveMode = InterleaveMode.None, EncodingOptions encodingOptions = EncodingOptions.None)
     {
@@ -442,6 +445,15 @@ public sealed class JpegLSEncoder
         _writer.WriteApplicationDataSegment(applicationDataId, applicationData);
     }
 
+    /// <summary>
+    /// Writes a mapping table segment to the destination.
+    /// </summary>
+    /// <remarks>
+    /// No validation is performed if the table ID is unique and if the table size matches the required size.
+    /// </remarks>
+    /// <param name="tableId">Table ID. Unique identifier of the mapping table in the range [1..255]</param>
+    /// <param name="entrySize">Size in bytes of a single table entry.</param>
+    /// <param name="tableData">Buffer that holds the mapping table.</param>
     public void WriteMappingTable(int tableId, int entrySize, ReadOnlySpan<byte> tableData)
     {
         //check_argument_range(minimum_table_id, maximum_table_id, table_id);

@@ -7,6 +7,8 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\src\CharLS.Managed.KeyPair.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,7 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\CharLS.csproj" />
+    <Using Remove="System.Net.Http" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\CharLS.Managed.csproj" />
   </ItemGroup>
 
   <ItemGroup>

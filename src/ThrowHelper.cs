@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 internal class ThrowHelper
 {

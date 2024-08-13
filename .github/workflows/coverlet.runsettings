@@ -4,7 +4,7 @@
     <DataCollectors>
       <DataCollector friendlyName="XPlat code coverage">
         <Configuration>
-          <Exclude>[CharLS.JpegLS.Benchmark]*,[*]CharLS.JpegLS.Benchmark*</Exclude> <!-- [Assembly-Filter]Type-Filter -->
+          <Exclude>[CharLS.Managed.Benchmark]*</Exclude> <!-- [Assembly-Filter]Type-Filter -->
         </Configuration>
       </DataCollector>
     </DataCollectors>

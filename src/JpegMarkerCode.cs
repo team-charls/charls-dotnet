@@ -1,7 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 // JPEG Marker codes have the pattern 0xFFaa in a JPEG byte stream.
 // The valid 'aa' options are defined by several ISO/IEC, ITU standards:

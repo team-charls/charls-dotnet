@@ -4,7 +4,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace CharLS.JpegLS;
+namespace CharLS.Managed;
 
 internal class ScanEncoderImpl : ScanEncoder
 {
