@@ -3,15 +3,6 @@
 
 namespace CharLS.JpegLS;
 
-internal static class Check
-{
-    internal static void Operation(bool expression)
-    {
-        if (!expression)
-            throw new InvalidOperationException();
-    }
-}
-
 /// <summary>
 /// Defines the error codes that can be used as additional information in the thrown exceptions.
 /// </summary>
@@ -108,12 +99,12 @@ public enum ErrorCode
     InvalidMarkerSegmentSize = 17,
 
     /// <summary>
-    /// This error is returned when the stream contains more then one SOI (Start Of Image) marker.
+    /// This error is returned when the stream contains more than one SOI (Start Of Image) marker.
     /// </summary>
     DuplicateStartOfImageMarker = 18,
 
     /// <summary>
-    /// This error is returned when the stream contains more then one SOF (Start Of Frame) marker.
+    /// This error is returned when the stream contains more than one SOF (Start Of Frame) marker.
     /// </summary>
     DuplicateStartOfFrameMarker = 19,
 
@@ -159,12 +150,12 @@ public enum ErrorCode
     EndOfImageMarkerNotFound = 28,
 
     /// <summary>
-    /// The argument for the width parameter is outside the range [1, 65535].
+    /// The argument for the width parameter is outside the range [1, 2147483647].
     /// </summary>
     InvalidArgumentWidth = 100,
 
     /// <summary>
-    /// The argument for the height parameter is outside the range [1, 65535].
+    /// The argument for the height parameter is outside the range [1, 2147483647].
     /// </summary>
     InvalidArgumentHeight = 101,
 

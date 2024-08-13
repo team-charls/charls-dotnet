@@ -317,7 +317,46 @@ public class JpegStreamWriterTest
     }
 
     [Fact]
-    public void WriteStartOfFrameSegmentLargeImage()
+    public void WriteStartOfFrameSegmentLargeImageWidth()
+    {
+        const int bitsPerSample = 8;
+        const int componentCount = 3;
+
+        var buffer = new byte[19];
+        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+
+        bool oversizedImage =
+            writer.WriteStartOfFrameSegment(new FrameInfo(ushort.MaxValue + 1, 100 , bitsPerSample, componentCount));
+
+        Assert.True(oversizedImage);
+        Assert.Equal(19, writer.BytesWritten);
+
+        Assert.Equal(0xFF, buffer[0]);
+        Assert.Equal(0xF7, buffer[1]); // JPEG_SOF_55
+        Assert.Equal(0, buffer[2]);     // 6 + (3 * 3) + 2 (in big endian)
+        Assert.Equal(17, buffer[3]);   // 6 + (3 * 3) + 2 (in big endian)
+        Assert.Equal(bitsPerSample, buffer[4]);
+        Assert.Equal(0, buffer[5]); // height (in big endian)
+        Assert.Equal(0, buffer[6]); // height (in big endian)
+        Assert.Equal(0, buffer[7]);    // width (in big endian)
+        Assert.Equal(0, buffer[8]); // width (in big endian)
+        Assert.Equal(componentCount, buffer[9]);
+
+        Assert.Equal(1, buffer[10]);
+        Assert.Equal(0x11, buffer[11]);
+        Assert.Equal(0, buffer[12]);
+
+        Assert.Equal(2, buffer[13]);
+        Assert.Equal(0x11, buffer[14]);
+        Assert.Equal(0, buffer[15]);
+
+        Assert.Equal(3, buffer[16]);
+        Assert.Equal(0x11, buffer[17]);
+        Assert.Equal(0, buffer[18]);
+    }
+
+    [Fact]
+    public void WriteStartOfFrameSegmentLargeImageHeight()
     {
         const int bitsPerSample = 8;
         const int componentCount = 3;
@@ -467,7 +506,7 @@ public class JpegStreamWriterTest
     }
 
     [Fact]
-    public void WriteStartOfScanMarker()
+    public void WriteStartOfScanSegment()
     {
         var buffer = new byte[10];
         JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
@@ -481,6 +520,53 @@ public class JpegStreamWriterTest
         Assert.Equal(2, buffer[7]); // NEAR parameter.
         Assert.Equal(0, buffer[8]); // ILV parameter.
         Assert.Equal(0, buffer[9]); // transformation.
+    }
+
+    [Fact]
+    public void WriteStartOfScanSegmentWithTableId()
+    {
+        var buffer = new byte[10];
+        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        writer.SetTableId(0, 77);
+
+        writer.WriteStartOfScanSegment(1, 2, InterleaveMode.None);
+
+        Assert.Equal(buffer.Length, writer.BytesWritten);
+        Assert.Equal(1, buffer[4]);  // component count.
+        Assert.Equal(1, buffer[5]);  // component index.
+        Assert.Equal(77, buffer[6]); // table ID.
+        Assert.Equal(2, buffer[7]);  // NEAR parameter.
+        Assert.Equal(0, buffer[8]);  // ILV parameter.
+        Assert.Equal(0, buffer[9]);  // transformation.
+    }
+
+    [Fact]
+    public void WriteStartOfScanSegmentWithTableIdAfterRewind()
+    {
+        var buffer = new byte[10];
+        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        writer.SetTableId(0, 77);
+        writer.Rewind();
+
+        writer.WriteStartOfScanSegment(1, 2, InterleaveMode.None);
+
+        Assert.Equal(buffer.Length, writer.BytesWritten);
+        Assert.Equal(1, buffer[4]);  // component count.
+        Assert.Equal(1, buffer[5]);  // component index.
+        Assert.Equal(77, buffer[6]); // table ID.
+        Assert.Equal(2, buffer[7]);  // NEAR parameter.
+        Assert.Equal(0, buffer[8]);  // ILV parameter.
+        Assert.Equal(0, buffer[9]);  // transformation.
+    }
+
+    [Fact]
+    public void AdvancePosition()
+    {
+        var buffer = new byte[2];
+        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+
+        writer.AdvancePosition(2);
+        Assert.Equal(2, writer.BytesWritten);
     }
 
     [Fact]
@@ -499,92 +585,93 @@ public class JpegStreamWriterTest
         Assert.Equal(1, buffer[4]); // component count.
     }
 
-    //TEST_METHOD(write_minimal_table) // NOLINT
-    //{
-    //    array < byte, 8 > buffer{ };
-    //    jpeg_stream_writer writer({ buffer.data(), buffer.size()});
+    [Fact]
+    public void WriteMinimalTable()
+    {
+        var buffer = new byte[8];
+        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
 
-    //    constexpr array table_data{ byte{ 77} };
-    //    writer.write_jpegls_preset_parameters_segment(100, 1, table_data);
+        byte[] tableData = [77];
+        writer.WriteJpegLSPresetParametersSegment(100, 1, tableData);
 
-    //    Assert.Equal(buffer.size(), writer.bytes_written());
-    //    Assert.Equal(byte{ 0xFF}, buffer[0]);
-    //    Assert.Equal(byte{ 0xF8}, buffer[1]); // LSE
-    //    Assert.Equal(byte{ 0}, buffer[2]);
-    //    Assert.Equal(byte{ 6}, buffer[3]);
-    //    Assert.Equal(byte{ 2}, buffer[4]);   // type = table
-    //    Assert.Equal(byte{ 100}, buffer[5]); // table ID
-    //    Assert.Equal(byte{ 1}, buffer[6]);   // size of entry
-    //    Assert.Equal(byte{ 77}, buffer[7]);  // table content
-    //}
+        Assert.Equal(buffer.Length, writer.BytesWritten);
+        Assert.Equal(0xFF, buffer[0]);
+        Assert.Equal(0xF8, buffer[1]); // LSE
+        Assert.Equal(0, buffer[2]);
+        Assert.Equal(6, buffer[3]);
+        Assert.Equal(2, buffer[4]);   // type = table
+        Assert.Equal(100, buffer[5]); // table ID
+        Assert.Equal(1, buffer[6]);   // size of entry
+        Assert.Equal(77, buffer[7]);  // table content
+    }
 
-    //TEST_METHOD(write_table_max_entry_size) // NOLINT
-    //{
-    //    array < byte, 7 + 255 > buffer{ };
-    //    jpeg_stream_writer writer({ buffer.data(), buffer.size()});
+    [Fact]
+    public void WriteTableMaxEntrySize()
+    {
+        var buffer = new byte[7 + 255];
+        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
 
-    //    constexpr array<byte, 255 > table_data{ };
-    //    writer.write_jpegls_preset_parameters_segment(100, 255, table_data);
+        var tableData = new byte[255];
+        writer.WriteJpegLSPresetParametersSegment(255, 255, tableData);
 
-    //    Assert.Equal(buffer.size(), writer.bytes_written());
-    //    Assert.Equal(byte{ 0xFF}, buffer[0]);
-    //    Assert.Equal(byte{ 0xF8}, buffer[1]); // LSE
-    //    Assert.Equal(byte{ 1}, buffer[2]);
-    //    Assert.Equal(byte{ 4}, buffer[3]);
-    //    Assert.Equal(byte{ 2}, buffer[4]);   // type = table
-    //    Assert.Equal(byte{ 100}, buffer[5]); // table ID
-    //    Assert.Equal(byte{ 255}, buffer[6]); // size of entry
-    //    Assert.Equal(byte{ 0}, buffer[7]);   // table content
-    //}
+        Assert.Equal(buffer.Length, writer.BytesWritten);
+        Assert.Equal(0xFF, buffer[0]);
+        Assert.Equal(0xF8, buffer[1]); // LSE
+        Assert.Equal(1, buffer[2]);
+        Assert.Equal(4, buffer[3]);
+        Assert.Equal(2, buffer[4]);   // type = table
+        Assert.Equal(255, buffer[5]); // table ID
+        Assert.Equal(255, buffer[6]); // size of entry
+        Assert.Equal(0, buffer[7]);   // table content
+    }
 
-    //TEST_METHOD(write_table_fits_in_single_segment) // NOLINT
-    //{
-    //    std::vector<byte> buffer(size_t{ 2}
-    //    +std::numeric_limits < uint16_t >::max());
-    //    jpeg_stream_writer writer({ buffer.data(), buffer.size()});
+    [Fact]
+    public void WriteTableFitsInSingleSegment()
+    {
+        var buffer = new byte[2 + ushort.MaxValue];
+        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
 
-    //    std::vector<byte> table_data(std::numeric_limits<uint16_t>::max() -5);
-    //    writer.write_jpegls_preset_parameters_segment(255, 1, { table_data.data(), table_data.size()});
+        var tableData = new byte[ushort.MaxValue - 5];
+        writer.WriteJpegLSPresetParametersSegment(255, 1, tableData);
 
-    //    Assert.Equal(buffer.size(), writer.bytes_written());
-    //    Assert.Equal(byte{ 0xFF}, buffer[0]);
-    //    Assert.Equal(byte{ 0xF8}, buffer[1]); // LSE
-    //    Assert.Equal(byte{ 255}, buffer[2]);
-    //    Assert.Equal(byte{ 255}, buffer[3]);
-    //    Assert.Equal(byte{ 2}, buffer[4]);   // type = table
-    //    Assert.Equal(byte{ 255}, buffer[5]); // table ID
-    //    Assert.Equal(byte{ 1}, buffer[6]);   // size of entry
-    //    Assert.Equal(byte{ 0}, buffer[7]);   // table content (first entry)
-    //}
+        Assert.Equal(buffer.Length, writer.BytesWritten);
+        Assert.Equal(0xFF, buffer[0]);
+        Assert.Equal(0xF8, buffer[1]); // LSE
+        Assert.Equal(255, buffer[2]);
+        Assert.Equal(255, buffer[3]);
+        Assert.Equal(2, buffer[4]);   // type = table
+        Assert.Equal(255, buffer[5]); // table ID
+        Assert.Equal(1, buffer[6]);   // size of entry
+        Assert.Equal(0, buffer[7]);   // table content (first entry)
+    }
 
-    //TEST_METHOD(write_table_that_requires_two_segment) // NOLINT
-    //{
-    //    std::vector<byte> buffer(size_t{ 2}
-    //    +std::numeric_limits < uint16_t >::max() + 8);
-    //    jpeg_stream_writer writer({ buffer.data(), buffer.size()});
+    [Fact]
+    public void WriteTableThatRequiresTwoSegment()
+    {
+        var buffer = new byte[2 + ushort.MaxValue + 8];
+        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
 
-    //    std::vector<byte> table_data(static_cast<size_t>(std::numeric_limits<uint16_t>::max()) -5 + 1);
-    //    writer.write_jpegls_preset_parameters_segment(255, 1, { table_data.data(), table_data.size()});
+        var tableData = new byte[ushort.MaxValue - 5 + 1];
+        writer.WriteJpegLSPresetParametersSegment(255, 1, tableData);
 
-    //    Assert.Equal(buffer.size(), writer.bytes_written());
-    //    Assert.Equal(byte{ 0xFF}, buffer[0]);
-    //    Assert.Equal(byte{ 0xF8}, buffer[1]); // LSE
-    //    Assert.Equal(byte{ 255}, buffer[2]);
-    //    Assert.Equal(byte{ 255}, buffer[3]);
-    //    Assert.Equal(byte{ 2}, buffer[4]);   // type = table
-    //    Assert.Equal(byte{ 255}, buffer[5]); // table ID
-    //    Assert.Equal(byte{ 1}, buffer[6]);   // size of entry
-    //    Assert.Equal(byte{ 0}, buffer[7]);   // table content (first entry)
+        Assert.Equal(buffer.Length, writer.BytesWritten);
+        Assert.Equal(0xFF, buffer[0]);
+        Assert.Equal(0xF8, buffer[1]); // LSE
+        Assert.Equal(255, buffer[2]);
+        Assert.Equal(255, buffer[3]);
+        Assert.Equal(2, buffer[4]);   // type = table
+        Assert.Equal(255, buffer[5]); // table ID
+        Assert.Equal(1, buffer[6]);   // size of entry
+        Assert.Equal(0, buffer[7]);   // table content (first entry)
 
-    //    // Validate second segment.
-    //    Assert.Equal(byte{ 0xFF}, buffer[65537]);
-    //    Assert.Equal(byte{ 0xF8}, buffer[65538]); // LSE
-    //    Assert.Equal(byte{ }, buffer[65539]);
-    //    Assert.Equal(byte{ 6}, buffer[65540]);
-    //    Assert.Equal(byte{ 3}, buffer[65541]);   // type = table
-    //    Assert.Equal(byte{ 255}, buffer[65542]); // table ID
-    //    Assert.Equal(byte{ 1}, buffer[65543]);   // size of entry
-    //    Assert.Equal(byte{ 0}, buffer[65544]);   // table content (last entry)
-    //}
-
+        // Validate second segment.
+        Assert.Equal(0xFF, buffer[65537]);
+        Assert.Equal(0xF8, buffer[65538]); // LSE
+        Assert.Equal(0, buffer[65539]);
+        Assert.Equal(6, buffer[65540]);
+        Assert.Equal(3, buffer[65541]);   // type = table
+        Assert.Equal(255, buffer[65542]); // table ID
+        Assert.Equal(1, buffer[65543]);   // size of entry
+        Assert.Equal(0, buffer[65544]);   // table content (last entry)
+    }
 }

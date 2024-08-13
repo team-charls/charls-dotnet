@@ -227,7 +227,7 @@ public sealed class JpegLSDecoder
     /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     public void Decode(Span<byte> destination, int stride = 0)
     {
-        Check.Operation(_state == State.HeaderRead);
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.HeaderRead);
 
         // Compute the stride for the uncompressed destination buffer.
         int minimumStride = CalculateMinimumStride();
@@ -277,7 +277,7 @@ public sealed class JpegLSDecoder
 
     private void CheckHeaderRead()
     {
-        Check.Operation(_state >= State.HeaderRead);
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state >= State.HeaderRead);
     }
 
     private int CalculateMinimumStride()

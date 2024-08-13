@@ -1,6 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 
@@ -30,9 +31,10 @@ public sealed class JpegLSEncoder
 
     private State _state;
 
-    public static Memory<byte> Encode(ReadOnlyMemory<byte> source, FrameInfo frameInfo)
+    public static Memory<byte> Encode(ReadOnlyMemory<byte> source, FrameInfo frameInfo,
+        InterleaveMode interleaveMode = InterleaveMode.None, EncodingOptions encodingOptions = EncodingOptions.None)
     {
-        JpegLSEncoder encoder = new(frameInfo);
+        JpegLSEncoder encoder = new(frameInfo) { InterleaveMode = interleaveMode, EncodingOptions = encodingOptions };
         encoder.Encode(source);
         return encoder.Destination[..encoder.BytesWritten];
     }
@@ -112,6 +114,8 @@ public sealed class JpegLSEncoder
 
         set
         {
+            ThrowHelper.ThrowIfOutsideRange(Constants.MinimumNearLossless, Constants.MaximumNearLossless, value,
+                ErrorCode.InvalidArgumentNearLossless);
             _nearLossless = value;
         }
     }
@@ -207,7 +211,7 @@ public sealed class JpegLSEncoder
     {
         get
         {
-            Check.Operation(IsFrameInfoConfigured());
+            ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured());
 
             return Util.CheckedMul(Util.CheckedMul(Util.CheckedMul(FrameInfo!.Width, FrameInfo.Height), FrameInfo.ComponentCount),
                        Algorithm.BitToByteCount(FrameInfo.BitsPerSample)) +
@@ -231,6 +235,7 @@ public sealed class JpegLSEncoder
             if (!_writer.Destination.IsEmpty)
                 throw new InvalidOperationException();
             _writer.Destination = value;
+            _state = State.DestinationSet;
         }
     }
 
@@ -282,7 +287,7 @@ public sealed class JpegLSEncoder
         if (InterleaveMode == InterleaveMode.None)
         {
             int byteCountComponent = stride * FrameInfo.Height;
-            int lastComponent = FrameInfo.ComponentCount -1;
+            int lastComponent = FrameInfo.ComponentCount - 1;
             for (int component = 0; component != FrameInfo.ComponentCount; ++component)
             {
                 _writer.WriteStartOfScanSegment(1, NearLossless, InterleaveMode);
@@ -311,13 +316,33 @@ public sealed class JpegLSEncoder
             codingParameters,
             new CodingParameters
             {
-                InterleaveMode = InterleaveMode, NearLossless = NearLossless, RestartInterval = 0, ColorTransformation = ColorTransformation
+                InterleaveMode = InterleaveMode,
+                NearLossless = NearLossless,
+                RestartInterval = 0,
+                ColorTransformation = ColorTransformation
             });
 
         int bytesWritten = encoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
 
         // Synchronize the destination encapsulated in the writer (encode_scan works on a local copy)
-        _writer.Seek(bytesWritten);
+        _writer.AdvancePosition(bytesWritten);
+    }
+
+    /// <summary>
+    /// Writes a SPIFF header to the destination memory buffer.
+    /// A SPIFF header is optional, but recommended for standalone JPEG-LS files.
+    /// It should not be used when embedding a JPEG-LS image in a DICOM file.
+    /// </summary>
+    /// <param name="spiffHeader">Reference to a SPIFF header that will be written to the destination buffer.</param>
+    public void WriteSpiffHeader(SpiffHeader spiffHeader)
+    {
+        ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Height, ErrorCode.InvalidArgumentHeight);
+        ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Width, ErrorCode.InvalidParameterWidth);
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.DestinationSet);
+
+        _writer.WriteStartOfImage();
+        _writer.WriteSpiffHeaderSegment(spiffHeader);
+        _state = State.SpiffHeader;
     }
 
     /// <summary>
@@ -332,32 +357,116 @@ public sealed class JpegLSEncoder
     public void WriteStandardSpiffHeader(SpiffColorSpace colorSpace, SpiffResolutionUnit resolutionUnit = SpiffResolutionUnit.AspectRatio,
         int verticalResolution = 1, int horizontalResolution = 1)
     {
-        throw new NotImplementedException();
+        ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured());
+        var spiffHeader = new SpiffHeader
+        {
+            ColorSpace = colorSpace,
+            Height = FrameInfo!.Height,
+            Width = FrameInfo.Width,
+            BitsPerSample = FrameInfo!.BitsPerSample,
+            ComponentCount = FrameInfo.ComponentCount,
+            ResolutionUnit = resolutionUnit,
+            VerticalResolution = verticalResolution,
+            HorizontalResolution = horizontalResolution
+        };
+
+        WriteSpiffHeader(spiffHeader);
     }
 
     /// <summary>
-    /// Writes a SPIFF header to the destination memory buffer.
-    /// A SPIFF header is optional, but recommended for standalone JPEG-LS files.
-    /// It should not be used when embedding a JPEG-LS image in a DICOM file.
+    /// Writes a SPIFF directory entry to the destination.
     /// </summary>
-    /// <param name="spiffHeader">Reference to a SPIFF header that will be written to the destination buffer.</param>
-    public void WriteSpiffHeader(SpiffHeader spiffHeader)
+    /// <param name="entryTag">The entry tag of the directory entry.</param>
+    /// <param name="entryData">The data of the directory entry.</param>
+    public void WriteSpiffEntry(SpiffEntryTag entryTag, ReadOnlySpan<byte> entryData)
     {
-        throw new NotImplementedException();
+        WriteSpiffEntry((int)entryTag, entryData);
+    }
+
+    /// <summary>
+    /// Writes a SPIFF directory entry to the destination.
+    /// </summary>
+    /// <param name="entryTag">The entry tag of the directory entry.</param>
+    /// <param name="entryData">The data of the directory entry.</param>
+    public void WriteSpiffEntry(int entryTag, ReadOnlySpan<byte> entryData)
+    {
+        ThrowHelper.ThrowArgumentExceptionIfFalse(entryTag != Constants.SpiffEndOfDirectoryEntryType, nameof(entryTag));
+        ThrowHelper.ThrowArgumentExceptionIfFalse(entryData.Length <= 65528, nameof(entryData));
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.SpiffHeader);
+
+        _writer.WriteSpiffDirectoryEntry(entryTag, entryData);
+    }
+
+    /// <summary>
+    /// Writes a comment (COM) segment to the destination.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called before encoding the image data.
+    /// </remarks>
+    /// <param name="comment">The 'comment' bytes. Application specific, usually human-readable UTF-8 string.</param>
+    public void WriteComment(ReadOnlySpan<byte> comment)
+    {
+        ThrowHelper.ThrowArgumentExceptionIfFalse(comment.Length <= Constants.SegmentMaxDataSize, nameof(comment));
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and <= State.Completed);
+
+        TransitionToTablesAndMiscellaneousState();
+        _writer.WriteCommentSegment(comment);
+    }
+
+    /// <summary>
+    /// Writes a comment (COM) segment to the destination.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called before encoding the image data.
+    /// </remarks>
+    /// <param name="comment">Application specific value, usually human-readable UTF-8 string.</param>
+    public void WriteComment(string comment)
+    {
+        WriteComment(ToUtf8(comment).Span);
+    }
+
+    /// <summary>
+    /// Writes an application data (APPn) segment to the destination.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called before encoding the image data.
+    /// </remarks>
+    /// <param name="applicationDataId">The ID of the application data segment in the range [0..15].</param>
+    /// <param name="applicationData">The 'application data' bytes. Application specific.</param>
+    public void WriteApplicationData(int applicationDataId, ReadOnlySpan<byte> applicationData)
+    {
+        ThrowHelper.ThrowArgumentExceptionIfFalse(applicationData.Length <= Constants.SegmentMaxDataSize, nameof(applicationData));
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and <= State.Completed);
+
+        TransitionToTablesAndMiscellaneousState();
+        _writer.WriteApplicationDataSegment(applicationDataId, applicationData);
+    }
+
+    public void WriteMappingTable(int tableId, int entrySize, ReadOnlySpan<byte> tableData)
+    {
+        //check_argument_range(minimum_table_id, maximum_table_id, table_id);
+        //check_argument_range(minimum_entry_size, maximum_entry_size, entry_size);
+        //check_argument(table_data.data() || table_data.empty());
+        //check_argument(table_data.size() >= static_cast<size_t>(entry_size), jpegls_errc::invalid_argument_size);
+        //check_operation(state_ >= state::destination_set && state_<state::completed);
+
+        TransitionToTablesAndMiscellaneousState();
+        _writer.WriteJpegLSPresetParametersSegment(tableId, entrySize, tableData);
     }
 
     private void TransitionToTablesAndMiscellaneousState()
     {
-        if (_state == State.TablesAndMiscellaneous)
-            return;
-
-        if (_state == State.SpiffHeader)
+        switch (_state)
         {
-            ////writer_.write_spiff_end_of_directory_entry();
-        }
-        else
-        {
-            _writer.WriteStartOfImage();
+            case State.TablesAndMiscellaneous:
+                return;
+            case State.SpiffHeader:
+                _writer.WriteSpiffEndOfDirectoryEntry();
+                break;
+            default:
+                Debug.Assert(_state == State.DestinationSet);
+                _writer.WriteStartOfImage();
+                break;
         }
 
         if (EncodingOptions.HasFlag(EncodingOptions.IncludeVersionNumber))
@@ -413,7 +522,7 @@ public sealed class JpegLSEncoder
     private void CheckInterleaveModeAgainstComponentCount()
     {
         if (FrameInfo!.ComponentCount == 1 && InterleaveMode != InterleaveMode.None)
-            throw new ArgumentException("invalid_argument_interleave_mode");
+            ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentInterleaveMode);
     }
 
     private int CalculateStride()
@@ -428,5 +537,17 @@ public sealed class JpegLSEncoder
     private bool IsFrameInfoConfigured()
     {
         return FrameInfo != null;
+    }
+
+    private static ReadOnlyMemory<byte> ToUtf8(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return new ReadOnlyMemory<byte>(); // TODO -> change to readonly span?
+
+        var utf8Encoded = new byte[Encoding.UTF8.GetMaxByteCount(text.Length) + 1];
+        int bytesWritten = Encoding.UTF8.GetBytes(text, 0, text.Length, utf8Encoded, 0);
+        utf8Encoded[bytesWritten] = 0;
+
+        return new ReadOnlyMemory<byte>(utf8Encoded, 0, bytesWritten + 1);
     }
 }

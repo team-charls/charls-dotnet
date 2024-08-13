@@ -10,28 +10,14 @@ internal class JpegStreamWriter
 {
     private int _position;
     private int _componentIndex;
+    private byte[]? _tableIds;
+
+    private byte MappingTableSelector => (byte)(_tableIds == null ? 0 : _tableIds[_componentIndex]);
 
     internal Memory<byte> Destination { get; set; }
 
-    // ReSharper disable once ConvertToAutoPropertyWhenPossible
+    // ReSharper disable once ConvertToAutoPropertyWithPrivateSetter
     internal int BytesWritten => _position;
-
-    internal Memory<byte> GetRemainingDestination()
-    {
-        return Destination[_position..];
-    }
-
-    internal void Rewind()
-    {
-        _position = 0;
-        _componentIndex = 0;
-    }
-
-    internal void Seek(int byteCount)
-    {
-        Debug.Assert(_position + byteCount <= Destination.Length);
-        _position += byteCount;
-    }
 
     internal void WriteStartOfImage()
     {
@@ -66,7 +52,7 @@ internal class JpegStreamWriter
         WriteUint32(header.HorizontalResolution);
     }
 
-    internal void WriteSpiffDirectoryEntry(int entryTag, Span<byte> entryData)
+    internal void WriteSpiffDirectoryEntry(int entryTag, ReadOnlySpan<byte> entryData)
     {
         WriteSegmentHeader(JpegMarkerCode.ApplicationData8, sizeof(int) + entryData.Length);
         WriteUint32(entryTag);
@@ -99,6 +85,12 @@ internal class JpegStreamWriter
         WriteSegment(JpegMarkerCode.Comment, comment);
     }
 
+    internal void WriteApplicationDataSegment(int applicationDataId, ReadOnlySpan<byte> applicationData)
+    {
+        Debug.Assert(applicationDataId is >= Constants.MinimumApplicationDataId and <= Constants.MaximumApplicationDataId);
+        WriteSegment(JpegMarkerCode.ApplicationData0 + applicationDataId, applicationData);
+    }
+
     internal void WriteJpegLSPresetParametersSegment(JpegLSPresetCodingParameters presetCodingParameters)
     {
         WriteSegmentHeader(JpegMarkerCode.JpegLSPresetParameters, 1 + 5 * sizeof(ushort));
@@ -110,7 +102,29 @@ internal class JpegStreamWriter
         WriteUint16(presetCodingParameters.ResetValue);
     }
 
-    public void WriteJpegLSPresetParametersSegment(int height, int width)
+    internal void WriteJpegLSPresetParametersSegment(int tableId, int entrySize,
+        ReadOnlySpan<byte> tableData)
+    {
+        // Write the first 65530 bytes as mapping table specification LSE segment.
+        const int maxTableDataSize = Constants.SegmentMaxDataSize - 3;
+
+        int tableSizeToWrite = Math.Min(tableData.Length, maxTableDataSize);
+        WriteJpegLSPresetParametersSegment(JpegLSPresetParametersType.MappingTableSpecification, tableId,
+            entrySize,
+            tableData[..tableSizeToWrite]);
+
+        // Write the remaining bytes as mapping table continuation LSE segments.
+        int tablePosition = tableSizeToWrite;
+        while (tablePosition < tableData.Length)
+        {
+            tableSizeToWrite = Math.Min(tableData.Length - tablePosition, maxTableDataSize);
+            WriteJpegLSPresetParametersSegment(JpegLSPresetParametersType.MappingTableContinuation, tableId,
+                entrySize, tableData[tablePosition..]);
+            tablePosition += tableSizeToWrite;
+        }
+    }
+
+    internal void WriteJpegLSPresetParametersSegment(int height, int width)
     {
         // Format is defined in ISO/IEC 14495-1, C.2.4.1.4
         WriteSegmentHeader(JpegMarkerCode.JpegLSPresetParameters, 1 + 1 + 2 * sizeof(uint));
@@ -140,8 +154,8 @@ internal class JpegStreamWriter
         {
             // Component Specification parameters
             WriteByte((byte)componentId); // Ci = Component identifier
-            WriteByte(0x11);         // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
-            WriteByte(0); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
+            WriteByte(0x11);              // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
+            WriteByte(0);                 // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
         }
 
         return oversizedImage;
@@ -149,10 +163,9 @@ internal class JpegStreamWriter
 
     internal void WriteStartOfScanSegment(int componentCount, int nearLossless, InterleaveMode interleaveMode)
     {
-        //ASSERT(component_count > 0 && component_count <= numeric_limits<uint8_t>::max());
-        //ASSERT(nearLossless >= 0 && nearLossless <= numeric_limits<uint8_t>::max());
-        //ASSERT(interleave_mode == interleave_mode::none || interleave_mode == interleave_mode::line ||
-        //       interleave_mode == interleave_mode::sample);
+        Debug.Assert(componentCount is > 0 and <= byte.MaxValue);
+        Debug.Assert(nearLossless is >= 0 and <= byte.MaxValue);
+        Debug.Assert(interleaveMode.IsValid());
 
         // Create a Scan Header as defined in T.87, C.2.3 and T.81, B.2.3
         WriteSegmentHeader(JpegMarkerCode.StartOfScan, 1 + (componentCount * 2) + 3);
@@ -161,7 +174,7 @@ internal class JpegStreamWriter
         for (int i = 0; i != componentCount; ++i)
         {
             WriteByte((byte)(_componentIndex + 1)); // follow the JPEG-LS standard samples and start with component ID 1.
-            WriteByte(MappingTableSelector());
+            WriteByte(MappingTableSelector);
             ++_componentIndex;
         }
 
@@ -179,6 +192,53 @@ internal class JpegStreamWriter
         }
 
         WriteSegmentWithoutData(JpegMarkerCode.EndOfImage);
+    }
+
+    internal Memory<byte> GetRemainingDestination()
+    {
+        return Destination[_position..];
+    }
+
+    internal void AdvancePosition(int byteCount)
+    {
+        Debug.Assert(byteCount >= 0);
+        Debug.Assert(_position + byteCount <= Destination.Length);
+        _position += byteCount;
+    }
+
+    internal void Rewind()
+    {
+        _position = 0;
+        _componentIndex = 0;
+    }
+
+    internal void SetTableId(int componentIndex, int tableId)
+    {
+        Debug.Assert(componentIndex < Constants.MaximumComponentCount);
+        Debug.Assert(tableId is >= 0 and <= Constants.MaximumTableId);
+
+        // Usage of mapping tables is rare: use lazy initialization.
+        _tableIds ??= new byte[Constants.MaximumComponentCount];
+
+        _tableIds[componentIndex] = (byte)tableId;
+    }
+
+    private void WriteJpegLSPresetParametersSegment(JpegLSPresetParametersType presetParametersType,
+    int tableId, int entrySize, ReadOnlySpan<byte> tableData)
+    {
+        Debug.Assert(presetParametersType == JpegLSPresetParametersType.MappingTableSpecification ||
+               presetParametersType == JpegLSPresetParametersType.MappingTableContinuation);
+        Debug.Assert(tableId > 0);
+        Debug.Assert(entrySize > 0);
+        Debug.Assert(tableData.Length >= entrySize); // Need to contain at least 1 entry.
+        Debug.Assert(tableData.Length <= Constants.SegmentMaxDataSize - 3);
+
+        // Format is defined in ISO/IEC 14495-1, C.2.4.1.2 and C.2.4.1.3
+        WriteSegmentHeader(JpegMarkerCode.JpegLSPresetParameters, 1 + 1 + 1 + tableData.Length);
+        WriteByte((byte)presetParametersType);
+        WriteByte((byte)tableId);
+        WriteByte((byte)entrySize);
+        WriteBytes(tableData);
     }
 
     private void WriteSegmentWithoutData(JpegMarkerCode markerCode)
@@ -219,13 +279,11 @@ internal class JpegStreamWriter
 
     private void WriteByte(byte value)
     {
-        //ASSERT(byte_offset_ + sizeof(std::byte) <= destination_.size());
         Destination.Span[_position++] = value;
     }
 
     private void WriteBytes(ReadOnlySpan<byte> data)
     {
-        //ASSERT(byte_offset_ + data.size() <= destination_.size());
         data.CopyTo(Destination.Span[_position..]);
         _position += data.Length;
     }
@@ -242,11 +300,5 @@ internal class JpegStreamWriter
         Debug.Assert(value >= 0);
         BinaryPrimitives.WriteUInt32BigEndian(Destination.Span[_position..], (uint)value);
         _position += sizeof(uint);
-    }
-
-    private byte MappingTableSelector()
-    {
-        return 0;
-        // return table_ids_.empty()? 0 : table_ids_[component_index_];
     }
 }
