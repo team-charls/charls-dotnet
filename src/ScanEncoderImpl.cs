@@ -6,11 +6,14 @@ using System.Runtime.InteropServices;
 
 namespace CharLS.Managed;
 
+using static Algorithm;
+
 internal class ScanEncoderImpl : ScanEncoder
 {
     private readonly Traits _traits;
     private readonly sbyte[] _quantizationLut;
-    private IProcessLineEncoded? _processLine;
+
+    private CopyToLineBuffer.CopyToLineBufferFn? _copyToLineBuffer;
 
     internal ScanEncoderImpl(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
         CodingParameters codingParameters, Traits traits) :
@@ -26,7 +29,8 @@ internal class ScanEncoderImpl : ScanEncoder
 
     public override int EncodeScan(ReadOnlyMemory<byte> source, Memory<byte> destination, int stride)
     {
-        _processLine = CreateProcessLine();
+        _copyToLineBuffer = CopyToLineBuffer.GetMethod(FrameInfo.BitsPerSample, FrameInfo.ComponentCount,
+            CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
 
         Initialize(destination);
 
@@ -366,10 +370,10 @@ internal class ScanEncoderImpl : ScanEncoder
             rb = rd;
             rd = previousLine[index + 1];
 
-            int qs = Algorithm.ComputeContextId(QuantizeGradient(rd - rb), QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
+            int qs = ComputeContextId(QuantizeGradient(rd - rb), QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
             if (qs != 0)
             {
-                currentLine[index] = (byte)encode_regular(qs, currentLine[index], Algorithm.ComputePredictedValue(ra, rb, rc));
+                currentLine[index] = (byte)encode_regular(qs, currentLine[index], ComputePredictedValue(ra, rb, rc));
                 ++index;
             }
             else
@@ -394,10 +398,10 @@ internal class ScanEncoderImpl : ScanEncoder
             rb = rd;
             rd = previousLine[index + 1];
 
-            int qs = Algorithm.ComputeContextId(QuantizeGradient(rd - rb), QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
+            int qs = ComputeContextId(QuantizeGradient(rd - rb), QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
             if (qs != 0)
             {
-                currentLine[index] = (ushort)encode_regular(qs, currentLine[index], Algorithm.ComputePredictedValue(ra, rb, rc));
+                currentLine[index] = (ushort)encode_regular(qs, currentLine[index], ComputePredictedValue(ra, rb, rc));
                 ++index;
             }
             else
@@ -419,11 +423,11 @@ internal class ScanEncoderImpl : ScanEncoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
+            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
                     QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = Algorithm.ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
+            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
                     QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = Algorithm.ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
+            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
                     QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
             {
@@ -432,9 +436,9 @@ internal class ScanEncoderImpl : ScanEncoder
             else
             {
                 Triplet<byte> rx;
-                rx.V1 = (byte)encode_regular(qs1, currentLine[index].V1, Algorithm.ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (byte)encode_regular(qs2, currentLine[index].V2, Algorithm.ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (byte)encode_regular(qs3, currentLine[index].V3, Algorithm.ComputePredictedValue(ra.V3, rb.V3, rc.V3));
+                rx.V1 = (byte)encode_regular(qs1, currentLine[index].V1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = (byte)encode_regular(qs2, currentLine[index].V2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = (byte)encode_regular(qs3, currentLine[index].V3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
                 currentLine[index] = rx;
                 ++index;
             }
@@ -451,11 +455,11 @@ internal class ScanEncoderImpl : ScanEncoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
+            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
                 QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = Algorithm.ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
+            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
                 QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = Algorithm.ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
+            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
                 QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
             {
@@ -464,9 +468,9 @@ internal class ScanEncoderImpl : ScanEncoder
             else
             {
                 Triplet<ushort> rx;
-                rx.V1 = (ushort)encode_regular(qs1, currentLine[index].V1, Algorithm.ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (ushort)encode_regular(qs2, currentLine[index].V2, Algorithm.ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (ushort)encode_regular(qs3, currentLine[index].V3, Algorithm.ComputePredictedValue(ra.V3, rb.V3, rc.V3));
+                rx.V1 = (ushort)encode_regular(qs1, currentLine[index].V1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = (ushort)encode_regular(qs2, currentLine[index].V2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = (ushort)encode_regular(qs3, currentLine[index].V3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
                 currentLine[index] = rx;
                 ++index;
             }
@@ -483,13 +487,13 @@ internal class ScanEncoderImpl : ScanEncoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
+            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
                 QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = Algorithm.ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
+            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
                 QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = Algorithm.ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
+            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
                 QuantizeGradient(rc.V3 - ra.V3));
-            int qs4 = Algorithm.ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
+            int qs4 = ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
                 QuantizeGradient(rc.V4 - ra.V4));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0 && qs4 == 0)
             {
@@ -498,10 +502,10 @@ internal class ScanEncoderImpl : ScanEncoder
             else
             {
                 Quad<byte> rx;
-                rx.V1 = (byte)encode_regular(qs1, currentLine[index].V1, Algorithm.ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (byte)encode_regular(qs2, currentLine[index].V2, Algorithm.ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (byte)encode_regular(qs3, currentLine[index].V3, Algorithm.ComputePredictedValue(ra.V3, rb.V3, rc.V3));
-                rx.V4 = (byte)encode_regular(qs3, currentLine[index].V4, Algorithm.ComputePredictedValue(ra.V4, rb.V4, rc.V4));
+                rx.V1 = (byte)encode_regular(qs1, currentLine[index].V1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = (byte)encode_regular(qs2, currentLine[index].V2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = (byte)encode_regular(qs3, currentLine[index].V3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
+                rx.V4 = (byte)encode_regular(qs3, currentLine[index].V4, ComputePredictedValue(ra.V4, rb.V4, rc.V4));
                 currentLine[index] = rx;
                 ++index;
             }
@@ -518,13 +522,13 @@ internal class ScanEncoderImpl : ScanEncoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
+            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
                 QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = Algorithm.ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
+            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
                 QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = Algorithm.ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
+            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
                 QuantizeGradient(rc.V3 - ra.V3));
-            int qs4 = Algorithm.ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
+            int qs4 = ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
                 QuantizeGradient(rc.V4 - ra.V4));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0 && qs4 == 0)
             {
@@ -533,10 +537,10 @@ internal class ScanEncoderImpl : ScanEncoder
             else
             {
                 Quad<ushort> rx;
-                rx.V1 = (ushort)encode_regular(qs1, currentLine[index].V1, Algorithm.ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (ushort)encode_regular(qs2, currentLine[index].V2, Algorithm.ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (ushort)encode_regular(qs3, currentLine[index].V3, Algorithm.ComputePredictedValue(ra.V3, rb.V3, rc.V3));
-                rx.V4 = (ushort)encode_regular(qs3, currentLine[index].V4, Algorithm.ComputePredictedValue(ra.V4, rb.V4, rc.V4));
+                rx.V1 = (ushort)encode_regular(qs1, currentLine[index].V1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = (ushort)encode_regular(qs2, currentLine[index].V2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = (ushort)encode_regular(qs3, currentLine[index].V3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
+                rx.V4 = (ushort)encode_regular(qs3, currentLine[index].V4, ComputePredictedValue(ra.V4, rb.V4, rc.V4));
                 currentLine[index] = rx;
                 ++index;
             }
@@ -545,17 +549,17 @@ internal class ScanEncoderImpl : ScanEncoder
 
     private int encode_regular(int qs, int x, int predicted)
     {
-        int sign = Algorithm.BitWiseSign(qs);
-        ref var context = ref RegularModeContext[Algorithm.ApplySign(qs, sign)];
+        int sign = BitWiseSign(qs);
+        ref var context = ref RegularModeContext[ApplySign(qs, sign)];
         int k = context.ComputeGolombCodingParameter();
-        int predictedValue = _traits.CorrectPrediction(predicted + Algorithm.ApplySign(context.C, sign));
-        int errorValue = _traits.ComputeErrorValue(Algorithm.ApplySign(x - predictedValue, sign));
+        int predictedValue = _traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
+        int errorValue = _traits.ComputeErrorValue(ApplySign(x - predictedValue, sign));
 
-        encode_mapped_value(k, Algorithm.MapErrorValue(context.GetErrorCorrection(k | _traits.NearLossless) ^ errorValue), _traits.Limit);
+        encode_mapped_value(k, MapErrorValue(context.GetErrorCorrection(k | _traits.NearLossless) ^ errorValue), _traits.Limit);
         context.UpdateVariablesAndBias(errorValue, _traits.NearLossless, _traits.ResetThreshold);
 
-        Debug.Assert(_traits.IsNear(_traits.ComputeReconstructedSample(predictedValue, Algorithm.ApplySign(errorValue, sign)), x));
-        return _traits.ComputeReconstructedSample(predictedValue, Algorithm.ApplySign(errorValue, sign));
+        Debug.Assert(_traits.IsNear(_traits.ComputeReconstructedSample(predictedValue, ApplySign(errorValue, sign)), x));
+        return _traits.ComputeReconstructedSample(predictedValue, ApplySign(errorValue, sign));
     }
 
     private int EncodeRunMode(int startIndex, Span<byte> previousLine, Span<byte> currentLine)
@@ -730,86 +734,86 @@ internal class ScanEncoderImpl : ScanEncoder
         }
         else
         {
-            int errorValue = _traits.ComputeErrorValue((x - rb) * Algorithm.Sign(rb - ra));
+            int errorValue = _traits.ComputeErrorValue((x - rb) * Sign(rb - ra));
             encode_run_interruption_error(ref RunModeContexts[0], errorValue);
-            return _traits.ComputeReconstructedSample(rb, errorValue * Algorithm.Sign(rb - ra));
+            return _traits.ComputeReconstructedSample(rb, errorValue * Sign(rb - ra));
         }
     }
 
     private Triplet<byte> encode_run_interruption_pixel(Triplet<byte> x, Triplet<byte> ra, Triplet<byte> rb)
     {
-        int errorValue1 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        int errorValue1 = _traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue1);
 
-        int errorValue2 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        int errorValue2 = _traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue2);
 
-        int errorValue3 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
+        int errorValue3 = _traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue3);
 
         return new Triplet<byte>(
-            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
-            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
-            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)));
+            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
     }
 
     private Triplet<ushort> encode_run_interruption_pixel(Triplet<ushort> x, Triplet<ushort> ra, Triplet<ushort> rb)
     {
-        int errorValue1 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        int errorValue1 = _traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue1);
 
-        int errorValue2 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        int errorValue2 = _traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue2);
 
-        int errorValue3 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
+        int errorValue3 = _traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue3);
 
         return new Triplet<ushort>(
-            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)));
+            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
     }
 
     private Quad<byte> encode_run_interruption_pixel(Quad<byte> x, Quad<byte> ra, Quad<byte> rb)
     {
-        int errorValue1 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        int errorValue1 = _traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue1);
 
-        int errorValue2 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        int errorValue2 = _traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue2);
 
-        int errorValue3 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
+        int errorValue3 = _traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue3);
 
-        int errorValue4 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V4 - ra.V4) * (x.V4 - rb.V4));
+        int errorValue4 = _traits.ComputeErrorValue(Sign(rb.V4 - ra.V4) * (x.V4 - rb.V4));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue4);
 
         return new Quad<byte>(
-            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
-            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
-            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)),
-            (byte)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Algorithm.Sign(rb.V4 - ra.V4)));
+            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
+            (byte)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
     }
 
     private Quad<ushort> encode_run_interruption_pixel(Quad<ushort> x, Quad<ushort> ra, Quad<ushort> rb)
     {
-        int errorValue1 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        int errorValue1 = _traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue1);
 
-        int errorValue2 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        int errorValue2 = _traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue2);
 
-        int errorValue3 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
+        int errorValue3 = _traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue3);
 
-        int errorValue4 = _traits.ComputeErrorValue(Algorithm.Sign(rb.V4 - ra.V4) * (x.V4 - rb.V4));
+        int errorValue4 = _traits.ComputeErrorValue(Sign(rb.V4 - ra.V4) * (x.V4 - rb.V4));
         encode_run_interruption_error(ref RunModeContexts[0], errorValue4);
 
         return new Quad<ushort>(
-            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Algorithm.Sign(rb.V4 - ra.V4)));
+            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
     }
 
     void encode_run_interruption_error(ref RunModeContext context, int errorValue)
@@ -855,153 +859,59 @@ internal class ScanEncoderImpl : ScanEncoder
         return _quantizationLut[_quantizationLut.Length / 2 + di];
     }
 
-    // Factory function for ProcessLine objects to copy/transform un encoded pixels to/from our scan line buffers.
-    private IProcessLineEncoded CreateProcessLine()
-    {
-        if (FrameInfo.BitsPerSample <= 8)
-        {
-            switch (CodingParameters.InterleaveMode)
-            {
-                case InterleaveMode.None:
-                    return new ProcessEncodedSingleComponent();
-
-                case InterleaveMode.Line:
-                    switch (FrameInfo.ComponentCount)
-                    {
-                        case 3:
-                            switch (CodingParameters.ColorTransformation)
-                            {
-                                case ColorTransformation.None:
-                                    return new ProcessEncodedSingleComponentToLine8Bit3Components();
-                                case ColorTransformation.HP1:
-                                    return new ProcessEncodedSingleComponentToLine8Bit3ComponentsHP1();
-                                case ColorTransformation.HP2:
-                                    return new ProcessEncodedSingleComponentToLine8Bit3ComponentsHP2();
-                                case ColorTransformation.HP3:
-                                    return new ProcessEncodedSingleComponentToLine8Bit3ComponentsHP3();
-                            }
-                            break;
-                        case 4:
-                            return new ProcessEncodedSingleComponentToLine8Bit4Components();
-                    }
-                    break;
-
-                case InterleaveMode.Sample:
-                    switch (CodingParameters.ColorTransformation)
-                    {
-                        case ColorTransformation.None:
-                            return new ProcessEncodedSingleComponent();
-                        case ColorTransformation.HP1:
-                            return new ProcessEncodedSingleComponent8BitHP1();
-                        case ColorTransformation.HP2:
-                            return new ProcessEncodedSingleComponent8BitHP2();
-                        case ColorTransformation.HP3:
-                            return new ProcessEncodedSingleComponent8BitHP3();
-                    }
-                    break;
-            }
-        }
-        else
-        {
-            switch (CodingParameters.InterleaveMode)
-            {
-                case InterleaveMode.None:
-                    return new ProcessEncodedSingleComponent();
-
-                case InterleaveMode.Line:
-                    switch (FrameInfo.ComponentCount)
-                    {
-                        case 3:
-                            switch (CodingParameters.ColorTransformation)
-                            {
-                                case ColorTransformation.None:
-                                    return new ProcessEncodedSingleComponentToLine16Bit3Components();
-                                case ColorTransformation.HP1:
-                                    return new ProcessEncodedSingleComponentToLine16Bit3ComponentsHP1();
-                                case ColorTransformation.HP2:
-                                    return new ProcessEncodedSingleComponentToLine16Bit3ComponentsHP2();
-                                case ColorTransformation.HP3:
-                                    return new ProcessEncodedSingleComponentToLine16Bit3ComponentsHP3();
-                            }
-                            break;
-
-                        case 4:
-                            return new ProcessEncodedSingleComponentToLine16Bit4Components();
-                    }
-
-                    break;
-
-                case InterleaveMode.Sample:
-                    switch (CodingParameters.ColorTransformation)
-                    {
-                        case ColorTransformation.None:
-                            return new ProcessEncodedSingleComponent();
-                        case ColorTransformation.HP1:
-                            return new ProcessEncodedSingleComponent16BitHP1();
-                        case ColorTransformation.HP2:
-                            return new ProcessEncodedSingleComponent16BitHP2();
-                        case ColorTransformation.HP3:
-                            return new ProcessEncodedSingleComponent16BitHP3();
-                    }
-                    break;
-            }
-        }
-
-        throw new NotImplementedException();
-    }
-
     private int OnLineBegin(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
     {
-        _processLine!.NewLineRequested(source, destination, pixelCount);
+        _copyToLineBuffer!(source, destination, pixelCount);
+        //_processLine!.NewLineRequested(source, destination, pixelCount);
         return pixelCount;
     }
 
     private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int componentCount)
     {
-        _processLine!.NewLineRequested(source, destination, pixelCount);
+        _copyToLineBuffer!(source, destination, pixelCount);
+        //_processLine!.NewLineRequested(source, destination, pixelCount);
         return pixelCount * componentCount;
     }
 
     private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount, int componentCount)
     {
-        Span<byte> destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
-        _processLine!.NewLineRequested(source, destinationInBytes, pixelCount);
+        var destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount);
         return pixelCount * componentCount * 2;
     }
 
     private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<byte>> destination, int pixelCount)
     {
-        var destinationByte = MemoryMarshal.Cast<Triplet<byte>, byte>(destination);
-        _processLine!.NewLineRequested(source, destinationByte, pixelCount * 3);
+        var destinationInBytes = MemoryMarshal.Cast<Triplet<byte>, byte>(destination);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3);
         return pixelCount * 3;
     }
 
     private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<ushort>> destination, int pixelCount)
     {
-        var destinationByte = MemoryMarshal.Cast<Triplet<ushort>, byte>(destination);
-        _processLine!.NewLineRequested(source, destinationByte, pixelCount * 3 * 2);
+        var destinationInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(destination);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3 * 2);
         return pixelCount * 3 * 2;
     }
 
     private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<byte>> destination, int pixelCount)
     {
-        var destinationByte = MemoryMarshal.Cast<Quad<byte>, byte>(destination);
-        _processLine!.NewLineRequested(source, destinationByte, pixelCount * 4);
+        var destinationInBytes = MemoryMarshal.Cast<Quad<byte>, byte>(destination);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4);
         return pixelCount * 4;
     }
 
     private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<ushort>> destination, int pixelCount)
     {
-        var destinationByte = MemoryMarshal.Cast<Quad<ushort>, byte>(destination);
-        _processLine!.NewLineRequested(source, destinationByte, pixelCount * 4 * 2);
+        var destinationInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(destination);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4 * 2);
         return pixelCount * 4 * 2;
     }
 
     private int OnLineBegin(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
     {
-        Span<byte> destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
-        _processLine!.NewLineRequested(source, destinationInBytes, pixelCount * 2);
+        var destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 2);
         return pixelCount * 2;
     }
-
 }
