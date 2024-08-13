@@ -16,6 +16,10 @@ internal static class Constants
     internal const int MaximumComponentCount = 255;
     internal const int MinimumBitsPerSample = 2;
     internal const int MaximumBitsPerSample = 16;
+    internal const int MinimumNearLossless = 0;
+    internal const int MaximumNearLossless = 255;
+    internal const int MinimumApplicationDataId = 0;
+    internal const int MaximumApplicationDataId = 15;
 
     // The following limits for mapping tables are defined in ISO/IEC 14495-1, C.2.4.1.2, table C.4.
     internal const int MinimumTableId = 1;
@@ -25,7 +29,6 @@ internal static class Constants
 
     internal const int AutoCalculateStride = 0;
     internal const byte JpegMarkerStartByte = 0xFF;
-    internal const int MaximumNearLossless = 255;
 
     internal const int MaxKValue = 16; // This is an implementation limit (theoretical limit is 32)
 

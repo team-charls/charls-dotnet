@@ -29,15 +29,16 @@ public sealed record FrameInfo
     /// <param name="componentCount">The number of components contained in a frame.</param>
     public FrameInfo(int width, int height, int bitsPerSample, int componentCount)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
-        ArgumentOutOfRangeException.ThrowIfLessThan(bitsPerSample, 2);
+        ThrowHelper.ThrowIfNegativeOrZero(width, ErrorCode.InvalidArgumentWidth);
+        ThrowHelper.ThrowIfNegativeOrZero(height, ErrorCode.InvalidArgumentHeight);
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumBitsPerSample, Constants.MaximumBitsPerSample, bitsPerSample, ErrorCode.InvalidArgumentBitsPerSample);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(componentCount);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(componentCount, Constants.MaximumComponentCount);
 
-        Width = width;
-        Height = height;
-        BitsPerSample = bitsPerSample;
-        ComponentCount = componentCount;
+        _width = width;
+        _height = height;
+        _bitsPerSample = bitsPerSample;
+        _componentCount = componentCount;
     }
 
     /// <summary>
@@ -48,7 +49,7 @@ public sealed record FrameInfo
         get => _width;
         init
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            ThrowHelper.ThrowIfNegativeOrZero(value, ErrorCode.InvalidArgumentWidth);
             _width = value;
         }
     }
@@ -61,7 +62,7 @@ public sealed record FrameInfo
         get => _height;
         init
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            ThrowHelper.ThrowIfNegativeOrZero(value, ErrorCode.InvalidArgumentHeight);
             _height = value;
         }
     }

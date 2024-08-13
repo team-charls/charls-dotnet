@@ -52,7 +52,7 @@ internal class JpegStreamWriter
         WriteUint32(header.HorizontalResolution);
     }
 
-    internal void WriteSpiffDirectoryEntry(int entryTag, Span<byte> entryData)
+    internal void WriteSpiffDirectoryEntry(int entryTag, ReadOnlySpan<byte> entryData)
     {
         WriteSegmentHeader(JpegMarkerCode.ApplicationData8, sizeof(int) + entryData.Length);
         WriteUint32(entryTag);
@@ -83,6 +83,12 @@ internal class JpegStreamWriter
     internal void WriteCommentSegment(ReadOnlySpan<byte> comment)
     {
         WriteSegment(JpegMarkerCode.Comment, comment);
+    }
+
+    internal void WriteApplicationDataSegment(int applicationDataId, ReadOnlySpan<byte> applicationData)
+    {
+        Debug.Assert(applicationDataId is >= Constants.MinimumApplicationDataId and <= Constants.MaximumApplicationDataId);
+        WriteSegment(JpegMarkerCode.ApplicationData0 + applicationDataId, applicationData);
     }
 
     internal void WriteJpegLSPresetParametersSegment(JpegLSPresetCodingParameters presetCodingParameters)

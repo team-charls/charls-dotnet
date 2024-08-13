@@ -17,13 +17,15 @@ public class JpegLSEncoderTest
     [Fact]
     public void FrameInfoBadWidthThrows()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => _= new JpegLSEncoder(0, 1, 2, 1));
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => _= new JpegLSEncoder(0, 1, 2, 1));
+        Assert.Equal(ErrorCode.InvalidArgumentWidth, exception.GetErrorCode());
     }
 
     [Fact]
     public void FrameInfoBadHeightThrows()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 0, 2, 1));
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 0, 2, 1));
+        Assert.Equal(ErrorCode.InvalidArgumentHeight, exception.GetErrorCode());
     }
 
     [Fact]
@@ -58,19 +60,17 @@ public class JpegLSEncoderTest
         Assert.Throws<ArgumentOutOfRangeException>(() => encoder.InterleaveMode = (InterleaveMode)(3));
     }
 
+    [Fact]
+    public void InterleaveModeDoesNotMatchComponentCountThrows()
+    {
+        var frameInfo = new FrameInfo(512, 512, 8, 1);
+        var source = new byte[frameInfo.Width * frameInfo.Height];
 
-    //    TEST_METHOD(interleave_mode_does_not_match_component_count_throws) // NOLINT
-    //    {
-    //        constexpr frame_info frame_info{ 512, 512, 8, 1};
-    //        vector<byte> source(static_cast<size_t>(frame_info.width)* frame_info.height);
-
-    //        assert_expect_exception(jpegls_errc::invalid_argument_interleave_mode, [&frame_info, &source] {
-    //            jpegls_encoder::encode(source, frame_info, interleave_mode::sample);
-    //        });
-    //        assert_expect_exception(jpegls_errc::invalid_argument_interleave_mode, [&frame_info, &source] {
-    //            jpegls_encoder::encode(source, frame_info, interleave_mode::line);
-    //        });
-    //    }
+        var exception = Assert.Throws<ArgumentException>(() => JpegLSEncoder.Encode(source, frameInfo, InterleaveMode.Sample));
+        Assert.Equal(ErrorCode.InvalidArgumentInterleaveMode, exception.GetErrorCode());
+        exception = Assert.Throws<ArgumentException>(() => JpegLSEncoder.Encode(source, frameInfo, InterleaveMode.Sample));
+        Assert.Equal(ErrorCode.InvalidArgumentInterleaveMode, exception.GetErrorCode());
+    }
 
     [Fact]
     public void TestNearLossless()
@@ -79,22 +79,28 @@ public class JpegLSEncoderTest
         encoder.NearLossless = 255; // set highest value.
     }
 
-    //    TEST_METHOD(near_lossless_bad_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void NearLosslessBadThrows()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        assert_expect_exception(jpegls_errc::invalid_argument_near_lossless, [&encoder] { encoder.near_lossless(-1); });
-    //        assert_expect_exception(jpegls_errc::invalid_argument_near_lossless, [&encoder] { encoder.near_lossless(256); });
-    //    }
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.NearLossless = -1);
+        Assert.Equal(ErrorCode.InvalidArgumentNearLossless, exception.GetErrorCode());
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.NearLossless = 256);
+        Assert.Equal(ErrorCode.InvalidArgumentNearLossless, exception.GetErrorCode());
+    }
 
-    //    TEST_METHOD(estimated_destination_size_minimal_frame_info) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void EstimatedDestinationSizeMinimalFrameInfo()
+    {
+        JpegLSEncoder encoder = new();
+        var frameInfo = new FrameInfo(1, 1, 2, 1); // = minimum.
 
-    //        encoder.frame_info({ 1, 1, 2, 1}); // = minimum.
-    //        const auto size{ encoder.estimated_destination_size()};
-    //        Assert::IsTrue(size >= 1024);
-    //    }
+        encoder.FrameInfo = frameInfo;
+        var size = encoder.EstimatedDestinationSize;
+        Assert.True(size >= 1024);
+    }
+
     //    TEST_METHOD(estimated_destination_size_maximal_frame_info) // NOLINT
     //    {
     //        jpegls_encoder encoder;
@@ -104,18 +110,19 @@ public class JpegLSEncoderTest
     //        constexpr auto expected{
     //            static_cast<size_t>(numeric_limits < uint16_t >::max()) * numeric_limits < uint16_t >::max() * 1 *
     //                                1};
-    //        Assert::IsTrue(size >= expected);
+    //        Assert.True(size >= expected);
     //    }
 
-    //    TEST_METHOD(estimated_destination_size_monochrome_16_bit) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void EstimatedDestinationSizeMonochrome16Bit()
+    {
+        JpegLSEncoder encoder = new();
+        var frameInfo = new FrameInfo(100, 100, 16, 1); // = minimum.
 
-    //        encoder.frame_info({ 100, 100, 16, 1}); // minimum.
-    //        const auto size{ encoder.estimated_destination_size()};
-    //        Assert::IsTrue(size >= size_t{ 100}
-    //        *100 * 2);
-    //    }
+        encoder.FrameInfo = frameInfo;
+        var size = encoder.EstimatedDestinationSize;
+        Assert.True(size >= 100 * 100 * 2);
+    }
 
     //    TEST_METHOD(estimated_destination_size_color_8_bit) // NOLINT
     //    {
@@ -123,7 +130,7 @@ public class JpegLSEncoderTest
 
     //        encoder.frame_info({ 2000, 2000, 8, 3});
     //        const auto size{ encoder.estimated_destination_size()};
-    //        Assert::IsTrue(size >= size_t{ 2000}
+    //        Assert.True(size >= size_t{ 2000}
     //        *2000 * 3);
     //    }
 
@@ -133,7 +140,7 @@ public class JpegLSEncoderTest
 
     //        encoder.frame_info({ numeric_limits < uint16_t >::max(), 1, 8, 1});
     //        const auto size{ encoder.estimated_destination_size()};
-    //        Assert::IsTrue(size >= static_cast<size_t>(numeric_limits < uint16_t >::max()) + 1024U);
+    //        Assert.True(size >= static_cast<size_t>(numeric_limits < uint16_t >::max()) + 1024U);
     //    }
 
     //    TEST_METHOD(estimated_destination_size_very_high) // NOLINT
@@ -142,16 +149,17 @@ public class JpegLSEncoderTest
 
     //        encoder.frame_info({ 1, numeric_limits < uint16_t >::max(), 8, 1});
     //        const auto size{ encoder.estimated_destination_size()};
-    //        Assert::IsTrue(size >= static_cast<size_t>(numeric_limits < uint16_t >::max()) + 1024U);
+    //        Assert.True(size >= static_cast<size_t>(numeric_limits < uint16_t >::max()) + 1024U);
     //    }
 
-    //    TEST_METHOD(estimated_destination_size_too_soon_throws) // NOLINT
-    //    {
-    //        const jpegls_encoder encoder;
+    [Fact]
+    public void EstimatedDestinationSizeTooSoonThrows()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        assert_expect_exception(jpegls_errc::invalid_operation,
-    //                                [&encoder] { ignore = encoder.estimated_destination_size(); });
-    //    }
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.EstimatedDestinationSize);
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
     //    TEST_METHOD(estimated_destination_size_thath_causes_overflow_throws) // NOLINT
     //    {
@@ -161,7 +169,7 @@ public class JpegLSEncoderTest
 
     //#if INTPTR_MAX == INT64_MAX
     //        const auto size{ encoder.estimated_destination_size()};
-    //        Assert::IsTrue(size != 0); // actual value already checked in other test functions.
+    //        Assert.True(size != 0); // actual value already checked in other test functions.
     //#elif INTPTR_MAX == INT32_MAX
     //        assert_expect_exception(jpegls_errc::parameter_value_not_supported,
     //                                [&encoder] { ignore = encoder.estimated_destination_size(); });
@@ -189,70 +197,70 @@ public class JpegLSEncoderTest
         Assert.Throws<InvalidOperationException>(() => encoder.Destination = destination);
     }
 
-    //    TEST_METHOD(write_standard_spiff_header) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteStandardSpiffHeader()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        encoder.frame_info({ 1, 1, 2, 1});
+        var frameInfo = new FrameInfo(1, 1, 2, 4);
+        encoder.FrameInfo = frameInfo;
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+        var destination = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = destination;
 
-    //        encoder.write_standard_spiff_header(spiff_color_space::cmyk);
+        encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk);
 
-    //        Assert::AreEqual(serialized_spiff_header_size + 2, encoder.bytes_written());
+        Assert.Equal(Constants.SpiffHeaderSizeInBytes + 2, encoder.BytesWritten);
 
-    //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+        // Check that SOI marker has been written.
+        Assert.Equal((byte)0xFF, destination[0]);
+        Assert.Equal((byte)JpegMarkerCode.StartOfImage, destination[1]);
 
-    //        // Verify that a APP8 with SPIFF has been written (details already verified by jpeg_stream_writer_test).
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::application_data8), destination[3]);
-    //        Assert::AreEqual({ }, destination[4]);
-    //        Assert::AreEqual(byte{ 32}, destination[5]);
-    //        Assert::AreEqual(byte{ 'S'}, destination[6]);
-    //        Assert::AreEqual(byte{ 'P'}, destination[7]);
-    //        Assert::AreEqual(byte{ 'I'}, destination[8]);
-    //        Assert::AreEqual(byte{ 'F'}, destination[9]);
-    //        Assert::AreEqual(byte{ 'F'}, destination[10]);
-    //        Assert::AreEqual({ }, destination[11]);
-    //    }
+        // Verify that a APP8 with SPIFF has been written (details already verified by jpeg_stream_writer_test).
+        Assert.Equal(0xFF, destination[2]);
+        Assert.Equal((byte)JpegMarkerCode.ApplicationData8, destination[3]);
+        Assert.Equal(0, destination[4]);
+        Assert.Equal((byte) 32, destination[5]);
+        Assert.Equal((byte) 'S', destination[6]);
+        Assert.Equal((byte) 'P', destination[7]);
+        Assert.Equal((byte) 'I', destination[8]);
+        Assert.Equal((byte) 'F', destination[9]);
+        Assert.Equal((byte) 'F', destination[10]);
+        Assert.Equal(0, destination[11]);
+    }
 
-    //    TEST_METHOD(write_standard_spiff_header_without_destination_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteStandardSpiffHeaderWithoutDestinationThrows()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 4) };
 
-    //        encoder.frame_info({ 1, 1, 2, 1});
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
-    //        assert_expect_exception(jpegls_errc::invalid_operation,
-    //                                [&encoder] { encoder.write_standard_spiff_header(spiff_color_space::cmyk); });
-    //    }
+    [Fact]
+    public void WriteStandardSpiffHeaderWithoutFrameInfoThrows()
+    {
+        JpegLSEncoder encoder = new();
 
-    //    TEST_METHOD(write_standard_spiff_header_without_frame_info_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+        var destination = new byte[100];
+        encoder.Destination = destination;
 
-    //        vector<byte> destination(100);
-    //        encoder.destination(destination);
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
-    //        assert_expect_exception(jpegls_errc::invalid_operation,
-    //                                [&encoder] { encoder.write_standard_spiff_header(spiff_color_space::cmyk); });
-    //    }
+    [Fact]
+    public void WriteStandardSpiffHeaderTwiceThrows()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 4) };
+        var destination = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = destination;
+        encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk);
 
-    //    TEST_METHOD(write_standard_spiff_header_twice_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
-
-    //        encoder.frame_info({ 1, 1, 2, 1});
-
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
-    //        encoder.write_standard_spiff_header(spiff_color_space::cmyk);
-
-    //        assert_expect_exception(jpegls_errc::invalid_operation,
-    //                                [&encoder] { encoder.write_standard_spiff_header(spiff_color_space::cmyk); });
-    //    }
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
     //    TEST_METHOD(write_spiff_header) // NOLINT
     //    {
@@ -268,23 +276,23 @@ public class JpegLSEncoderTest
     //        spiff_header.height = 1;
     //        encoder.write_spiff_header(spiff_header);
 
-    //        Assert::AreEqual(serialized_spiff_header_size + 2, encoder.bytes_written());
+    //        Assert.Equal(serialized_spiff_header_size + 2, encoder.bytes_written());
 
     //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+    //        Assert.Equal(byte{ 0xFF}, destination[0]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
 
     //        // Verify that a APP8 with SPIFF has been written (details already verified by jpeg_stream_writer_test).
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::application_data8), destination[3]);
-    //        Assert::AreEqual({ }, destination[4]);
-    //        Assert::AreEqual(byte{ 32}, destination[5]);
-    //        Assert::AreEqual(byte{ 'S'}, destination[6]);
-    //        Assert::AreEqual(byte{ 'P'}, destination[7]);
-    //        Assert::AreEqual(byte{ 'I'}, destination[8]);
-    //        Assert::AreEqual(byte{ 'F'}, destination[9]);
-    //        Assert::AreEqual(byte{ 'F'}, destination[10]);
-    //        Assert::AreEqual(byte{ }, destination[11]);
+    //        Assert.Equal(byte{ 0xFF}, destination[2]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::application_data8), destination[3]);
+    //        Assert.Equal({ }, destination[4]);
+    //        Assert.Equal(byte{ 32}, destination[5]);
+    //        Assert.Equal(byte{ 'S'}, destination[6]);
+    //        Assert.Equal(byte{ 'P'}, destination[7]);
+    //        Assert.Equal(byte{ 'I'}, destination[8]);
+    //        Assert.Equal(byte{ 'F'}, destination[9]);
+    //        Assert.Equal(byte{ 'F'}, destination[10]);
+    //        Assert.Equal(byte{ }, destination[11]);
     //    }
 
     //    TEST_METHOD(write_spiff_header_invalid_height_throws) // NOLINT
@@ -301,7 +309,7 @@ public class JpegLSEncoderTest
 
     //        assert_expect_exception(jpegls_errc::invalid_argument_height,
     //                                [&encoder, &spiff_header] { encoder.write_spiff_header(spiff_header); });
-    //        Assert::AreEqual(size_t{ }, encoder.bytes_written());
+    //        Assert.Equal(size_t{ }, encoder.bytes_written());
     //    }
 
     //    TEST_METHOD(write_spiff_header_invalid_width_throws) // NOLINT
@@ -318,67 +326,61 @@ public class JpegLSEncoderTest
 
     //        assert_expect_exception(jpegls_errc::invalid_argument_width,
     //                                [&encoder, &spiff_header] { encoder.write_spiff_header(spiff_header); });
-    //        Assert::AreEqual(size_t{ }, encoder.bytes_written());
+    //        Assert.Equal(size_t{ }, encoder.bytes_written());
     //    }
 
-    //    TEST_METHOD(write_spiff_entry) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteSpiffEntry()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 4) };
+        var destination = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = destination;
+        encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk);
 
-    //        encoder.frame_info({ 1, 1, 2, 1});
+        encoder.WriteSpiffEntry(SpiffEntryTag.ImageTitle, "test"u8);
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
-    //        encoder.write_standard_spiff_header(spiff_color_space::cmyk);
+        Assert.Equal(48, encoder.BytesWritten);
+    }
 
-    //        encoder.write_spiff_entry(spiff_entry_tag::image_title, "test", 4);
+    [Fact]
+    public void WriteSpiffEntryTwice()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 4) };
+        var destination = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = destination;
+        encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk);
+        encoder.WriteSpiffEntry(SpiffEntryTag.ImageTitle, "test"u8);
 
-    //        Assert::AreEqual(size_t{ 48}, encoder.bytes_written());
-    //    }
+        encoder.WriteSpiffEntry(SpiffEntryTag.ImageTitle, "test"u8);
 
-    //    TEST_METHOD(write_spiff_entry_twice) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+        Assert.Equal(60, encoder.BytesWritten);
+    }
 
-    //        encoder.frame_info({ 1, 1, 2, 1});
+    [Fact]
+    public void WriteEmptySpiffEntry()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 4) };
+        var destination = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = destination;
+        encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk);
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
-    //        encoder.write_standard_spiff_header(spiff_color_space::cmyk);
+        encoder.WriteSpiffEntry(SpiffEntryTag.ImageTitle, []);
 
-    //        encoder.write_spiff_entry(spiff_entry_tag::image_title, "test", 4);
-    //        encoder.write_spiff_entry(spiff_entry_tag::image_title, "test", 4);
+        Assert.Equal(44, encoder.BytesWritten);
+    }
 
-    //        Assert::AreEqual(size_t{ 60}, encoder.bytes_written());
-    //    }
+    [Fact]
+    public void WriteSpiffEntryWithInvalidTagThrows()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 4) };
+        var destination = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = destination;
+        encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk);
 
-    //    TEST_METHOD(write_empty_spiff_entry) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
-
-    //        encoder.frame_info({ 1, 1, 2, 1});
-
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
-    //        encoder.write_standard_spiff_header(spiff_color_space::cmyk);
-
-    //        encoder.write_spiff_entry(spiff_entry_tag::image_title, nullptr, 0);
-
-    //        Assert::AreEqual(size_t{ 44}, encoder.bytes_written());
-    //    }
-
-    //    TEST_METHOD(write_spiff_entry_with_invalid_tag_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
-
-    //        encoder.frame_info({ 1, 1, 2, 1});
-
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
-    //        encoder.write_standard_spiff_header(spiff_color_space::cmyk);
-
-    //        assert_expect_exception(jpegls_errc::invalid_argument, [&encoder] { encoder.write_spiff_entry(1, "test", 4); });
-    //    }
+        const int endOfSpiffDirectoryTag = 1;
+        var exception = Assert.Throws<ArgumentException>(() => encoder.WriteSpiffEntry(endOfSpiffDirectoryTag, "test"u8));
+        Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+    }
 
     //    TEST_METHOD(write_spiff_entry_with_invalid_size_throws) // NOLINT
     //    {
@@ -423,8 +425,8 @@ public class JpegLSEncoderTest
     //        encoder.write_standard_spiff_header(spiff_color_space::none);
     //        encoder.write_spiff_end_of_directory_entry();
 
-    //        Assert::AreEqual(byte{ 0xFF}, destination[44]);
-    //        Assert::AreEqual(byte{ 0xD8}, destination[45]); // 0xD8 = SOI: Marks the start of an image.
+    //        Assert.Equal(byte{ 0xFF}, destination[44]);
+    //        Assert.Equal(byte{ 0xD8}, destination[45]); // 0xD8 = SOI: Marks the start of an image.
     //    }
 
     //    TEST_METHOD(write_spiff_end_of_directory_entry_before_header_throws) // NOLINT
@@ -454,75 +456,80 @@ public class JpegLSEncoderTest
     //                                [&encoder] { encoder.write_spiff_end_of_directory_entry(); });
     //    }
 
-    //    TEST_METHOD(write_comment) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteComment()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        array < byte, 10 > destination;
-    //        encoder.destination(destination);
+        var destination = new byte[10];
+        encoder.Destination = destination;
 
-    //        encoder.write_comment("123");
+        encoder.WriteComment("123");
 
-    //        Assert::AreEqual(size_t{ 10}, encoder.bytes_written());
+        Assert.Equal(10, encoder.BytesWritten);
 
-    //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+        // Check that SOI marker has been written.
+        Assert.Equal(0xFF, destination[0]);
+        Assert.Equal((byte)JpegMarkerCode.StartOfImage, destination[1]);
 
-    //        // Verify that a COM segment has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::comment), destination[3]);
-    //        Assert::AreEqual({ }, destination[4]);
-    //        Assert::AreEqual(byte{ 2 + 4}, destination[5]);
-    //        Assert::AreEqual(byte{ '1'}, destination[6]);
-    //        Assert::AreEqual(byte{ '2'}, destination[7]);
-    //        Assert::AreEqual(byte{ '3'}, destination[8]);
-    //        Assert::AreEqual(byte{ }, destination[9]);
-    //    }
+        // Verify that a COM segment has been written.
+        Assert.Equal(0xFF, destination[2]);
+        Assert.Equal((byte)JpegMarkerCode.Comment, destination[3]);
+        Assert.Equal(0, destination[4]);
+        Assert.Equal( 2 + 4, destination[5]);
+        Assert.Equal((byte) '1', destination[6]);
+        Assert.Equal((byte) '2', destination[7]);
+        Assert.Equal((byte) '3', destination[8]);
+        Assert.Equal(0, destination[9]);
+    }
 
-    //    TEST_METHOD(write_empty_comment) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteEmptyComment()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        vector<byte> destination(6);
-    //        encoder.destination(destination);
+        var destination = new byte[6];
+        encoder.Destination = destination;
 
-    //        encoder.write_comment("");
+        encoder.WriteComment("");
 
-    //        Assert::AreEqual(size_t{ 6}, encoder.bytes_written());
+        Assert.Equal(6, encoder.BytesWritten);
 
-    //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+        // Check that SOI marker has been written.
+        Assert.Equal(0xFF, destination[0]);
+        Assert.Equal((byte)JpegMarkerCode.StartOfImage, destination[1]);
 
-    //        // Verify that a COM segment has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::comment), destination[3]);
-    //        Assert::AreEqual({ }, destination[4]);
-    //        Assert::AreEqual(byte{ 2}, destination[5]);
-    //    }
+        // Verify that a COM segment has been written.
+        Assert.Equal(0xFF, destination[2]);
+        Assert.Equal((byte)JpegMarkerCode.Comment, destination[3]);
+        Assert.Equal(0, destination[4]);
+        Assert.Equal(2, destination[5]);
+    }
 
-    //    TEST_METHOD(write_empty_comment_buffer) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteEmptyCommentBuffer()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        vector<byte> destination(6);
-    //        encoder.destination(destination);
+        var destination = new byte[6];
+        encoder.Destination = destination;
 
-    //        encoder.write_comment(nullptr, 0);
+        ReadOnlySpan<byte> buffer = [];
+        encoder.WriteComment(buffer);
 
-    //        Assert::AreEqual(size_t{ 6}, encoder.bytes_written());
+        Assert.Equal(6, encoder.BytesWritten);
 
-    //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+        // Check that SOI marker has been written.
+        Assert.Equal(0xFF, destination[0]);
+        Assert.Equal((byte)JpegMarkerCode.StartOfImage, destination[1]);
 
-    //        // Verify that a COM segment has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::comment), destination[3]);
-    //        Assert::AreEqual({ }, destination[4]);
-    //        Assert::AreEqual(byte{ 2}, destination[5]);
-    //    }
+        // Verify that a COM segment has been written.
+        Assert.Equal(0xFF, destination[2]);
+        Assert.Equal((byte)JpegMarkerCode.Comment, destination[3]);
+        Assert.Equal(0, destination[4]);
+        Assert.Equal(2, destination[5]);
+    }
+
     //    TEST_METHOD(write_max_comment) // NOLINT
     //    {
     //        jpegls_encoder encoder;
@@ -534,17 +541,17 @@ public class JpegLSEncoderTest
     //        const vector<byte> data(max_size_comment_data);
     //        encoder.write_comment(data.data(), data.size());
 
-    //        Assert::AreEqual(destination.size(), encoder.bytes_written());
+    //        Assert.Equal(destination.size(), encoder.bytes_written());
 
     //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+    //        Assert.Equal(byte{ 0xFF}, destination[0]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
 
     //        // Verify that a COM segment has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::comment), destination[3]);
-    //        Assert::AreEqual(byte{ 255}, destination[4]);
-    //        Assert::AreEqual(byte{ 255}, destination[5]);
+    //        Assert.Equal(byte{ 0xFF}, destination[2]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::comment), destination[3]);
+    //        Assert.Equal(byte{ 255}, destination[4]);
+    //        Assert.Equal(byte{ 255}, destination[5]);
     //    }
 
     //    TEST_METHOD(write_two_comment) // NOLINT
@@ -557,27 +564,28 @@ public class JpegLSEncoderTest
     //        encoder.write_comment("123");
     //        encoder.write_comment("");
 
-    //        Assert::AreEqual(destination.size(), encoder.bytes_written());
+    //        Assert.Equal(destination.size(), encoder.bytes_written());
 
     //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+    //        Assert.Equal(byte{ 0xFF}, destination[0]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
 
     //        // Verify that the COM segments have been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::comment), destination[3]);
-    //        Assert::AreEqual(byte{ }, destination[4]);
-    //        Assert::AreEqual(byte{ 2 + 4}, destination[5]);
-    //        Assert::AreEqual(byte{ '1'}, destination[6]);
-    //        Assert::AreEqual(byte{ '2'}, destination[7]);
-    //        Assert::AreEqual(byte{ '3'}, destination[8]);
-    //        Assert::AreEqual(byte{ }, destination[9]);
+    //        Assert.Equal(byte{ 0xFF}, destination[2]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::comment), destination[3]);
+    //        Assert.Equal(byte{ }, destination[4]);
+    //        Assert.Equal(byte{ 2 + 4}, destination[5]);
+    //        Assert.Equal(byte{ '1'}, destination[6]);
+    //        Assert.Equal(byte{ '2'}, destination[7]);
+    //        Assert.Equal(byte{ '3'}, destination[8]);
+    //        Assert.Equal(byte{ }, destination[9]);
 
-    //        Assert::AreEqual(byte{ 0xFF}, destination[10]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::comment), destination[11]);
-    //        Assert::AreEqual(byte{ }, destination[12]);
-    //        Assert::AreEqual(byte{ 2}, destination[13]);
+    //        Assert.Equal(byte{ 0xFF}, destination[10]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::comment), destination[11]);
+    //        Assert.Equal(byte{ }, destination[12]);
+    //        Assert.Equal(byte{ 2}, destination[13]);
     //    }
+
     //    TEST_METHOD(write_too_large_comment_throws) // NOLINT
     //    {
     //        jpegls_encoder encoder;
@@ -590,19 +598,6 @@ public class JpegLSEncoderTest
 
     //        assert_expect_exception(jpegls_errc::invalid_argument_size,
     //                                [&encoder, &data] { ignore = encoder.write_comment(data.data(), data.size()); });
-    //    }
-
-    //    TEST_METHOD(write_comment_null_pointer_with_size_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
-
-    //        vector<byte> destination(100);
-    //        encoder.destination(destination);
-
-    //        assert_expect_exception(jpegls_errc::invalid_argument, [&encoder] {
-    //            MSVC_WARNING_SUPPRESS_NEXT_LINE(6387) // argument> may be null.
-    //            ignore = encoder.write_comment(nullptr, 1);
-    //        });
     //    }
 
     //    TEST_METHOD(write_comment_after_encode_throws) // NOLINT
@@ -646,44 +641,47 @@ public class JpegLSEncoderTest
     //        constexpr array application_data{ byte{ 1}, byte{ 2}, byte{ 3}, byte{ 4} };
     //        encoder.write_application_data(1, application_data.data(), application_data.size());
 
-    //        Assert::AreEqual(size_t{ 10}, encoder.bytes_written());
+    //        Assert.Equal(size_t{ 10}, encoder.bytes_written());
 
     //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+    //        Assert.Equal(byte{ 0xFF}, destination[0]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
 
     //        // Verify that a APPn segment has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::application_data1), destination[3]);
-    //        Assert::AreEqual(byte{ }, destination[4]);
-    //        Assert::AreEqual(byte{ 2 + 4}, destination[5]);
-    //        Assert::AreEqual(byte{ 1}, destination[6]);
-    //        Assert::AreEqual(byte{ 2}, destination[7]);
-    //        Assert::AreEqual(byte{ 3}, destination[8]);
-    //        Assert::AreEqual(byte{ 4}, destination[9]);
+    //        Assert.Equal(byte{ 0xFF}, destination[2]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::application_data1), destination[3]);
+    //        Assert.Equal(byte{ }, destination[4]);
+    //        Assert.Equal(byte{ 2 + 4}, destination[5]);
+    //        Assert.Equal(byte{ 1}, destination[6]);
+    //        Assert.Equal(byte{ 2}, destination[7]);
+    //        Assert.Equal(byte{ 3}, destination[8]);
+    //        Assert.Equal(byte{ 4}, destination[9]);
     //    }
 
-    //    TEST_METHOD(write_empty_application_data) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteEmptyApplicationData()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        vector<byte> destination(6);
-    //        encoder.destination(destination);
+        var destination = new byte[6];
+        encoder.Destination = destination;
 
-    //        encoder.write_application_data(2, nullptr, 0);
+        ReadOnlySpan<byte> buffer = [];
+        encoder.WriteApplicationData(2, buffer);
 
-    //        Assert::AreEqual(size_t{ 6}, encoder.bytes_written());
+        Assert.Equal(6, encoder.BytesWritten);
 
-    //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+        // Check that SOI marker has been written.
+        Assert.Equal(0xFF, destination[0]);
+        Assert.Equal((byte)JpegMarkerCode.StartOfImage, destination[1]);
 
-    //        // Verify that a APPn segment has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::application_data2), destination[3]);
-    //        Assert::AreEqual({ }, destination[4]);
-    //        Assert::AreEqual(byte{ 2}, destination[5]);
-    //    }
+        // Verify that a APPn segment has been written.
+        Assert.Equal(0xFF, destination[2]);
+        Assert.Equal((byte)JpegMarkerCode.ApplicationData2, destination[3]);
+        Assert.Equal(0, destination[4]);
+        Assert.Equal(2, destination[5]);
+    }
+
     //    TEST_METHOD(write_max_application_data) // NOLINT
     //    {
     //        jpegls_encoder encoder;
@@ -695,17 +693,17 @@ public class JpegLSEncoderTest
     //        const vector<byte> data(max_size_application_data);
     //        encoder.write_application_data(15, data.data(), data.size());
 
-    //        Assert::AreEqual(destination.size(), encoder.bytes_written());
+    //        Assert.Equal(destination.size(), encoder.bytes_written());
 
     //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+    //        Assert.Equal(byte{ 0xFF}, destination[0]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
 
     //        // Verify that a APPn segment has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::application_data15), destination[3]);
-    //        Assert::AreEqual(byte{ 255}, destination[4]);
-    //        Assert::AreEqual(byte{ 255}, destination[5]);
+    //        Assert.Equal(byte{ 0xFF}, destination[2]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::application_data15), destination[3]);
+    //        Assert.Equal(byte{ 255}, destination[4]);
+    //        Assert.Equal(byte{ 255}, destination[5]);
     //    }
 
     //    TEST_METHOD(write_two_application_data) // NOLINT
@@ -719,27 +717,28 @@ public class JpegLSEncoderTest
     //        encoder.write_application_data(0, application_data.data(), application_data.size());
     //        encoder.write_application_data(8, nullptr, 0);
 
-    //        Assert::AreEqual(destination.size(), encoder.bytes_written());
+    //        Assert.Equal(destination.size(), encoder.bytes_written());
 
     //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+    //        Assert.Equal(byte{ 0xFF}, destination[0]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
 
     //        // Verify that the COM segments have been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::application_data0), destination[3]);
-    //        Assert::AreEqual(byte{ }, destination[4]);
-    //        Assert::AreEqual(byte{ 2 + 4}, destination[5]);
-    //        Assert::AreEqual(byte{ 1}, destination[6]);
-    //        Assert::AreEqual(byte{ 2}, destination[7]);
-    //        Assert::AreEqual(byte{ 3}, destination[8]);
-    //        Assert::AreEqual(byte{ 4}, destination[9]);
+    //        Assert.Equal(byte{ 0xFF}, destination[2]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::application_data0), destination[3]);
+    //        Assert.Equal(byte{ }, destination[4]);
+    //        Assert.Equal(byte{ 2 + 4}, destination[5]);
+    //        Assert.Equal(byte{ 1}, destination[6]);
+    //        Assert.Equal(byte{ 2}, destination[7]);
+    //        Assert.Equal(byte{ 3}, destination[8]);
+    //        Assert.Equal(byte{ 4}, destination[9]);
 
-    //        Assert::AreEqual(byte{ 0xFF}, destination[10]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::application_data8), destination[11]);
-    //        Assert::AreEqual(byte{ }, destination[12]);
-    //        Assert::AreEqual(byte{ 2}, destination[13]);
+    //        Assert.Equal(byte{ 0xFF}, destination[10]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::application_data8), destination[11]);
+    //        Assert.Equal(byte{ }, destination[12]);
+    //        Assert.Equal(byte{ 2}, destination[13]);
     //    }
+
     //    TEST_METHOD(write_too_large_application_data_throws) // NOLINT
     //    {
     //        jpegls_encoder encoder;
@@ -816,32 +815,33 @@ public class JpegLSEncoderTest
     //        test_by_decoding(encoded, frame_info, source.data(), source.size(), interleave_mode::none);
     //    }
 
-    //    TEST_METHOD(write_table) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteMappingTable()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        array < byte, 10 > destination;
-    //        encoder.destination(destination);
+        var destination = new byte[10];
+        encoder.Destination = destination;
 
-    //        constexpr array table_data{ byte{ 0} };
-    //        encoder.write_table(1, 1, table_data);
+        ReadOnlySpan<byte> buffer = [0];
+        encoder.WriteMappingTable(1, 1, buffer);
 
-    //        Assert::AreEqual(size_t{ 10}, encoder.bytes_written());
+        Assert.Equal(10, encoder.BytesWritten);
 
-    //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+        // Check that SOI marker has been written.
+        Assert.Equal(0xFF, destination[0]);
+        Assert.Equal((byte)JpegMarkerCode.StartOfImage, destination[1]);
 
-    //        // Verify that a JPEG-LS preset segment with the table has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::jpegls_preset_parameters), destination[3]);
-    //        Assert::AreEqual(byte{ }, destination[4]);
-    //        Assert::AreEqual(byte{ 6}, destination[5]);
-    //        Assert::AreEqual(byte{ 2}, destination[6]);
-    //        Assert::AreEqual(byte{ 1}, destination[7]);
-    //        Assert::AreEqual(byte{ 1}, destination[8]);
-    //        Assert::AreEqual(byte{ }, destination[9]);
-    //    }
+        // Verify that a APPn segment has been written.
+        Assert.Equal(0xFF, destination[2]);
+        Assert.Equal((byte)JpegMarkerCode.JpegLSPresetParameters, destination[3]);
+        Assert.Equal(0, destination[4]);
+        Assert.Equal(6, destination[5]);
+        Assert.Equal(2, destination[6]);
+        Assert.Equal(1, destination[7]);
+        Assert.Equal(1, destination[8]);
+        Assert.Equal(0, destination[9]);
+    }
 
     //    TEST_METHOD(write_table_before_encode) // NOLINT
     //    {
@@ -903,19 +903,6 @@ public class JpegLSEncoderTest
     //        });
     //    }
 
-    //    TEST_METHOD(write_table_null_pointer_with_size_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
-
-    //        vector<byte> destination(100);
-    //        encoder.destination(destination);
-
-    //        assert_expect_exception(jpegls_errc::invalid_argument, [&encoder] {
-    //            MSVC_WARNING_SUPPRESS_NEXT_LINE(6387)
-    //            ignore = encoder.write_table(1, 1, nullptr, 1);
-    //        });
-    //    }
-
     //    TEST_METHOD(write_table_after_encode_throws) // NOLINT
     //    {
     //        constexpr array table_data{ byte{ 0} };
@@ -944,25 +931,25 @@ public class JpegLSEncoderTest
     //        encoder.write_table(1, 1, table_data);
     //        const size_t bytes_written{ encoder.create_tables_only()};
 
-    //        Assert::AreEqual(size_t{ 12}, bytes_written);
+    //        Assert.Equal(size_t{ 12}, bytes_written);
 
     //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[0]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+    //        Assert.Equal(byte{ 0xFF}, destination[0]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
 
     //        // Verify that a JPEG-LS preset segment with the table has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[2]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::jpegls_preset_parameters), destination[3]);
-    //        Assert::AreEqual(byte{ }, destination[4]);
-    //        Assert::AreEqual(byte{ 6}, destination[5]);
-    //        Assert::AreEqual(byte{ 2}, destination[6]);
-    //        Assert::AreEqual(byte{ 1}, destination[7]);
-    //        Assert::AreEqual(byte{ 1}, destination[8]);
-    //        Assert::AreEqual(byte{ }, destination[9]);
+    //        Assert.Equal(byte{ 0xFF}, destination[2]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::jpegls_preset_parameters), destination[3]);
+    //        Assert.Equal(byte{ }, destination[4]);
+    //        Assert.Equal(byte{ 6}, destination[5]);
+    //        Assert.Equal(byte{ 2}, destination[6]);
+    //        Assert.Equal(byte{ 1}, destination[7]);
+    //        Assert.Equal(byte{ 1}, destination[8]);
+    //        Assert.Equal(byte{ }, destination[9]);
 
     //        // Check that SOI marker has been written.
-    //        Assert::AreEqual(byte{ 0xFF}, destination[10]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::end_of_image), destination[11]);
+    //        Assert.Equal(byte{ 0xFF}, destination[10]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::end_of_image), destination[11]);
     //    }
 
     //    TEST_METHOD(create_tables_only_with_no_tables_throws) // NOLINT
@@ -975,16 +962,17 @@ public class JpegLSEncoderTest
     //        assert_expect_exception(jpegls_errc::invalid_operation, [&encoder] { ignore = encoder.create_tables_only(); });
     //    }
 
-    //    TEST_METHOD(set_preset_coding_parameters) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void SetPresetCodingParameters()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        constexpr jpegls_pc_parameters pc_parameters{ };
-    //        encoder.preset_coding_parameters(pc_parameters);
+        var presetCodingParameters = new JpegLSPresetCodingParameters();
+        encoder.PresetCodingParameters = presetCodingParameters;
 
-    //        // No explicit test possible, code should remain stable.
-    //        Assert::IsTrue(true);
-    //    }
+        // No explicit test possible, code should remain stable.
+        Assert.True(true);
+    }
 
     //    TEST_METHOD(set_preset_coding_parameters_bad_values_throws) // NOLINT
     //    {
@@ -1037,7 +1025,7 @@ public class JpegLSEncoderTest
     //        jpegls_decoder decoder(destination, true);
     //        vector<byte> destination_decoded(decoder.destination_size());
     //        decoder.decode(destination_decoded);
-    //        Assert::AreEqual(1, decoder.mapping_table_id(0));
+    //        Assert.Equal(1, decoder.mapping_table_id(0));
     //    }
 
     //    TEST_METHOD(set_table_id_clear_id) // NOLINT
@@ -1057,7 +1045,7 @@ public class JpegLSEncoderTest
     //        jpegls_decoder decoder(destination, true);
     //        vector<byte> destination_decoded(decoder.destination_size());
     //        decoder.decode(destination_decoded);
-    //        Assert::AreEqual(0, decoder.mapping_table_id(0));
+    //        Assert.Equal(0, decoder.mapping_table_id(0));
     //    }
 
     //    TEST_METHOD(set_table_id_bad_component_index_throws) // NOLINT
@@ -1550,8 +1538,8 @@ public class JpegLSEncoderTest
     //        encoder.rewind();
     //        const size_t bytes_written2{ encoder.encode(source)};
 
-    //        Assert::AreEqual(bytes_written1, bytes_written2);
-    //        Assert::IsTrue(destination_backup == destination);
+    //        Assert.Equal(bytes_written1, bytes_written2);
+    //        Assert.True(destination_backup == destination);
     //    }
 
     //    TEST_METHOD(rewind_before_destination) // NOLINT
@@ -1579,7 +1567,7 @@ public class JpegLSEncoderTest
 
     //        const auto destination{ jpegls_encoder::encode(source, frame_info)};
 
-    //        Assert::AreEqual(size_t{ 99}, destination.size());
+    //        Assert.Equal(size_t{ 99}, destination.size());
     //        test_by_decoding(destination, frame_info, source.data(), source.size(), interleave_mode::none);
     //    }
 
@@ -1591,7 +1579,7 @@ public class JpegLSEncoderTest
     //        const auto destination{
     //            jpegls_encoder::encode(source, frame_info, interleave_mode::none, encoding_options::even_destination_size)};
 
-    //        Assert::AreEqual(size_t{ 100}, destination.size());
+    //        Assert.Equal(size_t{ 100}, destination.size());
     //        test_by_decoding(destination, frame_info, source.data(), source.size(), interleave_mode::none);
     //    }
 
@@ -1617,8 +1605,8 @@ public class JpegLSEncoderTest
 
     //        const std::string expected{ "charls "s + charls_get_version_string()};
 
-    //        Assert::AreEqual(expected.size() + 1, actual_size);
-    //        Assert::IsTrue(memcmp(expected.data(), actual_data, actual_size) == 0);
+    //        Assert.Equal(expected.size() + 1, actual_size);
+    //        Assert.True(memcmp(expected.data(), actual_data, actual_size) == 0);
     //    }
 
     //    TEST_METHOD(encode_image_include_pc_parameters_jai) // NOLINT
@@ -1637,32 +1625,32 @@ public class JpegLSEncoderTest
     //        const size_t bytes_written{ encoder.encode(source)};
     //        destination.resize(bytes_written);
 
-    //        Assert::AreEqual(size_t{ 43}, bytes_written);
+    //        Assert.Equal(size_t{ 43}, bytes_written);
 
-    //        Assert::AreEqual(byte{ 0xFF}, destination[15]);
-    //        Assert::AreEqual(static_cast<byte>(jpeg_marker_code::jpegls_preset_parameters), destination[16]);
+    //        Assert.Equal(byte{ 0xFF}, destination[15]);
+    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::jpegls_preset_parameters), destination[16]);
 
     //        // Segment size.
-    //        Assert::AreEqual(byte{ }, destination[17]);
-    //        Assert::AreEqual(byte{ 13}, destination[18]);
+    //        Assert.Equal(byte{ }, destination[17]);
+    //        Assert.Equal(byte{ 13}, destination[18]);
 
     //        // Parameter ID.
-    //        Assert::AreEqual(byte{ 0x1}, destination[19]);
+    //        Assert.Equal(byte{ 0x1}, destination[19]);
 
     //        // MaximumSampleValue
-    //        Assert::AreEqual(byte{ 255}, destination[20]);
-    //        Assert::AreEqual(byte{ 255}, destination[21]);
+    //        Assert.Equal(byte{ 255}, destination[20]);
+    //        Assert.Equal(byte{ 255}, destination[21]);
 
     //        constexpr thresholds expected{
     //            compute_defaults_using_reference_implementation(std::numeric_limits < uint16_t >::max(), 0)};
     //        const int32_t threshold1{ to_integer<int32_t>(destination[22]) << 8 | to_integer<int32_t>(destination[23])};
-    //        Assert::AreEqual(expected.t1, threshold1);
+    //        Assert.Equal(expected.t1, threshold1);
     //        const int32_t threshold2{ to_integer<int32_t>(destination[24]) << 8 | to_integer<int32_t>(destination[25])};
-    //        Assert::AreEqual(expected.t2, threshold2);
+    //        Assert.Equal(expected.t2, threshold2);
     //        const int32_t threshold3{ to_integer<int32_t>(destination[26]) << 8 | to_integer<int32_t>(destination[27])};
-    //        Assert::AreEqual(expected.t3, threshold3);
+    //        Assert.Equal(expected.t3, threshold3);
     //        const int32_t reset{ to_integer<int32_t>(destination[28] << 8) | to_integer<int32_t>(destination[29])};
-    //        Assert::AreEqual(expected.reset, reset);
+    //        Assert.Equal(expected.reset, reset);
     //    }
 
     //    TEST_METHOD(encode_image_with_disabled_include_pc_parameters_jai) // NOLINT
@@ -1679,7 +1667,7 @@ public class JpegLSEncoderTest
 
     //        const size_t bytes_written{ encoder.encode(source)};
 
-    //        Assert::AreEqual(size_t{ 28}, bytes_written);
+    //        Assert.Equal(size_t{ 28}, bytes_written);
     //    }
 
     //    TEST_METHOD(set_invalid_encode_options_throws) // NOLINT
@@ -1702,11 +1690,11 @@ public class JpegLSEncoderTest
     //        encoder.destination(destination);
 
     //        const size_t bytes_written{ encoder.encode(source)};
-    //        Assert::AreEqual(size_t{ 46}, bytes_written);
+    //        Assert.Equal(size_t{ 46}, bytes_written);
 
     //        destination.resize(bytes_written);
     //        const auto it{ find_first_lse_segment(destination.cbegin(), destination.cend())};
-    //        Assert::IsTrue(it != destination.cend());
+    //        Assert.True(it != destination.cend());
     //    }
 
     //    TEST_METHOD(encode_oversized_image) // NOLINT
@@ -1731,11 +1719,11 @@ public class JpegLSEncoderTest
     //        encoder.destination(destination);
 
     //        const size_t bytes_written{ encoder.encode(source)};
-    //        Assert::AreEqual(size_t{ 99}, bytes_written);
+    //        Assert.Equal(size_t{ 99}, bytes_written);
 
     //        destination.resize(bytes_written);
     //        const auto it{ find_first_lse_segment(destination.cbegin(), destination.cend())};
-    //        Assert::IsTrue(it == destination.cend());
+    //        Assert.True(it == destination.cend());
     //    }
 
     //    TEST_METHOD(image_contains_no_preset_coding_parameters_if_configured_pc_is_default) // NOLINT
@@ -1750,11 +1738,11 @@ public class JpegLSEncoderTest
     //        encoder.destination(destination);
 
     //        const size_t bytes_written{ encoder.encode(source)};
-    //        Assert::AreEqual(size_t{ 99}, bytes_written);
+    //        Assert.Equal(size_t{ 99}, bytes_written);
 
     //        destination.resize(bytes_written);
     //        const auto it{ find_first_lse_segment(destination.cbegin(), destination.cend())};
-    //        Assert::IsTrue(it == destination.cend());
+    //        Assert.True(it == destination.cend());
     //    }
 
     //    TEST_METHOD(image_contains_preset_coding_parameters_if_configured_pc_is_non_default) // NOLINT
@@ -1769,7 +1757,7 @@ public class JpegLSEncoderTest
     //        encoder.destination(destination);
 
     //        const size_t bytes_written{ encoder.encode(source)};
-    //        Assert::AreEqual(size_t{ 114}, bytes_written);
+    //        Assert.Equal(size_t{ 114}, bytes_written);
 
     //        destination.resize(bytes_written);
     //        const auto it{ find_first_lse_segment(destination.cbegin(), destination.cend())};
@@ -1788,7 +1776,7 @@ public class JpegLSEncoderTest
     //        encoder.destination(destination);
 
     //        const size_t bytes_written{ encoder.encode(source)};
-    //        Assert::AreEqual(size_t{ 114}, bytes_written);
+    //        Assert.Equal(size_t{ 114}, bytes_written);
 
     //        destination.resize(bytes_written);
     //        const auto it{ find_first_lse_segment(destination.cbegin(), destination.cend())};
@@ -1833,17 +1821,17 @@ public class JpegLSEncoderTest
 
     //        const auto& frame_info{decoder.frame_info()
     //};
-    //Assert::AreEqual(source_frame_info.width, frame_info.width);
-    //        Assert::AreEqual(source_frame_info.height, frame_info.height);
-    //        Assert::AreEqual(source_frame_info.bits_per_sample, frame_info.bits_per_sample);
-    //        Assert::AreEqual(source_frame_info.component_count, frame_info.component_count);
-    //        Assert::IsTrue(interleave_mode == decoder.interleave_mode());
-    //        Assert::IsTrue(color_transformation == decoder.color_transformation());
+    //Assert.Equal(source_frame_info.width, frame_info.width);
+    //        Assert.Equal(source_frame_info.height, frame_info.height);
+    //        Assert.Equal(source_frame_info.bits_per_sample, frame_info.bits_per_sample);
+    //        Assert.Equal(source_frame_info.component_count, frame_info.component_count);
+    //        Assert.True(interleave_mode == decoder.interleave_mode());
+    //        Assert.True(color_transformation == decoder.color_transformation());
 
     //        vector<byte> destination(decoder.destination_size());
     //decoder.decode(destination);
 
-    //        Assert::AreEqual(destination.size(), expected_destination_size);
+    //        Assert.Equal(destination.size(), expected_destination_size);
 
     //        if (decoder.near_lossless() == 0)
     //        {
@@ -1853,7 +1841,7 @@ public class JpegLSEncoderTest
     //            {
     //    if (expected_destination_byte[i] != destination[i]) // AreEqual is very slow, pre-test to speed up 50X
     //    {
-    //        Assert::AreEqual(expected_destination_byte[i], destination[i]);
+    //        Assert.Equal(expected_destination_byte[i], destination[i]);
     //    }
     //}
     //        }
