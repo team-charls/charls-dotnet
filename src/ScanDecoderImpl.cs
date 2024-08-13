@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 
 namespace CharLS.Managed;
 
+using static Algorithm;
+
 internal class ScanDecoderImpl : ScanDecoder
 {
     private int _restartInterval;
@@ -632,11 +634,11 @@ internal class ScanDecoderImpl : ScanDecoder
             rb = rd;
             rd = previousLine[index + 1];
 
-            int qs = Algorithm.ComputeContextId(QuantizeGradient(rd - rb),
+            int qs = ComputeContextId(QuantizeGradient(rd - rb),
                 QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
             if (qs != 0)
             {
-                currentLine[index] = (byte)DecodeRegular(qs, Algorithm.ComputePredictedValue(ra, rb, rc));
+                currentLine[index] = (byte)DecodeRegular(qs, ComputePredictedValue(ra, rb, rc));
                 ++index;
             }
             else
@@ -661,11 +663,11 @@ internal class ScanDecoderImpl : ScanDecoder
             rb = rd;
             rd = previousLine[index + 1];
 
-            int qs = Algorithm.ComputeContextId(QuantizeGradient(rd - rb),
+            int qs = ComputeContextId(QuantizeGradient(rd - rb),
                 QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
             if (qs != 0)
             {
-                currentLine[index] = (ushort)DecodeRegular(qs, Algorithm.ComputePredictedValue(ra, rb, rc));
+                currentLine[index] = (ushort)DecodeRegular(qs, ComputePredictedValue(ra, rb, rc));
                 ++index;
             }
             else
@@ -688,16 +690,16 @@ internal class ScanDecoderImpl : ScanDecoder
             var rd = previousLine[index + 1];
 
             int qs1 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
+                ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
                     QuantizeGradient(rb.V1 - rc.V1),
                         QuantizeGradient(rc.V1 - ra.V1));
             int qs2 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
+                ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
                     QuantizeGradient(rb.V2 - rc.V2),
                     QuantizeGradient(rc.V2 - ra.V2));
 
             int qs3 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
+                ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
                     QuantizeGradient(rb.V3 - rc.V3),
                     QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
@@ -707,9 +709,9 @@ internal class ScanDecoderImpl : ScanDecoder
             else
             {
                 Triplet<byte> rx;
-                rx.V1 = (byte)DecodeRegular(qs1, Algorithm.ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (byte)DecodeRegular(qs2, Algorithm.ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (byte)DecodeRegular(qs3, Algorithm.ComputePredictedValue(ra.V3, rb.V3, rc.V3));
+                rx.V1 = (byte)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = (byte)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = (byte)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
                 currentLine[index] = rx;
                 ++index;
             }
@@ -727,16 +729,16 @@ internal class ScanDecoderImpl : ScanDecoder
             var rd = previousLine[index + 1];
 
             int qs1 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
+                ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
                     QuantizeGradient(rb.V1 - rc.V1),
                     QuantizeGradient(rc.V1 - ra.V1));
             int qs2 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
+                ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
                     QuantizeGradient(rb.V2 - rc.V2),
                     QuantizeGradient(rc.V2 - ra.V2));
 
             int qs3 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
+                ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
                     QuantizeGradient(rb.V3 - rc.V3),
                     QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
@@ -746,9 +748,9 @@ internal class ScanDecoderImpl : ScanDecoder
             else
             {
                 Triplet<ushort> rx;
-                rx.V1 = (ushort)DecodeRegular(qs1, Algorithm.ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (ushort)DecodeRegular(qs2, Algorithm.ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (ushort)DecodeRegular(qs3, Algorithm.ComputePredictedValue(ra.V3, rb.V3, rc.V3));
+                rx.V1 = (ushort)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = (ushort)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = (ushort)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
                 currentLine[index] = rx;
                 ++index;
             }
@@ -766,19 +768,19 @@ internal class ScanDecoderImpl : ScanDecoder
             var rd = previousLine[index + 1];
 
             int qs1 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
+                ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
                     QuantizeGradient(rb.V1 - rc.V1),
                     QuantizeGradient(rc.V1 - ra.V1));
             int qs2 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
+                ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
                     QuantizeGradient(rb.V2 - rc.V2),
                     QuantizeGradient(rc.V2 - ra.V2));
             int qs3 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
+                ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
                     QuantizeGradient(rb.V3 - rc.V3),
                     QuantizeGradient(rc.V3 - ra.V3));
             int qs4 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V4 - rb.V4),
+                ComputeContextId(QuantizeGradient(rd.V4 - rb.V4),
                     QuantizeGradient(rb.V4 - rc.V4),
                     QuantizeGradient(rc.V4 - ra.V4));
 
@@ -789,10 +791,10 @@ internal class ScanDecoderImpl : ScanDecoder
             else
             {
                 Quad<byte> rx;
-                rx.V1 = (byte)DecodeRegular(qs1, Algorithm.ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (byte)DecodeRegular(qs2, Algorithm.ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (byte)DecodeRegular(qs3, Algorithm.ComputePredictedValue(ra.V3, rb.V3, rc.V3));
-                rx.V4 = (byte)DecodeRegular(qs3, Algorithm.ComputePredictedValue(ra.V4, rb.V4, rc.V4));
+                rx.V1 = (byte)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = (byte)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = (byte)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
+                rx.V4 = (byte)DecodeRegular(qs3, ComputePredictedValue(ra.V4, rb.V4, rc.V4));
                 currentLine[index] = rx;
                 ++index;
             }
@@ -810,19 +812,19 @@ internal class ScanDecoderImpl : ScanDecoder
             var rd = previousLine[index + 1];
 
             int qs1 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
+                ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
                     QuantizeGradient(rb.V1 - rc.V1),
                     QuantizeGradient(rc.V1 - ra.V1));
             int qs2 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
+                ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
                     QuantizeGradient(rb.V2 - rc.V2),
                     QuantizeGradient(rc.V2 - ra.V2));
             int qs3 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
+                ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
                     QuantizeGradient(rb.V3 - rc.V3),
                     QuantizeGradient(rc.V3 - ra.V3));
             int qs4 =
-                Algorithm.ComputeContextId(QuantizeGradient(rd.V4 - rb.V4),
+                ComputeContextId(QuantizeGradient(rd.V4 - rb.V4),
                     QuantizeGradient(rb.V4 - rc.V4),
                     QuantizeGradient(rc.V4 - ra.V4));
 
@@ -833,10 +835,10 @@ internal class ScanDecoderImpl : ScanDecoder
             else
             {
                 Quad<ushort> rx;
-                rx.V1 = (ushort)DecodeRegular(qs1, Algorithm.ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (ushort)DecodeRegular(qs2, Algorithm.ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (ushort)DecodeRegular(qs3, Algorithm.ComputePredictedValue(ra.V3, rb.V3, rc.V3));
-                rx.V4 = (ushort)DecodeRegular(qs3, Algorithm.ComputePredictedValue(ra.V4, rb.V4, rc.V4));
+                rx.V1 = (ushort)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
+                rx.V2 = (ushort)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
+                rx.V3 = (ushort)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
+                rx.V4 = (ushort)DecodeRegular(qs3, ComputePredictedValue(ra.V4, rb.V4, rc.V4));
                 currentLine[index] = rx;
                 ++index;
             }
@@ -845,10 +847,10 @@ internal class ScanDecoderImpl : ScanDecoder
 
     private int DecodeRegular(int qs, int predicted)
     {
-        int sign = Algorithm.BitWiseSign(qs);
-        ref var context = ref RegularModeContext[Algorithm.ApplySign(qs, sign)];
+        int sign = BitWiseSign(qs);
+        ref var context = ref RegularModeContext[ApplySign(qs, sign)];
         int k = context.ComputeGolombCodingParameter();
-        int predictedValue = _traits.CorrectPrediction(predicted + Algorithm.ApplySign(context.C, sign));
+        int predictedValue = _traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
 
         int errorValue;
         var code = ColombCodeTable[k].Get(PeekByte());
@@ -860,7 +862,7 @@ internal class ScanDecoderImpl : ScanDecoder
         }
         else
         {
-            errorValue = Algorithm.UnmapErrorValue(DecodeValue(k, _traits.Limit, _traits.QuantizedBitsPerSample));
+            errorValue = UnmapErrorValue(DecodeValue(k, _traits.Limit, _traits.QuantizedBitsPerSample));
             if (Math.Abs(errorValue) > 65535)
                 throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
         }
@@ -871,7 +873,7 @@ internal class ScanDecoderImpl : ScanDecoder
         }
 
         context.UpdateVariablesAndBias(errorValue, _traits.NearLossless, _traits.ResetThreshold);
-        errorValue = Algorithm.ApplySign(errorValue, sign);
+        errorValue = ApplySign(errorValue, sign);
         return _traits.ComputeReconstructedSample(predictedValue, errorValue);
     }
 
@@ -1197,7 +1199,7 @@ internal class ScanDecoderImpl : ScanDecoder
         else
         {
             int errorValue = DecodeRunInterruptionError(ref RunModeContexts[0]);
-            return _traits.ComputeReconstructedSample(rb, errorValue * Algorithm.Sign(rb - ra));
+            return _traits.ComputeReconstructedSample(rb, errorValue * Sign(rb - ra));
         }
     }
 
@@ -1208,9 +1210,9 @@ internal class ScanDecoderImpl : ScanDecoder
         int errorValue3 = DecodeRunInterruptionError(ref RunModeContexts[0]);
 
         return new Triplet<byte>(
-            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
-            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
-            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)));
+            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
     }
 
     private Triplet<ushort> DecodeRunInterruptionPixel(Triplet<ushort> ra, Triplet<ushort> rb)
@@ -1220,9 +1222,9 @@ internal class ScanDecoderImpl : ScanDecoder
         int errorValue3 = DecodeRunInterruptionError(ref RunModeContexts[0]);
 
         return new Triplet<ushort>(
-            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)));
+            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
     }
 
     private Quad<byte> DecodeRunInterruptionPixel(Quad<byte> ra, Quad<byte> rb)
@@ -1233,10 +1235,10 @@ internal class ScanDecoderImpl : ScanDecoder
         int errorValue4 = DecodeRunInterruptionError(ref RunModeContexts[0]);
 
         return new Quad<byte>(
-            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
-            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
-            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)),
-            (byte)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Algorithm.Sign(rb.V4 - ra.V4)));
+            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
+            (byte)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
     }
 
     private Quad<ushort> DecodeRunInterruptionPixel(Quad<ushort> ra, Quad<ushort> rb)
@@ -1247,10 +1249,10 @@ internal class ScanDecoderImpl : ScanDecoder
         int errorValue4 = DecodeRunInterruptionError(ref RunModeContexts[0]);
 
         return new Quad<ushort>(
-            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Algorithm.Sign(rb.V1 - ra.V1)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Algorithm.Sign(rb.V2 - ra.V2)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Algorithm.Sign(rb.V3 - ra.V3)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Algorithm.Sign(rb.V4 - ra.V4)));
+            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
+            (ushort)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
     }
 
     private int DecodeRunInterruptionError(ref RunModeContext context)
