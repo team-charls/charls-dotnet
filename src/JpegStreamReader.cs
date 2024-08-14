@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace CharLS.Managed;
 
-internal class JpegStreamReader
+internal struct JpegStreamReader
 {
     private enum State
     {
@@ -54,6 +54,12 @@ internal class JpegStreamReader
     internal uint RestartInterval
     {
         get { return _restartInterval; }
+    }
+
+    public JpegStreamReader()
+    {
+        _eventSender = this;
+        _componentIds = [];
     }
 
     internal JpegStreamReader(object? eventSender = null)

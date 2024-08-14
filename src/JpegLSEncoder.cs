@@ -12,7 +12,7 @@ namespace CharLS.Managed;
 /// </summary>
 public sealed class JpegLSEncoder
 {
-    private readonly JpegStreamWriter _writer = new();
+    private JpegStreamWriter _writer;
     private FrameInfo? _frameInfo;
     private int _nearLossless;
     private InterleaveMode _interleaveMode;

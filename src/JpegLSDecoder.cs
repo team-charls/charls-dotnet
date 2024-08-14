@@ -10,7 +10,7 @@ namespace CharLS.Managed;
 /// </summary>
 public sealed class JpegLSDecoder
 {
-    private readonly JpegStreamReader _reader;
+    private JpegStreamReader _reader;
     private State _state = State.Initial;
 
     private enum State

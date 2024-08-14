@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace CharLS.Managed;
 
-internal class JpegStreamWriter
+internal struct JpegStreamWriter
 {
     private int _position;
     private int _componentIndex;
