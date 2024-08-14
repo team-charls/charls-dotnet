@@ -100,7 +100,7 @@ internal class ScanDecoderImpl : ScanDecoder
             switch (CodingParameters.InterleaveMode)
             {
                 case InterleaveMode.None:
-                    return new ProcessDecodedSingleComponent(stride, 1);
+                    return new ProcessDecodedSingleComponent();
 
                 case InterleaveMode.Line:
                     switch (FrameInfo.ComponentCount)
@@ -109,18 +109,18 @@ internal class ScanDecoderImpl : ScanDecoder
                             switch (CodingParameters.ColorTransformation)
                             {
                                 case ColorTransformation.None:
-                                    return new ProcessDecodedSingleComponentToLine3Components(stride, 3);
+                                    return new ProcessDecodedSingleComponentToLine8Bit3Components();
                                 case ColorTransformation.HP1:
-                                    return new ProcessDecodedSingleComponentToLine3Components8BitHP1(stride, 3);
+                                    return new ProcessDecodedSingleComponentToLine3Components8BitHP1();
                                 case ColorTransformation.HP2:
-                                    return new ProcessDecodedSingleComponentToLine3Components8BitHP2(stride, 3);
+                                    return new ProcessDecodedSingleComponentToLine3Components8BitHP2();
                                 case ColorTransformation.HP3:
-                                    return new ProcessDecodedSingleComponentToLine3Components8BitHP3(stride, 3);
+                                    return new ProcessDecodedSingleComponentToLine3Components8BitHP3();
                             }
 
                             break;
                         case 4:
-                            return new ProcessDecodedSingleComponentToLine4Components(stride, 4);
+                            return new ProcessDecodedSingleComponentToLine8Bit4Components();
                     }
 
                     break;
@@ -132,21 +132,21 @@ internal class ScanDecoderImpl : ScanDecoder
                             switch (FrameInfo.ComponentCount)
                             {
                                 case 3:
-                                    return new ProcessDecodedTripletComponent8Bit(stride, 3);
+                                    return new ProcessDecodedTripletComponent8Bit();
 
                                 case 4:
-                                    return new ProcessDecodedQuadComponent8Bit(stride, 4);
+                                    return new ProcessDecodedQuadComponent8Bit();
                             }
                             break;
 
                         case ColorTransformation.HP1:
-                            return new ProcessDecodedTripletComponent8BitHP1(stride, 3);
+                            return new ProcessDecodedTripletComponent8BitHP1();
 
                         case ColorTransformation.HP2:
-                            return new ProcessDecodedTripletComponent8BitHP2(stride, 3);
+                            return new ProcessDecodedTripletComponent8BitHP2();
 
                         case ColorTransformation.HP3:
-                            return new ProcessDecodedTripletComponent8BitHP3(stride, 3);
+                            return new ProcessDecodedTripletComponent8BitHP3();
                     }
                     break;
             }
@@ -156,7 +156,7 @@ internal class ScanDecoderImpl : ScanDecoder
             switch (CodingParameters.InterleaveMode)
             {
                 case InterleaveMode.None:
-                    return new ProcessDecodedSingleComponent(stride, 1);
+                    return new ProcessDecodedSingleComponent();
 
                 case InterleaveMode.Line:
                     switch (FrameInfo.ComponentCount)
@@ -165,20 +165,19 @@ internal class ScanDecoderImpl : ScanDecoder
                             switch (CodingParameters.ColorTransformation)
                             {
                                 case ColorTransformation.None:
-                                    return new ProcessDecodedSingleComponentToLine3Components(stride, 3);
+                                    return new ProcessDecodedSingleComponentToLine16Bit3Components();
                                 case ColorTransformation.HP1:
-                                    return new ProcessDecodedSingleComponentToLine3Components16BitHP1(stride, 3);
+                                    return new ProcessDecodedSingleComponentToLine3Components16BitHP1();
                                 case ColorTransformation.HP2:
-                                    return new ProcessDecodedSingleComponentToLine3Components16BitHP2(stride, 3);
+                                    return new ProcessDecodedSingleComponentToLine3Components16BitHP2();
                                 case ColorTransformation.HP3:
-                                    return new ProcessDecodedSingleComponentToLine3Components16BitHP3(stride, 3);
+                                    return new ProcessDecodedSingleComponentToLine3Components16BitHP3();
                             }
 
                             break;
                         case 4:
-                            return new ProcessDecodedSingleComponentToLine4Components(stride, 4);
+                            return new ProcessDecodedSingleComponentToLine16Bit4Components();
                     }
-
                     break;
 
                 case InterleaveMode.Sample:
@@ -188,22 +187,22 @@ internal class ScanDecoderImpl : ScanDecoder
                             switch (FrameInfo.ComponentCount)
                             {
                                 case 3:
-                                    return new ProcessDecodedTripletComponent16Bit(stride, 3);
+                                    return new ProcessDecodedTripletComponent16Bit();
 
                                 case 4:
-                                    return new ProcessDecodedQuadComponent16Bit(stride, 4);
+                                    return new ProcessDecodedQuadComponent16Bit();
                             }
 
                             break;
 
                         case ColorTransformation.HP1:
-                            return new ProcessDecodedTripletComponent16BitHP1(stride, 3);
+                            return new ProcessDecodedTripletComponent16BitHP1();
 
                         case ColorTransformation.HP2:
-                            return new ProcessDecodedTripletComponent16BitHP2(stride, 3);
+                            return new ProcessDecodedTripletComponent16BitHP2();
 
                         case ColorTransformation.HP3:
-                            return new ProcessDecodedTripletComponent16BitHP3(stride, 3);
+                            return new ProcessDecodedTripletComponent16BitHP3();
                     }
 
                     break;
@@ -303,7 +302,7 @@ internal class ScanDecoderImpl : ScanDecoder
                 }
 
                 int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
-                int bytesWritten = on_line_end(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = on_line_end_interleave_line(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -410,7 +409,7 @@ internal class ScanDecoderImpl : ScanDecoder
 
                 DecodeTripletLine(previousLine, currentLine);
 
-                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = on_line_end_InterleaveModeSample(currentLine[1..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -1266,48 +1265,47 @@ internal class ScanDecoderImpl : ScanDecoder
 
     private int on_line_end(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
-        //Span<byte> sourceInBytes = MemoryMarshal.Cast<TPixel, byte>(source);
+        return _processLineDecoded!.LineDecoded(source, destination, pixelCount, pixelStride);
+    }
 
+    private int on_line_end_interleave_line(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
+    {
         return _processLineDecoded!.LineDecoded(source, destination, pixelCount, pixelStride);
     }
 
     private int on_line_end(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
-
         return _processLineDecoded!.LineDecoded(sourceInBytes, destination, pixelCount * 2, pixelStride);
     }
 
     private int on_line_end_interleave_line(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
-        return _processLineDecoded!.LineDecoded(source, destination, pixelCount, pixelStride);
+        Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
+        return _processLineDecoded!.LineDecoded(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
-    private int on_line_end(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private int on_line_end_InterleaveModeSample(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
-        //Span<byte> sourceInBytes = MemoryMarshal.Cast<TPixel, byte>(source);
-
-        return _processLineDecoded!.LineDecoded(source, destination, pixelCount, pixelStride);
+        Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<byte>, byte>(source);
+        return _processLineDecoded!.LineDecoded(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
     private int on_line_end(Span<Triplet<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(source);
-
         return _processLineDecoded!.LineDecoded(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
     private int on_line_end(Span<Quad<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<byte>, byte>(source);
-
         return _processLineDecoded!.LineDecoded(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
     private int on_line_end(Span<Quad<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(source);
-
         return _processLineDecoded!.LineDecoded(sourceInBytes, destination, pixelCount, pixelStride);
     }
 }
