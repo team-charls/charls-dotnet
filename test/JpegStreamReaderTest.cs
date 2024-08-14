@@ -12,9 +12,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.SourceBufferTooSmall, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.SourceBufferTooSmall, exception.GetErrorCode());
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        reader.ReadHeader();  // if it doesn't throw test is passed.
+        reader.ReadHeader(false);  // if it doesn't throw test is passed.
     }
 
     [Fact]
@@ -44,9 +44,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.JpegMarkerStartByteNotFound, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.JpegMarkerStartByteNotFound, exception.GetErrorCode());
     }
 
     [Fact]
@@ -78,9 +78,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.EncodingNotSupported, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.EncodingNotSupported, exception.GetErrorCode());
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        reader.ReadHeader();
+        reader.ReadHeader(false);
 
         JpegLSPresetCodingParameters? actual = reader.JpegLSPresetCodingParameters;
         Assert.NotNull(actual);
@@ -120,9 +120,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -135,9 +135,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -150,9 +150,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -176,9 +176,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -193,9 +193,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -210,9 +210,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -226,10 +226,10 @@ public class JpegStreamReaderTest
         buffer[5]++;
         var reader = new JpegStreamReader { Source = buffer.ToArray() };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -240,10 +240,10 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 128, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.UnexpectedMarkerFound, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.UnexpectedMarkerFound, exception.GetErrorCode());
     }
 
     [Fact]
@@ -255,10 +255,10 @@ public class JpegStreamReaderTest
         writer.WriteStartOfFrameSegment(512, 512, 8, 3);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.DuplicateStartOfFrameMarker, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.DuplicateStartOfFrameMarker, exception.GetErrorCode());
     }
 
     [Fact]
@@ -270,10 +270,10 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 128, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidParameterNearLossless, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidParameterNearLossless, exception.GetErrorCode());
     }
 
     [Fact]
@@ -288,10 +288,10 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, badNearLossless, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidParameterNearLossless, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidParameterNearLossless, exception.GetErrorCode());
     }
 
     [Fact]
@@ -314,10 +314,10 @@ public class JpegStreamReaderTest
         writer.WriteStartOfFrameSegment(512, 512, 8, 3);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.DuplicateComponentIdInStartOfFrameSegment, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.DuplicateComponentIdInStartOfFrameSegment, exception.GetErrorCode());
     }
 
     [Fact]
@@ -341,10 +341,10 @@ public class JpegStreamReaderTest
         ];
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -368,10 +368,10 @@ public class JpegStreamReaderTest
         ];
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -380,10 +380,10 @@ public class JpegStreamReaderTest
         byte[] buffer = [0xFF, 0xD8, 0xFF, 0xD9]; // 0xD9 = EOI
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.UnexpectedEndOfImageMarker, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.UnexpectedEndOfImageMarker, exception.GetErrorCode());
     }
 
     [Fact]
@@ -392,10 +392,10 @@ public class JpegStreamReaderTest
         byte[] buffer = [0xFF, 0xD8, 0xFF, 0xD8]; // 0xD8 = SOI.
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.DuplicateStartOfImageMarker, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.DuplicateStartOfImageMarker, exception.GetErrorCode());
     }
 
     [Fact]
@@ -416,7 +416,7 @@ public class JpegStreamReaderTest
         var buffer = Util.CreateTestSpiffHeader(3);
         var reader = new JpegStreamReader { Source = buffer };
 
-        reader.ReadHeader();
+        reader.ReadHeader(false);
 
         Assert.Null(reader.SpiffHeader);
     }
@@ -427,13 +427,13 @@ public class JpegStreamReaderTest
         var buffer = Util.CreateTestSpiffHeader(2, 0, false);
         var reader = new JpegStreamReader { Source = buffer };
 
-        reader.ReadHeader();
+        reader.ReadHeader(true);
         Assert.NotNull(reader.SpiffHeader);
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.MissingEndOfSpiffDirectory, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.MissingEndOfSpiffDirectory, exception.GetErrorCode());
     }
 
     [Fact]
@@ -447,7 +447,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        reader.ReadHeader();
+        reader.ReadHeader(false);
 
         Assert.Equal(expectedRestartInterval, reader.RestartInterval);
     }
@@ -463,7 +463,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        reader.ReadHeader();
+        reader.ReadHeader(false);
 
         Assert.Equal(expectedRestartInterval, reader.RestartInterval);
     }
@@ -479,7 +479,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        reader.ReadHeader();
+        reader.ReadHeader(false);
 
         Assert.Equal(expectedRestartInterval, reader.RestartInterval);
     }
@@ -495,7 +495,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        reader.ReadHeader();
+        reader.ReadHeader(false);
 
         Assert.Equal(0U, reader.RestartInterval);
     }
@@ -511,10 +511,10 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -525,10 +525,10 @@ public class JpegStreamReaderTest
         writer.WriteRestartMarker(0);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.UnexpectedRestartMarker, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.UnexpectedRestartMarker, exception.GetErrorCode());
     }
 
     [Fact]
@@ -549,7 +549,7 @@ public class JpegStreamReaderTest
             receivedComment = e.Data.ToArray();
         };
 
-        reader.ReadHeader();
+        reader.ReadHeader(false);
 
         Assert.NotNull(receivedComment);
         Assert.Equal(comment, receivedComment);
@@ -573,7 +573,7 @@ public class JpegStreamReaderTest
             receivedComment = e.Data.ToArray();
         };
 
-        reader.ReadHeader();
+        reader.ReadHeader(false);
 
         Assert.NotNull(receivedComment);
         Assert.Equal(comment, receivedComment);
@@ -595,10 +595,10 @@ public class JpegStreamReaderTest
             eventHandlerCalled = true;
         };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
-
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.SourceBufferTooSmall, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.SourceBufferTooSmall, exception.GetErrorCode());
+
         Assert.False(eventHandlerCalled);
     }
 
@@ -614,7 +614,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
-        reader.ReadHeader();
+        reader.ReadHeader(false);
 
         Assert.Equal(1, reader.MappingTableCount);
         Assert.Equal(0, reader.FindMappingTableIndex(1).GetValueOrDefault(-1));
@@ -632,7 +632,7 @@ public class JpegStreamReaderTest
         var buffer = Util.CreateTestSpiffHeader(2, lowVersion);
         var reader = new JpegStreamReader { Source = buffer };
 
-        reader.ReadHeader();
+        reader.ReadHeader(true);
 
         var spiffHeader = reader.SpiffHeader;
         Assert.NotNull(spiffHeader);
@@ -663,7 +663,7 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        reader.ReadHeader(); // if it doesn't throw test is passed.
+        reader.ReadHeader(false); // if it doesn't throw test is passed.
     }
 
     private static void ReadHeaderIncorrectInterleaveInSosForSingleComponentThrows(InterleaveMode mode)
@@ -674,10 +674,10 @@ public class JpegStreamReaderTest
         writer.WriteStartOfScanSegment(0, 1, 0, mode);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidParameterInterleaveMode, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.InvalidParameterInterleaveMode, exception.GetErrorCode());
     }
 
     private static void ReadHeaderWithJpegLSPresetParameterWithExtendedIdShouldThrowImpl(int id)
@@ -690,8 +690,8 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = buffer };
 
-        var exception = Assert.Throws<InvalidDataException>(reader.ReadHeader);
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.JpeglsPresetExtendedParameterTypeNotSupported, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.JpeglsPresetExtendedParameterTypeNotSupported, exception.GetErrorCode());
     }
 }

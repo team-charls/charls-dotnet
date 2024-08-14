@@ -44,16 +44,16 @@ public class JpegLSDecoderTest
         Assert.False(string.IsNullOrEmpty(exception.Message));
     }
 
-    //TEST_METHOD(read_header_from_non_jpegls_data) // NOLINT
-    //{
-    //    const vector<uint8_t> source(100);
-    //    jpegls_decoder decoder{ source, false};
+    [Fact]
+    public void ReadHeaderFromNonJpegLSData()
+    {
+        var buffer = new byte[100];
+        JpegLSDecoder decoder = new() { Source = buffer };
 
-    //    error_code ec;
-    //    decoder.read_header(ec);
-
-    //    Assert::IsTrue(ec == jpegls_errc::jpeg_marker_start_byte_not_found);
-    //}
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.JpegMarkerStartByteNotFound, exception.GetErrorCode());
+    }
 
     [Fact]
     public void FrameInfoWithoutReadHeaderThrows()
@@ -73,6 +73,7 @@ public class JpegLSDecoderTest
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.InterleaveMode);
         Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -104,134 +105,99 @@ public class JpegLSDecoderTest
         Assert.Equal(expectedDestinationSize, decoder.GetDestinationSize());
     }
 
-    //TEST_METHOD(destination_size_stride_interleave_none) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("DataFiles/t8c0e0.jls")};
+    [Fact]
+    public void DestinationSizeStrideInterleaveNone()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
 
-    //    const jpegls_decoder decoder{ source, true};
+        const int stride = 512;
+        const int expectedDestinationSize = stride * 256 * 3;
+        Assert.Equal(expectedDestinationSize, decoder.GetDestinationSize(stride));
+    }
 
-    //    constexpr size_t stride{ 512};
-    //    constexpr size_t expected_destination_size{ stride * 256 * 3};
-    //    Assert.Equal(expected_destination_size, decoder.destination_size(stride));
-    //}
+    [Fact]
+    public void DestinationSizeStrideInterleaveLine()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c1e0.jls"));
 
-    //TEST_METHOD(destination_size_stride_interleave_line) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("DataFiles/t8c1e0.jls")};
+        const int stride = 1024;
+        const int expectedDestinationSize = stride * 256;
+        Assert.Equal(expectedDestinationSize, decoder.GetDestinationSize(stride));
+    }
 
-    //    const jpegls_decoder decoder{ source, true};
+    [Fact]
+    public void DestinationSizeStrideInterleaveSample()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c2e0.jls"));
 
-    //    constexpr size_t stride{ 1024};
-    //    constexpr size_t expected_destination_size{ stride * 256};
-    //    Assert.Equal(expected_destination_size, decoder.destination_size(stride));
-    //}
+        const int stride = 1024;
+        const int expectedDestinationSize = stride * 256;
+        Assert.Equal(expectedDestinationSize, decoder.GetDestinationSize(stride));
+    }
 
-    //TEST_METHOD(destination_size_stride_interleave_sample) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("DataFiles/t8c2e0.jls")};
+    [Fact]
+    public void DecodeReferenceFileFromBuffer()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+        byte[] destination = new byte[decoder.GetDestinationSize()];
 
-    //    const jpegls_decoder decoder{ source, true};
+        decoder.Decode(destination);
 
-    //    constexpr size_t stride = 1024;
-    //    constexpr size_t expected_destination_size{ stride * 256};
-    //    Assert.Equal(expected_destination_size, decoder.destination_size(stride));
-    //}
+        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.InterleaveMode, decoder.FrameInfo);
+        var referenceImageData = referenceFile.ImageData;
+        for (int i = 0; i != destination.Length; ++i)
+        {
+            Assert.Equal(referenceImageData[i], destination[i]);
+        }
+    }
 
-    //TEST_METHOD(decode_reference_file_from_buffer) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("DataFiles/t8c0e0.jls")};
+    [Fact]
+    public void DecodeWithDefaultPcParametersBeforeEachSos()
+    {
+        var source = ReadAllBytes("conformance/t8c0e0.jls");
+        source = InsertPCParametersSegments(source, 3);
 
-    //    const jpegls_decoder decoder{ source, true};
+        JpegLSDecoder decoder = new(source);
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
 
-    //    vector<uint8_t> destination(decoder.destination_size());
-    //    decoder.decode(destination);
+        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.InterleaveMode, decoder.FrameInfo);
+        var referenceImageData = referenceFile.ImageData;
+        for (int i = 0; i != destination.Length; ++i)
+        {
+            Assert.Equal(referenceImageData[i], destination[i]);
+        }
+    }
 
-    //    portable_anymap_file reference_file{
-    //        read_anymap_reference_file("DataFiles/test8.ppm", decoder.interleave_mode(), decoder.frame_info())};
+    [Fact]
+    public void DecodeWithDestinationAsReturn()
+    {
+        var source = ReadAllBytes("conformance/t8c0e0.jls");
+        JpegLSDecoder decoder = new(source);
 
-    //    const auto&reference_image_data = reference_file.image_data();
-    //    for (size_t i{ }; i != destination.size(); ++i)
-    //    {
-    //        Assert.Equal(reference_image_data[i], destination[i]);
-    //    }
-    //}
+        var destination = decoder.Decode();
 
-    //TEST_METHOD(decode_with_default_pc_parameters_before_each_sos) // NOLINT
-    //{
-    //    vector<uint8_t> source{ read_file("DataFiles/t8c0e0.jls")};
-    //    insert_pc_parameters_segments(source, 3);
+        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.InterleaveMode, decoder.FrameInfo);
+        var referenceImageData = referenceFile.ImageData;
+        for (int i = 0; i != destination.Length; ++i)
+        {
+            Assert.Equal(referenceImageData[i], destination[i]);
+        }
+    }
 
-    //    const jpegls_decoder decoder{ source, true};
+    [Fact]
+    public void DecodeWithoutReadingHeaderThrows()
+    {
+        JpegLSDecoder decoder = new();
 
-    //    vector<uint8_t> destination(decoder.destination_size());
-    //    decoder.decode(destination);
+        byte[] buffer = new byte[1000];
 
-    //    portable_anymap_file reference_file{
-    //        read_anymap_reference_file("DataFiles/test8.ppm", decoder.interleave_mode(), decoder.frame_info())};
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.Decode(buffer));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
-    //    const auto&reference_image_data = reference_file.image_data();
-    //    for (size_t i{ }; i != destination.size(); ++i)
-    //    {
-    //        Assert.Equal(reference_image_data[i], destination[i]);
-    //    }
-    //}
-
-    //TEST_METHOD(decode_with_destination_as_return) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("DataFiles/t8c0e0.jls")};
-    //    const jpegls_decoder decoder{ source, true};
-    //    const auto destination{ decoder.decode<vector<uint8_t>>()};
-
-    //    portable_anymap_file reference_file{
-    //        read_anymap_reference_file("DataFiles/test8.ppm", decoder.interleave_mode(), decoder.frame_info())};
-
-    //    const auto&reference_image_data{ reference_file.image_data()};
-    //    for (size_t i{ }; i != destination.size(); ++i)
-    //    {
-    //        Assert.Equal(reference_image_data[i], destination[i]);
-    //    }
-    //}
-
-    //TEST_METHOD(decode_with_16_bit_destination_as_return) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("DataFiles/t8c0e0.jls")};
-    //    const jpegls_decoder decoder{ source, true};
-    //    const auto destination{ decoder.decode<vector<uint16_t>>()};
-
-    //    portable_anymap_file reference_file{
-    //        read_anymap_reference_file("DataFiles/test8.ppm", decoder.interleave_mode(), decoder.frame_info())};
-
-    //    const auto&reference_image_data{ reference_file.image_data()};
-    //    const auto* destination_as_bytes{ reinterpret_cast <const uint8_t*> (destination.data())};
-    //    for (size_t i{ }; i != reference_image_data.size(); ++i)
-    //    {
-    //        Assert.Equal(reference_image_data[i], destination_as_bytes[i]);
-    //    }
-    //}
-
-    //TEST_METHOD(decode_without_reading_header) // NOLINT
-    //{
-    //    const jpegls_decoder decoder;
-
-    //    vector<uint8_t> buffer(1000);
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder, &buffer] { decoder.decode(buffer); });
-    //}
-
-    //TEST_METHOD(decode_reference_to_mapping_table_selector) // NOLINT
-    //{
-    //    jpeg_test_stream_writer writer;
-
-    //    writer.write_start_of_image();
-    //    writer.write_start_of_frame_segment(10, 10, 8, 3);
-    //    writer.mapping_table_selector = 1;
-    //    writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //    jpegls_decoder decoder{ writer.buffer, false};
-
-    //    assert_expect_exception(jpegls_errc::parameter_value_not_supported, [&decoder] { decoder.read_header(); });
-    //}
-
-    [Fact (Skip = "WIP")]
+    [Fact]
     public void ReadSpiffHeader()
     {
         var source = Util.CreateTestSpiffHeader();
@@ -252,226 +218,206 @@ public class JpegLSDecoderTest
         Assert.Equal(1024, header.HorizontalResolution);
     }
 
-    //TEST_METHOD(read_spiff_header_from_non_jpegls_data) // NOLINT
-    //{
-    //    const vector<uint8_t> source(100);
-    //    jpegls_decoder decoder{ source, false};
+    [Fact]
+    public void ReadSpiffHeaderFromNonJpegLSData()
+    {
+        byte[] source = new byte[100];
+        JpegLSDecoder decoder = new(source, false);
 
-    //    error_code ec;
-    //    ignore = decoder.read_spiff_header(ec);
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.TryReadSpiffHeader(out _));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.JpegMarkerStartByteNotFound, exception.GetErrorCode());
+    }
 
-    //    Assert::IsTrue(ec == jpegls_errc::jpeg_marker_start_byte_not_found);
-    //}
+    [Fact]
+    public void ReadSpiffHeaderFromJpegLSWithoutSpiff()
+    {
+        var source = ReadAllBytes("conformance/t8c0e0.jls");
+        JpegLSDecoder decoder = new(source);
 
-    //TEST_METHOD(read_spiff_header_from_jpegls_without_spiff) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("DataFiles/t8c0e0.jls")};
+        Assert.Null(decoder.SpiffHeader);
 
-    //    const jpegls_decoder decoder{ source, true};
+        var frameInfo = decoder.FrameInfo;
 
-    //    Assert::IsFalse(decoder.spiff_header_has_value());
+        Assert.Equal(3, frameInfo.ComponentCount);
+        Assert.Equal(8, frameInfo.BitsPerSample);
+        Assert.Equal(256, frameInfo.Height);
+        Assert.Equal(256, frameInfo.Width);
+    }
 
-    //    const frame_info&frame_info{ decoder.frame_info()};
+    [Fact]
+    public void ReadHeaderTwice()
+    {
+        var source = ReadAllBytes("conformance/t8c0e0.jls");
+        JpegLSDecoder decoder = new(source);
 
-    //    Assert.Equal(3, frame_info.component_count);
-    //    Assert.Equal(8, frame_info.bits_per_sample);
-    //    Assert.Equal(256U, frame_info.height);
-    //    Assert.Equal(256U, frame_info.width);
-    //}
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
-    //TEST_METHOD(read_header_twice) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("DataFiles/t8c0e0.jls")};
+    [Fact]
+    public void DecodeFileWithFFInEntropyData()
+    {
+        var source = ReadAllBytes("test-images/ff_in_entropy_data.jls");
+        JpegLSDecoder decoder = new(source);
 
-    //    jpegls_decoder decoder{ source, true};
+        var frameInfo = decoder.FrameInfo;
+        Assert.Equal(1, frameInfo.ComponentCount);
+        Assert.Equal(12, frameInfo.BitsPerSample);
+        Assert.Equal(1216, frameInfo.Height);
+        Assert.Equal(968, frameInfo.Width);
 
-    //    assert_expect_exception(jpegls_errc::invalid_operation, [&decoder] { ignore = decoder.read_header(); });
-    //}
+        var destination = new byte[decoder.GetDestinationSize()];
 
-    //TEST_METHOD(simple_decode) // NOLINT
-    //{
-    //    const vector<uint8_t> encoded_source{ read_file("DataFiles/t8c0e0.jls")};
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidEncodedData, exception.GetErrorCode());
+    }
 
-    //    vector<uint8_t> decoded_destination;
-    //    frame_info frame_info;
-    //    interleave_mode interleave_mode;
-    //    tie(frame_info, interleave_mode) = jpegls_decoder::decode(encoded_source, decoded_destination);
+    [Fact]
+    public void DecodeFileWithGolombLargeThenKMax()
+    {
+        var source = ReadAllBytes("test-images/fuzzy_input_golomb_16.jls");
+        JpegLSDecoder decoder = new(source);
 
-    //    Assert.Equal(3, frame_info.component_count);
-    //    Assert.Equal(8, frame_info.bits_per_sample);
-    //    Assert.Equal(256U, frame_info.height);
-    //    Assert.Equal(256U, frame_info.width);
-    //    Assert.Equal(interleave_mode::none, interleave_mode);
+        var frameInfo = decoder.FrameInfo;
+        Assert.Equal(3, frameInfo.ComponentCount);
+        Assert.Equal(16, frameInfo.BitsPerSample);
+        Assert.Equal(65516, frameInfo.Height);
+        Assert.Equal(1, frameInfo.Width);
 
-    //    const size_t expected_size = static_cast<size_t>(frame_info.height) * frame_info.width * frame_info.component_count;
-    //    Assert.Equal(expected_size, decoded_destination.size());
-    //}
+        var destination = new byte[decoder.GetDestinationSize()];
 
-    //TEST_METHOD(simple_decode_to_uint16_buffer) // NOLINT
-    //{
-    //    const vector<uint8_t> encoded_source{ read_file("DataFiles/t8c0e0.jls")};
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidEncodedData, exception.GetErrorCode());
+    }
 
-    //    vector<uint16_t> decoded_destination;
-    //    frame_info frame_info;
-    //    interleave_mode interleave_mode;
-    //    tie(frame_info, interleave_mode) = jpegls_decoder::decode(encoded_source, decoded_destination);
+    [Fact]
+    public void DecodeFileWithMissingRestartMarker()
+    {
+        var source = ReadAllBytes("conformance/t8c0e0.jls");
 
-    //    Assert.Equal(3, frame_info.component_count);
-    //    Assert.Equal(8, frame_info.bits_per_sample);
-    //    Assert.Equal(256U, frame_info.height);
-    //    Assert.Equal(256U, frame_info.width);
-    //    Assert.Equal(interleave_mode::none, interleave_mode);
+        // Insert a DRI marker segment to trigger that restart markers are used.
+        JpegTestStreamWriter streamWriter = new();
+        streamWriter.WriteDefineRestartInterval(10, 3);
 
-    //    const size_t expected_size{ static_cast<size_t>(frame_info.height) * frame_info.width * frame_info.component_count};
-    //    Assert.Equal(expected_size, decoded_destination.size() * sizeof(uint16_t));
-    //}
+        source = ArrayInsert(2, source, streamWriter.GetBuffer().ToArray());
 
-    //TEST_METHOD(decode_file_with_ff_in_entropy_data) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("ff_in_entropy_data.jls")};
+        JpegLSDecoder decoder = new(source);
+        var destination = new byte[decoder.GetDestinationSize()];
 
-    //    const jpegls_decoder decoder{ source, true};
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.RestartMarkerNotFound, exception.GetErrorCode());
+    }
 
-    //    const auto&frame_info{ decoder.frame_info()};
-    //    Assert.Equal(1, frame_info.component_count);
-    //    Assert.Equal(12, frame_info.bits_per_sample);
-    //    Assert.Equal(1216U, frame_info.height);
-    //    Assert.Equal(968U, frame_info.width);
+    [Fact]
+    public void DecodeFileWithIncorrectRestartMarker()
+    {
+        var source = ReadAllBytes("test-images/test8_ilv_none_rm_7.jls");
 
-    //    vector<uint8_t> destination(decoder.destination_size());
+        // Change the first restart marker to the second.
+        int position = FindScanHeader(0, source);
+        position = FindFirstRestartMarker(position + 1, source);
+        ++position;
+        source[position] = 0xD1;
 
-    //    assert_expect_exception(jpegls_errc::invalid_encoded_data,
-    //                            [&decoder, &destination] { decoder.decode(destination); });
-    //}
+        JpegLSDecoder decoder = new(source);
+        var destination = new byte[decoder.GetDestinationSize()];
 
-    //TEST_METHOD(decode_file_with_golomb_large_then_k_max) // NOLINT
-    //{
-    //    const vector<uint8_t> source{ read_file("fuzzy_input_golomb_16.jls")};
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.RestartMarkerNotFound, exception.GetErrorCode());
+    }
 
-    //    const jpegls_decoder decoder{ source, true};
+    [Fact]
+    public void DecodeFileWithExtraBeginBytesForRestartMarkerCode()
+    {
+        var source = ReadAllBytes("test-images/test8_ilv_none_rm_7.jls");
 
-    //    const auto&frame_info{ decoder.frame_info()};
-    //    Assert.Equal(3, frame_info.component_count);
-    //    Assert.Equal(16, frame_info.bits_per_sample);
-    //    Assert.Equal(65516U, frame_info.height);
-    //    Assert.Equal(1U, frame_info.width);
+        // Add additional 0xFF marker begin bytes
+        int position = FindScanHeader(0, source);
+        position = FindFirstRestartMarker(position + 1, source);
+        byte[] extraBeginBytes = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        source = ArrayInsert(position, source, extraBeginBytes);
 
-    //    vector<uint8_t> destination(decoder.destination_size());
+        JpegLSDecoder decoder = new(source);
+        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.InterleaveMode, decoder.FrameInfo);
+        Util.TestCompliance(source, referenceFile.ImageData, false);
+    }
 
-    //    assert_expect_exception(jpegls_errc::invalid_encoded_data,
-    //                            [&decoder, &destination] { decoder.decode(destination); });
-    //}
+    [Fact]
+    public void ReadComment()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteSegment(JpegMarkerCode.Comment, "hello"u8);
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
 
-    //TEST_METHOD(decode_file_with_missing_restart_marker) // NOLINT
-    //{
-    //    vector<uint8_t> source{ read_file("DataFiles/t8c0e0.jls")};
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+        decoder.Comment += (sender, e) =>
+        {
+            Assert.Equal(decoder, sender);
 
-    //    // Insert a DRI marker segment to trigger that restart markers are used.
-    //    jpeg_test_stream_writer stream_writer;
-    //    stream_writer.write_define_restart_interval(10, 3);
-    //    const auto it = source.begin() + 2;
-    //    source.insert(it, stream_writer.buffer.cbegin(), stream_writer.buffer.cend());
+            Assert.NotNull(e);
+            Assert.Equal(5, e.Data.Length);
 
-    //    const jpegls_decoder decoder{ source, true};
-    //    vector<uint8_t> destination(decoder.destination_size());
+            Assert.True(e.Data.Span.SequenceEqual("hello"u8));
+        };
 
-    //    assert_expect_exception(jpegls_errc::restart_marker_not_found,
-    //                            [&decoder, &destination] { decoder.decode(destination); });
-    //}
+        decoder.ReadHeader();
+    }
 
-    //TEST_METHOD(decode_file_with_incorrect_restart_marker) // NOLINT
-    //{
-    //    vector<uint8_t> source{ read_file("DataFiles/test8_ilv_none_rm_7.jls")};
+    [Fact]
+    public void ReadCommentWhileAlreadyUnregistered()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteSegment(JpegMarkerCode.Comment, "hello"u8);
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+        decoder.Comment += EventHandler;
+        decoder.Comment -= EventHandler;
 
-    //    // Change the first restart marker to the second.
-    //    auto it{ find_scan_header(source.begin(), source.end())};
-    //    it = find_first_restart_marker(it + 1, source.end());
-    //    ++it;
-    //    *it = 0xD1;
+        decoder.ReadHeader();
 
-    //    const jpegls_decoder decoder{ source, true};
-    //    vector<uint8_t> destination(decoder.destination_size());
+        bool eventCalled = false;
+        Assert.False(eventCalled);
+        return;
 
-    //    assert_expect_exception(jpegls_errc::restart_marker_not_found,
-    //                            [&decoder, &destination] { decoder.decode(destination); });
-    //}
+        void EventHandler(object? sender, CommentEventArgs e)
+        {
+            eventCalled = true;
+        }
+    }
 
-    //TEST_METHOD(decode_file_with_extra_begin_bytes_for_restart_marker_code) // NOLINT
-    //{
-    //    vector<uint8_t> source{ read_file("DataFiles/test8_ilv_none_rm_7.jls")};
+    [Fact]
+    public void ReadCommentThrowException()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteSegment(JpegMarkerCode.Comment, "hello"u8);
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
 
-    //    // Add additional 0xFF marker begin bytes
-    //    auto it{ find_scan_header(source.begin(), source.end())};
-    //    it = find_first_restart_marker(it + 1, source.end());
-    //    const array<uint8_t, 7> extra_begin_bytes{ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    //    source.insert(it, extra_begin_bytes.cbegin(), extra_begin_bytes.cend());
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+        decoder.Comment += EventHandler;
 
-    //    const jpegls_decoder decoder{ source, true};
-    //    portable_anymap_file reference_file{
-    //        read_anymap_reference_file("DataFiles/test8.ppm", decoder.interleave_mode(), decoder.frame_info())};
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.CallbackFailed, exception.GetErrorCode());
+        Assert.IsType<ArgumentNullException>(exception.InnerException);
+        return;
 
-    //    test_compliance(source, reference_file.image_data(), false);
-    //}
-
-    //TEST_METHOD(read_comment) // NOLINT
-    //{
-    //    jpeg_test_stream_writer writer;
-    //    writer.write_start_of_image();
-    //    writer.write_segment(jpeg_marker_code::comment, "hello", 5);
-    //    writer.write_start_of_frame_segment(512, 512, 8, 3);
-    //    writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //    jpegls_decoder decoder;
-    //    decoder.source(writer.buffer.data(), writer.buffer.size());
-
-    //    const void* actual_data{ };
-    //    size_t actual_size{ };
-    //    decoder.at_comment([&actual_data, &actual_size](const void* data, const size_t size) noexcept {
-    //        actual_data = data;
-    //        actual_size = size;
-    //    });
-
-    //    decoder.read_header();
-
-    //    Assert.Equal(static_cast<size_t>(5), actual_size);
-    //    Assert::IsTrue(memcmp("hello", actual_data, actual_size) == 0);
-    //}
-
-    //TEST_METHOD(read_comment_while_already_unregisted) // NOLINT
-    //{
-    //    jpeg_test_stream_writer writer;
-    //    writer.write_start_of_image();
-    //    writer.write_segment(jpeg_marker_code::comment, "hello", 5);
-    //    writer.write_start_of_frame_segment(512, 512, 8, 3);
-    //    writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //    jpegls_decoder decoder;
-    //    decoder.source(writer.buffer.data(), writer.buffer.size());
-
-    //    bool callback_called{ };
-    //    decoder.at_comment([&callback_called](const void*, const size_t) noexcept { callback_called = true; })
-    //        .at_comment(nullptr);
-
-    //    decoder.read_header();
-
-    //    Assert::IsFalse(callback_called);
-    //}
-
-    //TEST_METHOD(read_comment_throw_exception) // NOLINT
-    //{
-    //    jpeg_test_stream_writer writer;
-    //    writer.write_start_of_image();
-    //    writer.write_segment(jpeg_marker_code::comment, "hello", 5);
-    //    writer.write_start_of_frame_segment(512, 512, 8, 3);
-    //    writer.write_start_of_scan_segment(0, 1, 0, interleave_mode::none);
-
-    //    jpegls_decoder decoder;
-    //    decoder.source(writer.buffer.data(), writer.buffer.size());
-
-    //    decoder.at_comment([](const void*, const size_t) { throw "something"; });
-
-    //    assert_expect_exception(jpegls_errc::callback_failed, [&decoder] { decoder.read_header(); });
-    //}
+        void EventHandler(object? sender, CommentEventArgs e)
+        {
+            throw new ArgumentNullException();
+        }
+    }
 
     private static byte[] ReadAllBytes(string path, int bytesToSkip = 0)
     {
@@ -497,5 +443,64 @@ public class JpegLSDecoderTest
         }
     }
 
+    private static byte[] InsertPCParametersSegments(byte[] source, int componentCount)
+    {
+        var pcpSegment = CreateDefaultPCParametersSegment();
 
+        int position = 0;
+        for (int i = 0; i != componentCount; ++i)
+        {
+            position = FindScanHeader(position, source);
+            source = ArrayInsert(position, source, pcpSegment);
+            position += pcpSegment.Length + 2;
+        }
+
+        return source;
+    }
+
+    private static byte[] CreateDefaultPCParametersSegment()
+    {
+        JpegTestStreamWriter writer = new();
+
+        var a = new JpegLSPresetCodingParameters();
+        writer.WriteJpegLSPresetParametersSegment(a);
+        return writer.GetBuffer().ToArray();
+    }
+
+    private static int FindScanHeader(int startPosition, byte[] data)
+    {
+        const byte startOfScan = 0xDA;
+
+        for (int i = startPosition; startPosition < data.Length - 1; ++i)
+        {
+            if (data[i] == 0xFF && data[i + 1] == startOfScan)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static int FindFirstRestartMarker(int startPosition, byte[] data)
+    {
+        const byte firstRestartMarker = 0xD0;
+
+        for (int i = startPosition; i < data.Length; ++i)
+        {
+            if (data[i] == 0xFF && data[i + 1] == firstRestartMarker)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static byte[] ArrayInsert(int insertIndex, byte[] array1, byte[] array2)
+    {
+        var result = new byte[array1.Length + array2.Length];
+
+        Array.Copy(array1, 0, result, 0, insertIndex);
+        Array.Copy(array2, 0, result, insertIndex, array2.Length);
+        Array.Copy(array1, insertIndex, result, insertIndex + array2.Length, array1.Length - insertIndex);
+
+        return result;
+    }
 }
