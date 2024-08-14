@@ -20,12 +20,6 @@ internal class LosslessTraitsImpl : Traits
         return lhs == rhs;
     }
 
-    //public override bool IsNear(TPixel lhs, TPixel rhs)
-    //{
-    //    return false;
-    //    ////return IsNear(Convert.ToInt32(lhs), Convert.ToInt32(rhs));
-    //}
-
     public override int ModuloRange(int errorValue)
     {
         return (errorValue << (Constants.Int32BitCount - BitsPerSample)) >> (Constants.Int32BitCount - BitsPerSample);
@@ -53,11 +47,6 @@ internal class LosslessTraits8 : LosslessTraitsImpl
     public LosslessTraits8(int maximumSampleValue, int nearLossless, int resetThreshold)
         : base(maximumSampleValue, nearLossless, resetThreshold)
     {
-    }
-
-    public sbyte ModRange(int errorValue)
-    {
-        return (sbyte)errorValue;
     }
 
     internal override int ComputeErrorValue(int errorValue)

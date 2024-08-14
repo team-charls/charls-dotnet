@@ -126,7 +126,7 @@ public enum ErrorCode
     /// <summary>
     /// This error is returned when the stream contains an unsupported type parameter in the JPEG-LS segment.
     /// </summary>
-    JpeglsPresetExtendedParameterTypeNotSupported = 23,
+    JpegLSPresetExtendedParameterTypeNotSupported = 23,
 
     /// <summary>
     /// This error is returned when the stream contains a SPIFF header but not an SPIFF end-of-directory entry.
@@ -211,12 +211,12 @@ public enum ErrorCode
     InvalidArgumentStride = 112,
 
     /// <summary>
-    /// This error is returned when the width parameter is defined more then once in an incompatible way.
+    /// This error is returned when the width parameter is defined more than once in an incompatible way.
     /// </summary>
     InvalidParameterWidth = 200,
 
     /// <summary>
-    /// This error is returned when the height parameter is defined more then once in an incompatible way.
+    /// This error is returned when the height parameter is defined more than once in an incompatible way.
     /// </summary>
     InvalidParameterHeight = 201,
 
@@ -243,7 +243,7 @@ public enum ErrorCode
     /// <summary>
     /// This error is returned when the stream contains an invalid JPEG-LS preset coding parameters segment.
     /// </summary>
-    InvalidParameterJpeglsPresetCodingParameters = 206,
+    InvalidParameterJpegLSPresetCodingParameters = 206,
 
     /// <summary>
     /// This error is returned when the stream contains an invalid color transformation segment or one that doesn't match with frame info.

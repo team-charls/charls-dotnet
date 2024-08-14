@@ -692,6 +692,6 @@ public class JpegStreamReaderTest
 
         var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.JpeglsPresetExtendedParameterTypeNotSupported, exception.GetErrorCode());
+        Assert.Equal(ErrorCode.JpegLSPresetExtendedParameterTypeNotSupported, exception.GetErrorCode());
     }
 }

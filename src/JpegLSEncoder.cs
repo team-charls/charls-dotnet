@@ -8,17 +8,18 @@ using System.Text;
 namespace CharLS.Managed;
 
 /// <summary>
-/// JPEG-LS Encoder that uses the native CharLS implementation to encode JPEG-LS images.
+/// JPEG-LS encoder that provided the functionality to encode JPEG-LS images.
 /// </summary>
 public sealed class JpegLSEncoder
 {
+    private readonly JpegStreamWriter _writer = new();
     private FrameInfo? _frameInfo;
     private int _nearLossless;
     private InterleaveMode _interleaveMode;
     private ColorTransformation _colorTransformation;
     private EncodingOptions _encodingOptions;
-    private JpegLSPresetCodingParameters? _userPresetCodingParameters = new JpegLSPresetCodingParameters();
-    private readonly JpegStreamWriter _writer = new JpegStreamWriter();
+    private JpegLSPresetCodingParameters? _userPresetCodingParameters = new();
+    private State _state;
 
     private enum State
     {
@@ -28,8 +29,6 @@ public sealed class JpegLSEncoder
         TablesAndMiscellaneous,
         Completed
     }
-
-    private State _state;
 
     /// <summary>
     /// Encodes the passed image data into encoded JPEG-LS data.

@@ -122,10 +122,8 @@ internal static class Algorithm
             return 1;
         if (di < threshold2)
             return 2;
-        if (di < threshold3)
-            return 3;
 
-        return 4;
+        return di < threshold3 ? (sbyte)3 : (sbyte)4;
     }
 
     internal static int ComputeContextId(int q1, int q2, int q3)
