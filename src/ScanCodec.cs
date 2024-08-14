@@ -1,6 +1,8 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Runtime.CompilerServices;
+
 namespace CharLS.Managed;
 
 /// <summary>
@@ -10,13 +12,27 @@ namespace CharLS.Managed;
 internal class ScanCodec
 {
     protected int RunIndex;
-    protected RunModeContext[] RunModeContexts = new RunModeContext[2];
-    protected RegularModeContext[] RegularModeContext = new RegularModeContext[365];
+
+    protected RunModeContextArray RunModeContexts;
+
+    protected RegularModeContextArray RegularModeContext;
 
     // Used to determine how large runs should be encoded at a time.
     // Defined by the JPEG-LS standard, A.2.1., Initialization step 3.
     protected static readonly int[] J =
         [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+
+    [InlineArray(2)]
+    protected struct RunModeContextArray
+    {
+        private RunModeContext _element;
+    }
+
+    [InlineArray(365)]
+    protected struct RegularModeContextArray
+    {
+        private RegularModeContext _element;
+    }
 
     protected ScanCodec(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
@@ -34,7 +50,7 @@ internal class ScanCodec
     protected void InitializeParameters(int range)
     {
         var regularModeContext = new RegularModeContext(range);
-        for (int i = 0; i < RegularModeContext.Length; i++)
+        for (int i = 0; i < 365; i++)
         {
             RegularModeContext[i] = regularModeContext;
         }
