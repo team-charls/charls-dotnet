@@ -61,7 +61,7 @@ internal abstract class ScanDecoder(
     protected void EndScan()
     {
         if (_position >= _endPosition)
-            throw Util.CreateInvalidDataException(ErrorCode.SourceBufferTooSmall);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.SourceBufferTooSmall);
 
         var source = _source.Span;
         if (source[_position] != Constants.JpegMarkerStartByte)
@@ -69,14 +69,14 @@ internal abstract class ScanDecoder(
             _ = ReadBit();
 
             if (_position >= _endPosition)
-                throw Util.CreateInvalidDataException(ErrorCode.SourceBufferTooSmall);
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.SourceBufferTooSmall);
 
             if (source[_position] != Constants.JpegMarkerStartByte)
-                throw Util.CreateInvalidDataException(ErrorCode.TooMuchEncodedData);
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.TooMuchEncodedData);
         }
 
         if (_readCache != 0)
-            throw Util.CreateInvalidDataException(ErrorCode.TooMuchEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.TooMuchEncodedData);
     }
 
     protected int get_cur_byte_pos()
@@ -117,7 +117,7 @@ internal abstract class ScanDecoder(
         {
             FillReadCache();
             if (_validBits < bitCount)
-                throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
         }
 
         Debug.Assert(bitCount <= _validBits);
@@ -187,7 +187,7 @@ internal abstract class ScanDecoder(
     protected byte ReadByte()
     {
         if (_position == _endPosition)
-            throw Util.CreateInvalidDataException(ErrorCode.SourceBufferTooSmall);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.SourceBufferTooSmall);
 
         byte value = _source.Span[_position];
         ++_position;
@@ -199,7 +199,7 @@ internal abstract class ScanDecoder(
         byte value = ReadByte();
 
         if (value != Constants.JpegMarkerStartByte)
-            throw Util.CreateInvalidDataException(ErrorCode.RestartMarkerNotFound);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.RestartMarkerNotFound);
 
         // Read all preceding 0xFF fill bytes until a non 0xFF byte has been found. (see T.81, B.1.1.2)
         do
@@ -208,7 +208,7 @@ internal abstract class ScanDecoder(
         } while (value == Constants.JpegMarkerStartByte);
 
         if (value != Constants.JpegRestartMarkerBase + expectedRestartMarkerId)
-            throw Util.CreateInvalidDataException(ErrorCode.RestartMarkerNotFound);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.RestartMarkerNotFound);
     }
 
     private void FindJpegMarkerStartByte()
@@ -232,7 +232,7 @@ internal abstract class ScanDecoder(
                 if (_validBits == 0)
                 {
                     // Decoding process expects at least some bits to be added to the cache.
-                    throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
+                    ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
                 }
 
                 return;
@@ -247,7 +247,7 @@ internal abstract class ScanDecoder(
                 if (_validBits <= 0)
                 {
                     // Decoding process expects at least some bits to be added to the cache.
-                    throw Util.CreateInvalidDataException(ErrorCode.InvalidEncodedData);
+                    ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
                 }
 
                 // End of buffer or marker detected. Typical found markers are EOI, SOS (next scan) or RSTm.

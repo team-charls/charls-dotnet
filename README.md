@@ -29,7 +29,7 @@ This project is considered work in progress and NOT ready for general use. The f
 * [X] Encode 16 bit images, interleave mode: sample
 * [X] Encode\Decode 16 bit images HP color transformation
 * [X] Encode\Decode 4 component images
-* [ ] Support for SPIFF Header
+* [X] Support for SPIFF Header
 * [ ] General code clean-up
 * [ ] Good code coverage
 * [ ] Performance tuning

@@ -48,7 +48,7 @@ internal sealed class JpegTestStreamWriter
         WriteUint16((ushort)(dataSize + 2));
     }
 
-    public void WriteSegment(JpegMarkerCode markerCode, byte[] values)
+    public void WriteSegment(JpegMarkerCode markerCode, ReadOnlySpan<byte> values)
     {
         WriteSegmentStart(markerCode, values.Length);
         WriteBytes(values);
