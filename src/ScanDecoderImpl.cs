@@ -42,7 +42,7 @@ internal class ScanDecoderImpl : ScanDecoder
             switch (CodingParameters.InterleaveMode)
             {
                 case InterleaveMode.None:
-                    DecodeLinesByteNone(destination);
+                    DecodeLines8BitInterleaveModeNone(destination);
                     break;
 
                 case InterleaveMode.Line:
@@ -67,7 +67,7 @@ internal class ScanDecoderImpl : ScanDecoder
             switch (CodingParameters.InterleaveMode)
             {
                 case InterleaveMode.None:
-                    DecodeLinesUint16None(destination);
+                    DecodeLines16BitInterleaveModeNone(destination);
                     break;
 
                 case InterleaveMode.Line:
@@ -96,7 +96,7 @@ internal class ScanDecoderImpl : ScanDecoder
     // In ILV_SAMPLE mode, multiple components are handled in do_line
     // In ILV_LINE mode, a call to do_line is made for every component
     // In ILV_NONE mode, do_scan is called for each component
-    private void DecodeLinesByteNone(Span<byte> destination)
+    private void DecodeLines8BitInterleaveModeNone(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
         int restartIntervalCounter = 0;
@@ -124,7 +124,7 @@ internal class ScanDecoderImpl : ScanDecoder
 
                 DecodeSampleLine(previousLine, currentLine);
 
-                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -183,7 +183,7 @@ internal class ScanDecoderImpl : ScanDecoder
                 }
 
                 int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
-                int bytesWritten = on_line_end_interleave_line(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -243,7 +243,7 @@ internal class ScanDecoderImpl : ScanDecoder
                 }
 
                 int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
-                int bytesWritten = on_line_end_interleave_line(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -290,7 +290,7 @@ internal class ScanDecoderImpl : ScanDecoder
 
                 DecodeTripletLine(previousLine, currentLine);
 
-                int bytesWritten = on_line_end_InterleaveModeSample(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -336,7 +336,7 @@ internal class ScanDecoderImpl : ScanDecoder
 
                 DecodeTripletLine(previousLine, currentLine);
 
-                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -382,7 +382,7 @@ internal class ScanDecoderImpl : ScanDecoder
 
                 DecodeQuadLine(previousLine, currentLine);
 
-                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -428,7 +428,7 @@ internal class ScanDecoderImpl : ScanDecoder
 
                 DecodeQuadLine(previousLine, currentLine);
 
-                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -449,7 +449,7 @@ internal class ScanDecoderImpl : ScanDecoder
     // In ILV_SAMPLE mode, multiple components are handled in do_line
     // In ILV_LINE mode, a call to do_line is made for every component
     // In ILV_NONE mode, do_scan is called for each component
-    private void DecodeLinesUint16None(Span<byte> destination)
+    private void DecodeLines16BitInterleaveModeNone(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
         int restartIntervalCounter = 0;
@@ -477,7 +477,7 @@ internal class ScanDecoderImpl : ScanDecoder
 
                 DecodeSampleLine(previousLine, currentLine);
 
-                int bytesWritten = on_line_end(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
                 destination = destination[bytesWritten..];
             }
 
@@ -1144,47 +1144,47 @@ internal class ScanDecoderImpl : ScanDecoder
         return errorValue;
     }
 
-    private int on_line_end(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private int CopyLineBufferToDestination(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         return _copyFromLineBuffer!(source, destination, pixelCount, pixelStride);
     }
 
-    private int on_line_end_interleave_line(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private int CopyLineBufferToDestinationInterleaveLine(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         return _copyFromLineBuffer!(source, destination, pixelCount, pixelStride);
     }
 
-    private int on_line_end(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private int CopyLineBufferToDestination(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
         return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount * 2, pixelStride);
     }
 
-    private int on_line_end_interleave_line(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private int CopyLineBufferToDestinationInterleaveLine(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
         return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
-    private int on_line_end_InterleaveModeSample(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private int CopyLineBufferToDestination(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<byte>, byte>(source);
         return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
-    private int on_line_end(Span<Triplet<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private int CopyLineBufferToDestination(Span<Triplet<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(source);
         return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
-    private int on_line_end(Span<Quad<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private int CopyLineBufferToDestination(Span<Quad<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<byte>, byte>(source);
         return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
-    private int on_line_end(Span<Quad<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private int CopyLineBufferToDestination(Span<Quad<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(source);
         return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);

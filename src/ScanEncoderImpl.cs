@@ -110,7 +110,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBegin(source.Span, currentLine[1..], FrameInfo.Width);
+            int bytesRead = CopySourceToLineBufferInterleaveModeNone(source.Span, currentLine[1..], FrameInfo.Width);
             source = source[bytesRead..];
 
             // initialize edge pixels used for prediction
@@ -141,7 +141,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBeginInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width, componentCount);
+            int bytesRead = CopySourceToLineBufferInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width, componentCount);
             source = source[bytesRead..];
 
             for (int component = 0; component < componentCount; ++component)
@@ -181,7 +181,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBeginInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width, componentCount);
+            int bytesRead = CopySourceToLineBufferInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width, componentCount);
             source = source[bytesRead..];
 
             for (int component = 0; component < componentCount; ++component)
@@ -219,7 +219,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBeginInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+            int bytesRead = CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
             source = source[bytesRead..];
 
             // initialize edge pixels used for prediction
@@ -248,7 +248,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBeginInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+            int bytesRead = CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
             source = source[bytesRead..];
 
             // initialize edge pixels used for prediction
@@ -277,7 +277,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBeginInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+            int bytesRead = CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
             source = source[bytesRead..];
 
             // initialize edge pixels used for prediction
@@ -306,7 +306,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBeginInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+            int bytesRead = CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
             source = source[bytesRead..];
 
             // initialize edge pixels used for prediction
@@ -337,7 +337,7 @@ internal class ScanEncoderImpl : ScanEncoder
                 currentLine = temp;
             }
 
-            int bytesRead = OnLineBegin(source.Span, currentLine[1..], FrameInfo.Width);
+            int bytesRead = CopySourceToLineBufferInterleaveModeNone(source.Span, currentLine[1..], FrameInfo.Width);
             source = source[bytesRead..];
 
             for (int component = 0; component < componentCount; ++component)
@@ -859,59 +859,57 @@ internal class ScanEncoderImpl : ScanEncoder
         return _quantizationLut[_quantizationLut.Length / 2 + di];
     }
 
-    private int OnLineBegin(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
+    private int CopySourceToLineBufferInterleaveModeNone(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
     {
         _copyToLineBuffer!(source, destination, pixelCount);
-        //_processLine!.NewLineRequested(source, destination, pixelCount);
         return pixelCount;
     }
 
-    private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int componentCount)
+    private int CopySourceToLineBufferInterleaveModeNone(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
+    {
+        var destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 2);
+        return pixelCount * 2;
+    }
+
+    private int CopySourceToLineBufferInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int componentCount)
     {
         _copyToLineBuffer!(source, destination, pixelCount);
-        //_processLine!.NewLineRequested(source, destination, pixelCount);
         return pixelCount * componentCount;
     }
 
-    private int OnLineBeginInterleaveModeLine(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount, int componentCount)
+    private int CopySourceToLineBufferInterleaveModeLine(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount, int componentCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount);
         return pixelCount * componentCount * 2;
     }
 
-    private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<byte>> destination, int pixelCount)
+    private int CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<byte>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Triplet<byte>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3);
         return pixelCount * 3;
     }
 
-    private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<ushort>> destination, int pixelCount)
+    private int CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<ushort>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3 * 2);
         return pixelCount * 3 * 2;
     }
 
-    private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<byte>> destination, int pixelCount)
+    private int CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<byte>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Quad<byte>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4);
         return pixelCount * 4;
     }
 
-    private int OnLineBeginInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<ushort>> destination, int pixelCount)
+    private int CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<ushort>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4 * 2);
         return pixelCount * 4 * 2;
-    }
-
-    private int OnLineBegin(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
-    {
-        var destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
-        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 2);
-        return pixelCount * 2;
     }
 }

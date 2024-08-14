@@ -10,7 +10,6 @@ namespace CharLS.Managed;
 /// </summary>
 public sealed class JpegLSDecoder
 {
-    private FrameInfo? _frameInfo;
     private readonly JpegStreamReader _reader;
 
     private enum State
