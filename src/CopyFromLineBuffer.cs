@@ -10,7 +10,7 @@ internal class CopyFromLineBuffer
 {
     internal delegate int CopyFromLineBufferFn(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride);
 
-    internal static CopyFromLineBufferFn? GetMethod(int bitsPerSample, int componentCount, InterleaveMode interleaveMode, ColorTransformation colorTransformation)
+    internal static CopyFromLineBufferFn GetMethod(int bitsPerSample, int componentCount, InterleaveMode interleaveMode, ColorTransformation colorTransformation)
     {
         if (bitsPerSample <= 8)
         {
@@ -55,6 +55,7 @@ internal class CopyFromLineBuffer
                                     return CopyPixels8BitTriplet;
 
                                 default:
+                                    Debug.Assert(componentCount == 4);
                                     return CopyPixels8BitQuad;
                             }
                         case ColorTransformation.HP1:

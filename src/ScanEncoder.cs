@@ -16,8 +16,8 @@ internal abstract class ScanEncoder(
     private int _freeBitCount = 4 * 8;
     private int _position;
     private int _compressedLength;
-    private bool _is_ff_written;
-    private int _bytes_written;
+    private bool _isFFWritten;
+    private int _bytesWritten;
 
     public abstract int EncodeScan(ReadOnlyMemory<byte> source, Memory<byte> destination, int stride);
 
@@ -87,7 +87,7 @@ internal abstract class ScanEncoder(
         Flush();
 
         // if a 0xff was written, Flush() will force one unset bit anyway
-        if (_is_ff_written)
+        if (_isFFWritten)
         {
             append_to_bit_stream(0, (_freeBitCount - 1) % 8);
         }
@@ -98,7 +98,7 @@ internal abstract class ScanEncoder(
 
     protected int GetLength()
     {
-        return _bytes_written - ((_freeBitCount) - 32) / 8;
+        return _bytesWritten - ((_freeBitCount) - 32) / 8;
     }
 
     private void Flush()
@@ -114,7 +114,7 @@ internal abstract class ScanEncoder(
                 break;
             }
 
-            if (_is_ff_written)
+            if (_isFFWritten)
             {
                 // JPEG-LS requirement (T.87, A.1) to detect markers: after a xFF value a single 0 bit needs to be inserted.
                 _destination.Span[_position] = (byte)(_bitBuffer >> 25);
@@ -128,10 +128,10 @@ internal abstract class ScanEncoder(
                 _freeBitCount += 8;
             }
 
-            _is_ff_written = _destination.Span[_position] == Constants.JpegMarkerStartByte;
+            _isFFWritten = _destination.Span[_position] == Constants.JpegMarkerStartByte;
             ++_position;
             --_compressedLength;
-            ++_bytes_written;
+            ++_bytesWritten;
         }
     }
 

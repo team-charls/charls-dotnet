@@ -6,11 +6,12 @@ using System.Diagnostics;
 namespace CharLS.Managed;
 
 /// <summary>
-/// JPEG-LS Decoder that uses the native CharLS implementation to decode JPEG-LS images.
+/// JPEG-LS decoder that provided the functionality to decode JPEG-LS images.
 /// </summary>
 public sealed class JpegLSDecoder
 {
     private readonly JpegStreamReader _reader;
+    private State _state = State.Initial;
 
     private enum State
     {
@@ -21,8 +22,6 @@ public sealed class JpegLSDecoder
         HeaderRead,
         Completed
     }
-
-    private State _state = State.Initial;
 
     /// <summary>
     /// Occurs when a comment (COM segment) is read.

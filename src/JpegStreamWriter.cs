@@ -226,8 +226,7 @@ internal class JpegStreamWriter
     private void WriteJpegLSPresetParametersSegment(JpegLSPresetParametersType presetParametersType,
     int tableId, int entrySize, ReadOnlySpan<byte> tableData)
     {
-        Debug.Assert(presetParametersType == JpegLSPresetParametersType.MappingTableSpecification ||
-               presetParametersType == JpegLSPresetParametersType.MappingTableContinuation);
+        Debug.Assert(presetParametersType is JpegLSPresetParametersType.MappingTableSpecification or JpegLSPresetParametersType.MappingTableContinuation);
         Debug.Assert(tableId > 0);
         Debug.Assert(entrySize > 0);
         Debug.Assert(tableData.Length >= entrySize); // Need to contain at least 1 entry.

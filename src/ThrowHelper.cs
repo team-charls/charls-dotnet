@@ -84,7 +84,7 @@ internal class ThrowHelper
             ErrorCode.SourceBufferTooSmall => "The source is too small, more input data was expected",
             ErrorCode.CallbackFailed => "Callback function returned a failure",
             ErrorCode.EncodingNotSupported => "Invalid JPEG-LS stream: the JPEG stream is not encoded with the JPEG-LS algorithm",
-            ErrorCode.JpeglsPresetExtendedParameterTypeNotSupported => "Unsupported JPEG-LS stream: JPEG-LS preset parameters segment contains a JPEG-LS Extended (ISO/IEC 14495-2) type",
+            ErrorCode.JpegLSPresetExtendedParameterTypeNotSupported => "Unsupported JPEG-LS stream: JPEG-LS preset parameters segment contains a JPEG-LS Extended (ISO/IEC 14495-2) type",
             ErrorCode.JpegMarkerStartByteNotFound => "Invalid JPEG-LS stream: first JPEG marker is not a Start Of Image (SOI) marker",
             ErrorCode.DuplicateStartOfFrameMarker => "Invalid JPEG-LS stream: more then one Start Of Frame (SOF) marker",
             ErrorCode.DuplicateStartOfImageMarker => "Invalid JPEG-LS stream: more then one Start Of Image (SOI) marker",

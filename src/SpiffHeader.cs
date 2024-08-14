@@ -142,32 +142,22 @@ public sealed record SpiffHeader
 
     private static bool IsValidColorSpace(SpiffColorSpace colorSpace, int componentCount)
     {
-        switch (colorSpace)
+        return colorSpace switch
         {
-            case SpiffColorSpace.None:
-                return true;
-
-            case SpiffColorSpace.BiLevelBlack:
-            case SpiffColorSpace.BiLevelWhite:
-                return false; // not supported for JPEG-LS.
-
-            case SpiffColorSpace.Grayscale:
-                return componentCount == 1;
-
-            case SpiffColorSpace.YcbcrItuBT709Video:
-            case SpiffColorSpace.YcbcrItuBT6011Rgb:
-            case SpiffColorSpace.YcbcrItuBT6011Video:
-            case SpiffColorSpace.Rgb:
-            case SpiffColorSpace.Cmy:
-            case SpiffColorSpace.PhotoYcc:
-            case SpiffColorSpace.CieLab:
-                return componentCount == 3;
-
-            case SpiffColorSpace.Cmyk:
-            case SpiffColorSpace.Ycck:
-                return componentCount == 4;
-        }
-
-        return false;
+            SpiffColorSpace.None => true,
+            SpiffColorSpace.BiLevelBlack or
+            SpiffColorSpace.BiLevelWhite => false, // not supported for JPEG-LS.
+            SpiffColorSpace.Grayscale => componentCount == 1,
+            SpiffColorSpace.YcbcrItuBT709Video or
+            SpiffColorSpace.YcbcrItuBT6011Rgb or
+            SpiffColorSpace.YcbcrItuBT6011Video or
+            SpiffColorSpace.Rgb or
+            SpiffColorSpace.Cmy or
+            SpiffColorSpace.PhotoYcc or
+            SpiffColorSpace.CieLab => componentCount == 3,
+            SpiffColorSpace.Cmyk or
+            SpiffColorSpace.Ycck => componentCount == 4,
+            _ => false
+        };
     }
 }

@@ -18,7 +18,7 @@ internal class JpegStreamReader
         BitStreamSection
     }
 
-    private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0..D7)
+    private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0 - D7)
     private const int JpegRestartMarkerRange = 8;
     private const int PcTableIdEntrySizeBytes = 3;
 
@@ -90,7 +90,7 @@ internal class JpegStreamReader
         JpegLSPresetCodingParameters ??= new JpegLSPresetCodingParameters();
 
         if (!JpegLSPresetCodingParameters.IsValid(Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample), _nearLossless, out var validatedCodingParameters))
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterJpeglsPresetCodingParameters);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterJpegLSPresetCodingParameters);
 
         return validatedCodingParameters;
     }
@@ -472,7 +472,7 @@ internal class JpegStreamReader
 
         const byte jpegLSExtendedPresetParameterLast = 0xD; // defined in JPEG-LS Extended (ISO/IEC 14495-2) (first = 0x5)
         ThrowHelper.ThrowInvalidDataException(type <= jpegLSExtendedPresetParameterLast
-            ? ErrorCode.JpeglsPresetExtendedParameterTypeNotSupported
+            ? ErrorCode.JpegLSPresetExtendedParameterTypeNotSupported
             : ErrorCode.InvalidJpegLSPresetParameterType);
     }
 
