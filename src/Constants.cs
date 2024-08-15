@@ -14,6 +14,8 @@ internal static class Constants
     internal const int DefaultResetThreshold = 64; // Default RESET value as defined in ISO/IEC 14495-1, table C.2
 
     internal const int MaximumComponentCount = 255;
+    internal const int MinimumComponentIndex = 0;
+    internal const int MaximumComponentIndex = MaximumComponentCount - 1;
     internal const int MinimumBitsPerSample = 2;
     internal const int MaximumBitsPerSample = 16;
     internal const int MinimumNearLossless = 0;

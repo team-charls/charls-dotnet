@@ -28,7 +28,7 @@ internal class ThrowHelper
             throw AddErrorCode(new ArgumentOutOfRangeException(paramName, GetErrorMessage(errorCode)), errorCode);
     }
 
-    internal static void ThrowIfOutsideRange<T>(T min, T max, T value, ErrorCode errorCode, [CallerArgumentExpression(nameof(value))] string? paramName = null)
+    internal static void ThrowIfOutsideRange<T>(T min, T max, T value, ErrorCode errorCode = ErrorCode.InvalidArgument, [CallerArgumentExpression(nameof(value))] string? paramName = null)
         where T : IBinaryInteger<T>
     {
         if (value < min || value > max)
@@ -44,12 +44,11 @@ internal class ThrowHelper
         throw AddErrorCode(new InvalidOperationException(GetErrorMessage(errorCode)), errorCode);
     }
 
-    internal static void ThrowArgumentExceptionIfFalse(bool value, string? paramName)
+    internal static void ThrowArgumentExceptionIfFalse(bool value, string? paramName = null, ErrorCode errorCode = ErrorCode.InvalidArgument)
     {
         if (value)
             return;
 
-        const ErrorCode errorCode = ErrorCode.InvalidArgument;
         throw AddErrorCode(new ArgumentException(GetErrorMessage(errorCode), paramName), errorCode);
     }
 
@@ -81,7 +80,7 @@ internal class ThrowHelper
         return errorCode switch
         {
             ErrorCode.None => "",
-            ErrorCode.SourceBufferTooSmall => "The source is too small, more input data was expected",
+            ErrorCode.NeedMoreData => "The source is too small, more input data was expected",
             ErrorCode.CallbackFailed => "Callback function returned a failure",
             ErrorCode.EncodingNotSupported => "Invalid JPEG-LS stream: the JPEG stream is not encoded with the JPEG-LS algorithm",
             ErrorCode.JpegLSPresetExtendedParameterTypeNotSupported => "Unsupported JPEG-LS stream: JPEG-LS preset parameters segment contains a JPEG-LS Extended (ISO/IEC 14495-2) type",
@@ -93,7 +92,7 @@ internal class ThrowHelper
             ErrorCode.UnexpectedRestartMarker => "Invalid JPEG-LS stream: restart (RTSm) marker found outside encoded entropy data",
             ErrorCode.MissingEndOfSpiffDirectory => "Invalid JPEG-LS stream: SPIFF header without End Of Directory (EOD) entry",
             ErrorCode.DuplicateComponentIdInStartOfFrameSegment => "Invalid JPEG-LS stream: duplicate component identifier in the (SOF) segment",
-            ErrorCode.InvalidEncodedData => "Invalid JPEG-LS stream, the encoded bit stream contains a general structural problem",
+            ErrorCode.InvalidData => "Invalid JPEG-LS stream, the encoded bit stream contains a general structural problem",
             ErrorCode.RestartMarkerNotFound => "Invalid JPEG-LS stream: missing expected restart (RTSm) marker",
             ErrorCode.InvalidMarkerSegmentSize => "Invalid JPEG-LS stream: segment size of a marker segment is invalid",
             ErrorCode.InvalidParameterNearLossless => "Invalid JPEG-LS stream: near-lossless is outside the range [0, min(255, MAXVAL/2)]",
@@ -103,6 +102,7 @@ internal class ThrowHelper
             ErrorCode.InvalidArgumentHeight => "The height argument is outside the supported range [1, 2147483647]",
             ErrorCode.InvalidArgumentWidth => "The width argument is outside the supported range [1, 2147483647]",
             ErrorCode.InvalidArgumentBitsPerSample => "The bit per sample argument is outside the range [2, 16]",
+            ErrorCode.InvalidArgumentSize => "The passed size is outside the valid range",
             _ => ""
         };
     }

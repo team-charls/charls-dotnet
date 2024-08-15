@@ -33,6 +33,15 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
+    /// Occurs when an application data (APPn segment) is read.
+    /// </summary>
+    public event EventHandler<ApplicationDataEventArgs> ApplicationData
+    {
+        add { _reader.ApplicationData += value; }
+        remove { _reader.ApplicationData -= value; }
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="JpegLSDecoder"/> class.
     /// </summary>
     public JpegLSDecoder()

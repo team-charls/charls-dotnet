@@ -104,7 +104,7 @@ internal abstract class ScanEncoder(
     private void Flush()
     {
         if (_compressedLength < 4)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.SourceBufferTooSmall);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.NeedMoreData);
 
         for (int i = 0; i < 4; ++i)
         {

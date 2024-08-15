@@ -61,7 +61,7 @@ internal abstract class ScanDecoder(
     protected void EndScan()
     {
         if (_position >= _endPosition)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.SourceBufferTooSmall);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.NeedMoreData);
 
         var source = _source.Span;
         if (source[_position] != Constants.JpegMarkerStartByte)
@@ -69,14 +69,14 @@ internal abstract class ScanDecoder(
             _ = ReadBit();
 
             if (_position >= _endPosition)
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.SourceBufferTooSmall);
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.NeedMoreData);
 
             if (source[_position] != Constants.JpegMarkerStartByte)
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.TooMuchEncodedData);
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
         }
 
         if (_readCache != 0)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.TooMuchEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
     }
 
     protected int get_cur_byte_pos()
@@ -117,7 +117,7 @@ internal abstract class ScanDecoder(
         {
             FillReadCache();
             if (_validBits < bitCount)
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
         }
 
         Debug.Assert(bitCount <= _validBits);
@@ -187,7 +187,7 @@ internal abstract class ScanDecoder(
     protected byte ReadByte()
     {
         if (_position == _endPosition)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.SourceBufferTooSmall);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.NeedMoreData);
 
         byte value = _source.Span[_position];
         ++_position;
@@ -232,7 +232,7 @@ internal abstract class ScanDecoder(
                 if (_validBits == 0)
                 {
                     // Decoding process expects at least some bits to be added to the cache.
-                    ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+                    ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
                 }
 
                 return;
@@ -247,7 +247,7 @@ internal abstract class ScanDecoder(
                 if (_validBits <= 0)
                 {
                     // Decoding process expects at least some bits to be added to the cache.
-                    ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+                    ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
                 }
 
                 // End of buffer or marker detected. Typical found markers are EOI, SOS (next scan) or RSTm.

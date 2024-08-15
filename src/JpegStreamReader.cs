@@ -6,6 +6,8 @@ using System.Diagnostics;
 
 namespace CharLS.Managed;
 
+using static Algorithm;
+
 internal struct JpegStreamReader
 {
     private enum State
@@ -32,6 +34,7 @@ internal struct JpegStreamReader
     private readonly List<MappingTableEntry> _mappingTables = [];
 
     public event EventHandler<CommentEventArgs>? Comment;
+    public event EventHandler<ApplicationDataEventArgs>? ApplicationData;
 
     internal ReadOnlyMemory<byte> Source { get; set; }
 
@@ -95,7 +98,7 @@ internal struct JpegStreamReader
     {
         JpegLSPresetCodingParameters ??= new JpegLSPresetCodingParameters();
 
-        if (!JpegLSPresetCodingParameters.IsValid(Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample), _nearLossless, out var validatedCodingParameters))
+        if (!JpegLSPresetCodingParameters.IsValid(CalculateMaximumSampleValue(FrameInfo!.BitsPerSample), _nearLossless, out var validatedCodingParameters))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterJpegLSPresetCodingParameters);
 
         return validatedCodingParameters;
@@ -127,7 +130,7 @@ internal struct JpegStreamReader
                 return (uint)JpegLSPresetCodingParameters.MaximumSampleValue;
             }
 
-            return (uint)Util.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
+            return (uint)CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
         }
     }
 
@@ -197,7 +200,7 @@ internal struct JpegStreamReader
     private byte ReadByte()
     {
         if (Position == Source.Span.Length)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.SourceBufferTooSmall);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.NeedMoreData);
 
         return Source.Span[Position++];
     }
@@ -205,7 +208,7 @@ internal struct JpegStreamReader
     private void SkipByte()
     {
         if (Position == Source.Span.Length)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.SourceBufferTooSmall);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.NeedMoreData);
 
         Position++;
     }
@@ -434,7 +437,17 @@ internal struct JpegStreamReader
 
     private void ReadApplicationDataSegment(JpegMarkerCode markerCode)
     {
-        ////call_application_data_callback(marker_code);
+        try
+        {
+            ApplicationData?.Invoke(_eventSender,
+                new ApplicationDataEventArgs(markerCode - JpegMarkerCode.ApplicationData0,
+                    Source.Slice(Position, _segmentDataSize)));
+        }
+        catch (Exception e)
+        {
+            throw ThrowHelper.CreateInvalidDataException(ErrorCode.CallbackFailed, e);
+        }
+
         SkipRemainingSegmentData();
     }
 
@@ -571,7 +584,7 @@ internal struct JpegStreamReader
         }
 
         _nearLossless = ReadByte(); // Read NEAR parameter
-        if (_nearLossless > Util.ComputeMaximumNearLossless((int)(MaximumSampleValue)))
+        if (_nearLossless > Algorithm.ComputeMaximumNearLossless((int)(MaximumSampleValue)))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterNearLossless);
 
         InterleaveMode = (InterleaveMode)ReadByte(); // Read ILV parameter

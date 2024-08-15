@@ -243,7 +243,7 @@ internal struct JpegStreamWriter
     private void WriteSegmentWithoutData(JpegMarkerCode markerCode)
     {
         if (_position + 2 > Destination.Length)
-            ThrowHelper.ThrowArgumentOutOfRangeException(ErrorCode.DestinationBufferTooSmall);
+            ThrowHelper.ThrowArgumentOutOfRangeException(ErrorCode.DestinationTooSmall);
 
         WriteByte(Constants.JpegMarkerStartByte);
         WriteByte((byte)markerCode);
@@ -264,7 +264,7 @@ internal struct JpegStreamWriter
         const int markerCodeSize = 2;
         int totalSegmentSize = markerCodeSize + Constants.SegmentLengthSize + dataSize;
         if (_position + totalSegmentSize > Destination.Length)
-            ThrowHelper.ThrowArgumentOutOfRangeException(ErrorCode.DestinationBufferTooSmall);
+            ThrowHelper.ThrowArgumentOutOfRangeException(ErrorCode.DestinationTooSmall);
 
         WriteMarker(markerCode);
         WriteUint16(Constants.SegmentLengthSize + dataSize);

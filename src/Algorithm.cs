@@ -31,7 +31,12 @@ internal static class Algorithm
     internal static int CalculateMaximumSampleValue(int bitsPerSample)
     {
         Debug.Assert(bitsPerSample is > 0 and <= 16);
-        return (int)((1U << bitsPerSample) - 1);
+        return (1 << bitsPerSample) - 1;
+    }
+
+    internal static int ComputeMaximumNearLossless(int maximumSampleValue)
+    {
+        return Math.Min(Constants.MaximumNearLossless, maximumSampleValue / 2); // As defined by ISO/IEC 14495-1, C.2.3
     }
 
     // Computes the initial value for A. See ISO/IEC 14495-1, A.8, step 1.d and A.2.1

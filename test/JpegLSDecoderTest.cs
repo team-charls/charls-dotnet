@@ -272,7 +272,7 @@ public class JpegLSDecoderTest
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidEncodedData, exception.GetErrorCode());
+        Assert.Equal(ErrorCode.InvalidData, exception.GetErrorCode());
     }
 
     [Fact]
@@ -291,7 +291,7 @@ public class JpegLSDecoderTest
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidEncodedData, exception.GetErrorCode());
+        Assert.Equal(ErrorCode.InvalidData, exception.GetErrorCode());
     }
 
     [Fact]
@@ -416,6 +416,37 @@ public class JpegLSDecoderTest
         void EventHandler(object? sender, CommentEventArgs e)
         {
             throw new ArgumentNullException();
+        }
+    }
+
+    [Fact]
+    public void ApplicationDataHandlerReceivesApplicationDataBytes()
+    {
+        JpegLSEncoder encoder = new(1, 1, 8, 1, true, 100);
+
+        var applicationData1 = new byte[] { 1, 2, 3, 4 };
+        encoder.WriteApplicationData(12, applicationData1);
+        encoder.Encode(new byte[1]);
+
+        byte[]? applicationData2 = null;
+        JpegLSDecoder decoder = new(encoder.EncodedData, false);
+
+        decoder.ApplicationData += ApplicationDataHandler;
+        decoder.ApplicationData -= ApplicationDataHandler;
+        decoder.ApplicationData += ApplicationDataHandler;
+        decoder.ReadHeader();
+
+        Assert.NotNull(applicationData2);
+        Assert.Equal(4, applicationData2.Length);
+        Assert.Equal(1, applicationData2![0]);
+        Assert.Equal(2, applicationData2![1]);
+        Assert.Equal(3, applicationData2![2]);
+        Assert.Equal(4, applicationData2![3]);
+        return;
+
+        void ApplicationDataHandler(object? _, ApplicationDataEventArgs e)
+        {
+            applicationData2 = e.Data.ToArray();
         }
     }
 
