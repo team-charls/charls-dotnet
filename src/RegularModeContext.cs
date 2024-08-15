@@ -31,7 +31,7 @@ internal struct RegularModeContext
         }
 
         if (k == Constants.MaxKValue)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         return k;
     }
@@ -51,7 +51,7 @@ internal struct RegularModeContext
 
         const int limit = 65536 * 256;
         if (_a >= limit || Math.Abs(_b) >= limit)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         if (_n == resetThreshold)
         {

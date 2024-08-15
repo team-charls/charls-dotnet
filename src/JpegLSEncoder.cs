@@ -19,7 +19,7 @@ public sealed class JpegLSEncoder
     private ColorTransformation _colorTransformation;
     private EncodingOptions _encodingOptions;
     private JpegLSPresetCodingParameters? _userPresetCodingParameters = new();
-    private State _state;
+    private State _state = State.Initial;
 
     private enum State
     {
@@ -215,9 +215,11 @@ public sealed class JpegLSEncoder
         {
             ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured());
 
-            return Util.CheckedMul(Util.CheckedMul(Util.CheckedMul(FrameInfo!.Width, FrameInfo.Height), FrameInfo.ComponentCount),
-                       Algorithm.BitToByteCount(FrameInfo.BitsPerSample)) +
-                   1024 + Constants.SpiffHeaderSizeInBytes;
+            checked
+            {
+                return (FrameInfo!.Width * FrameInfo.Height * FrameInfo.ComponentCount *
+                           Algorithm.BitToByteCount(FrameInfo.BitsPerSample)) + 1024 + Constants.SpiffHeaderSizeInBytes;
+            }
         }
     }
 
@@ -258,6 +260,18 @@ public sealed class JpegLSEncoder
     public int BytesWritten => _writer.BytesWritten;
 
     /// <summary>
+    /// Configures the mapping table ID the encoder should reference when encoding a component.
+    /// The referenced mapping table can be included in the stream or provided in another JPEG-LS abbreviated format stream.
+    /// </summary>
+    public void SetMappingTableId(int componentIndex, int tableId)
+    {
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumComponentIndex, Constants.MaximumComponentIndex, componentIndex);
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumTableId, Constants.MaximumTableId, tableId);
+
+        _writer.SetTableId(componentIndex, tableId);
+    }
+
+    /// <summary>
     /// Encodes the passed image data into encoded JPEG-LS data.
     /// </summary>
     /// <param name="source">The memory region that is the source input to the encoding process.</param>
@@ -269,8 +283,9 @@ public sealed class JpegLSEncoder
         CheckInterleaveModeAgainstComponentCount();
 
         int maximumSampleValue = Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
-        if (!_userPresetCodingParameters!.IsValid(maximumSampleValue, NearLossless, out var presetCodingParameters))
-            throw new ArgumentException("TODO");
+        ThrowHelper.ThrowArgumentExceptionIfFalse(
+            _userPresetCodingParameters!.IsValid(maximumSampleValue, NearLossless, out var presetCodingParameters),
+            null, ErrorCode.InvalidArgumentPresetCodingParameters);
 
         if (stride == Constants.AutoCalculateStride)
         {
@@ -455,14 +470,23 @@ public sealed class JpegLSEncoder
     /// <param name="tableData">Buffer that holds the mapping table.</param>
     public void WriteMappingTable(int tableId, int entrySize, ReadOnlySpan<byte> tableData)
     {
-        //check_argument_range(minimum_table_id, maximum_table_id, table_id);
-        //check_argument_range(minimum_entry_size, maximum_entry_size, entry_size);
-        //check_argument(table_data.data() || table_data.empty());
-        //check_argument(table_data.size() >= static_cast<size_t>(entry_size), jpegls_errc::invalid_argument_size);
-        //check_operation(state_ >= state::destination_set && state_<state::completed);
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumTableId, Constants.MaximumTableId, tableId);
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumEntrySize, Constants.MaximumEntrySize, entrySize);
+        ThrowHelper.ThrowArgumentExceptionIfFalse(tableData.Length >= entrySize, nameof(tableData), ErrorCode.InvalidArgumentSize);
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and < State.Completed);
 
         TransitionToTablesAndMiscellaneousState();
         _writer.WriteJpegLSPresetParametersSegment(tableId, entrySize, tableData);
+    }
+
+    /// <summary>
+    /// Creates a JPEG-LS stream in abbreviated format that only contain mapping tables (See JPEG-LS standard, C.4).
+    /// These tables should have been written to the stream first with the method write_mapping_table.
+    /// </summary>
+    public void CreateAbbreviatedFormat()
+    {
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.TablesAndMiscellaneous);
+        WriteEndOfImage();
     }
 
     private void TransitionToTablesAndMiscellaneousState()

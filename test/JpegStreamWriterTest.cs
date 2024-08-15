@@ -34,7 +34,7 @@ public class JpegStreamWriterTest
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(writer.WriteStartOfImage);
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.DestinationBufferTooSmall, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.DestinationTooSmall, exception.Data[nameof(ErrorCode)]);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class JpegStreamWriterTest
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => writer.WriteEndOfImage(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.DestinationBufferTooSmall, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.DestinationTooSmall, exception.Data[nameof(ErrorCode)]);
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public class JpegStreamWriterTest
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => writer.WriteSpiffHeaderSegment(header));
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.DestinationBufferTooSmall, exception.Data[nameof(ErrorCode)]);
+        Assert.Equal(ErrorCode.DestinationTooSmall, exception.Data[nameof(ErrorCode)]);
     }
 
     [Fact]

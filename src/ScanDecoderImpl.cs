@@ -744,7 +744,7 @@ internal class ScanDecoderImpl : ScanDecoder
         {
             errorValue = UnmapErrorValue(DecodeValue(k, _traits.Limit, _traits.QuantizedBitsPerSample));
             if (Math.Abs(errorValue) > 65535)
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
         }
 
         if (k == 0)
@@ -884,7 +884,7 @@ internal class ScanDecoderImpl : ScanDecoder
         }
 
         if (index > pixelCount)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         for (int i = 0; i < index; ++i)
         {
@@ -919,7 +919,7 @@ internal class ScanDecoderImpl : ScanDecoder
         }
 
         if (index > pixelCount)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         for (int i = 0; i < index; ++i)
         {
@@ -954,7 +954,7 @@ internal class ScanDecoderImpl : ScanDecoder
         }
 
         if (index > pixelCount)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         for (int i = 0; i < index; ++i)
         {
@@ -989,7 +989,7 @@ internal class ScanDecoderImpl : ScanDecoder
         }
 
         if (index > pixelCount)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         for (int i = 0; i < index; ++i)
         {
@@ -1024,7 +1024,7 @@ internal class ScanDecoderImpl : ScanDecoder
         }
 
         if (index > pixelCount)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         for (int i = 0; i < index; ++i)
         {
@@ -1059,7 +1059,7 @@ internal class ScanDecoderImpl : ScanDecoder
         }
 
         if (index > pixelCount)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidEncodedData);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         for (int i = 0; i < index; ++i)
         {
