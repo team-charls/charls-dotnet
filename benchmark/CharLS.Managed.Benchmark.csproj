@@ -9,6 +9,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>CharLS.Managed.Benchmark</RootNamespace>
     <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
