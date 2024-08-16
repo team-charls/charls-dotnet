@@ -365,79 +365,73 @@ public class JpegLSEncoderTest
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
-    //    TEST_METHOD(write_spiff_entry_with_invalid_size_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteSpiffEntryWithInvalidSizeThrows()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 4) };
 
-    //        encoder.frame_info({ 1, 1, 2, 1});
+        var destination = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = destination;
+        encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk);
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
-    //        encoder.write_standard_spiff_header(spiff_color_space::cmyk);
+        var data = new byte[655281];
+        var exception = Assert.Throws<ArgumentException>(() => encoder.WriteSpiffEntry(SpiffEntryTag.ImageTitle, data));
+        Assert.Equal(ErrorCode.InvalidArgumentSize, exception.GetErrorCode());
+    }
 
-    //        assert_expect_exception(jpegls_errc::invalid_argument_size, [&encoder] {
-    //            const vector<byte> spiff_entry(65528 + 1);
-    //            encoder.write_spiff_entry(spiff_entry_tag::image_title, spiff_entry.data(), spiff_entry.size());
-    //        });
-    //    }
+    [Fact]
+    public void WriteSpiffEntryWithoutSpiffHeaderThrows()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) };
+        var destination = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = destination;
 
-    //    TEST_METHOD(write_spiff_entry_without_spiff_header_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+        var data = new byte[100];
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteSpiffEntry(SpiffEntryTag.ImageTitle, data));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
-    //        encoder.frame_info({ 1, 1, 2, 1});
+    [Fact]
+    public void WriteSpiffEndOfDirectoryEntry()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) };
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+        var destination = new byte[300];
+        encoder.Destination = destination;
 
-    //        assert_expect_exception(jpegls_errc::invalid_operation, [&encoder] {
-    //            const vector<byte> spiff_entry(65528);
-    //            encoder.write_spiff_entry(spiff_entry_tag::image_title, spiff_entry.data(), spiff_entry.size());
-    //        });
-    //    }
+        encoder.WriteStandardSpiffHeader(SpiffColorSpace.None);
+        encoder.WriteSpiffEndOfDirectoryEntry();
 
-    //    TEST_METHOD(write_spiff_end_of_directory_entry) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+        Assert.Equal(0xFF, destination[44]);
+        Assert.Equal(0xD8, destination[45]); // 0xD8 = SOI: Marks the start of an image.
+    }
 
-    //        encoder.frame_info({ 1, 1, 2, 1});
+    [Fact]
+    public void WriteSpiffEndOfDirectoryEntryBeforeHeaderThrows()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        vector<byte> destination(300);
-    //        encoder.destination(destination);
+        var destination = new byte[300];
+        encoder.Destination = destination;
 
-    //        encoder.write_standard_spiff_header(spiff_color_space::none);
-    //        encoder.write_spiff_end_of_directory_entry();
+        var exception = Assert.Throws<InvalidOperationException>(encoder.WriteSpiffEndOfDirectoryEntry);
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
-    //        Assert.Equal(byte{ 0xFF}, destination[44]);
-    //        Assert.Equal(byte{ 0xD8}, destination[45]); // 0xD8 = SOI: Marks the start of an image.
-    //    }
+    [Fact]
+    public void WriteSpiffEndOfDirectoryEntryTwiceThrows()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) };
 
-    //    TEST_METHOD(write_spiff_end_of_directory_entry_before_header_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+        var destination = new byte[300];
+        encoder.Destination = destination;
 
-    //        vector<byte> destination(300);
-    //        encoder.destination(destination);
+        encoder.WriteStandardSpiffHeader(SpiffColorSpace.None);
+        encoder.WriteSpiffEndOfDirectoryEntry();
 
-    //        assert_expect_exception(jpegls_errc::invalid_operation,
-    //                                [&encoder] { encoder.write_spiff_end_of_directory_entry(); });
-    //    }
-
-    //    TEST_METHOD(write_spiff_end_of_directory_entry_twice_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
-
-    //        encoder.frame_info({ 1, 1, 2, 1});
-
-    //        vector<byte> destination(300);
-    //        encoder.destination(destination);
-
-    //        encoder.write_standard_spiff_header(spiff_color_space::none);
-    //        encoder.write_spiff_end_of_directory_entry();
-
-    //        assert_expect_exception(jpegls_errc::invalid_operation,
-    //                                [&encoder] { encoder.write_spiff_end_of_directory_entry(); });
-    //    }
+        var exception = Assert.Throws<InvalidOperationException>(encoder.WriteSpiffEndOfDirectoryEntry);
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
     [Fact]
     public void WriteComment()
@@ -513,29 +507,30 @@ public class JpegLSEncoderTest
         Assert.Equal(2, destination[5]);
     }
 
-    //    TEST_METHOD(write_max_comment) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void WriteMaxComment()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        vector<byte> destination(2 + 2 + static_cast<size_t>(numeric_limits < uint16_t >::max()));
-    //        encoder.destination(destination);
+        var destination = new byte[2 + 2 + ushort.MaxValue];
+        encoder.Destination = destination;
 
-    //        constexpr size_t max_size_comment_data{ static_cast<size_t>(numeric_limits < uint16_t >::max()) - 2};
-    //        const vector<byte> data(max_size_comment_data);
-    //        encoder.write_comment(data.data(), data.size());
+        const int maxSizeCommentData = ushort.MaxValue - 2;
+        byte[] data = new byte[maxSizeCommentData];
+        encoder.WriteComment(data);
 
-    //        Assert.Equal(destination.size(), encoder.bytes_written());
+        Assert.Equal(destination.Length, encoder.BytesWritten);
 
-    //        // Check that SOI marker has been written.
-    //        Assert.Equal(byte{ 0xFF}, destination[0]);
-    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::start_of_image), destination[1]);
+        // Check that SOI marker has been written.
+        Assert.Equal( 0xFF, destination[0]);
+        Assert.Equal((byte)JpegMarkerCode.StartOfImage, destination[1]);
 
-    //        // Verify that a COM segment has been written.
-    //        Assert.Equal(byte{ 0xFF}, destination[2]);
-    //        Assert.Equal(static_cast<byte>(jpeg_marker_code::comment), destination[3]);
-    //        Assert.Equal(byte{ 255}, destination[4]);
-    //        Assert.Equal(byte{ 255}, destination[5]);
-    //    }
+        // Verify that a COM segment has been written.
+        Assert.Equal(0xFF, destination[2]);
+        Assert.Equal((byte)JpegMarkerCode.Comment, destination[3]);
+        Assert.Equal(255, destination[4]);
+        Assert.Equal(255, destination[5]);
+    }
 
     //    TEST_METHOD(write_two_comment) // NOLINT
     //    {
@@ -583,20 +578,22 @@ public class JpegLSEncoderTest
     //                                [&encoder, &data] { ignore = encoder.write_comment(data.data(), data.size()); });
     //    }
 
-    //    TEST_METHOD(write_comment_after_encode_throws) // NOLINT
-    //    {
-    //        const vector source{ byte{ 0}, byte{ 1}, byte{ 2}, byte{ 3}, byte{ 4}, byte{ 5} };
+    [Fact]
+    public void WriteCommentAfterEncodeThrows()
+    {
+        byte[] source = [0, 1, 2, 3, 4, 5];
 
-    //        jpegls_encoder encoder;
+        JpegLSEncoder encoder = new();
 
-    //        vector<byte> destination(100);
-    //        encoder.destination(destination);
-    //        encoder.frame_info({ 3, 1, 16, 1});
-    //        ignore = encoder.encode(source);
+        var destination = new byte[2 + 2 + ushort.MaxValue];
+        encoder.Destination = destination;
 
-    //        assert_expect_exception(jpegls_errc::invalid_operation,
-    //                                [&encoder] { ignore = encoder.write_comment("after-encoding"); });
-    //    }
+        encoder.FrameInfo = new FrameInfo( 3, 1, 16, 1);
+        encoder.Encode(source);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteComment("after-encoding"));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
     [Fact]
     public void WriteCommentBeforeEncode()
@@ -738,38 +735,36 @@ public class JpegLSEncoderTest
     //                                [&encoder, &data] { ignore = encoder.write_application_data(0, data.data(), data.size()); });
     //    }
 
-    //    TEST_METHOD(write_application_data_after_encode_throws) // NOLINT
-    //    {
-    //        const vector source{ byte{ 0}, byte{ 1}, byte{ 2}, byte{ 3}, byte{ 4}, byte{ 5} };
+    [Fact]
+    public void WriteApplicationDataAfterEncodeThrows()
+    {
+        byte[] source = [0, 1, 2, 3, 4, 5];
 
-    //        jpegls_encoder encoder;
+        JpegLSEncoder encoder = new();
 
-    //        vector<byte> destination(100);
-    //        encoder.destination(destination);
-    //        encoder.frame_info({ 3, 1, 16, 1});
-    //        ignore = encoder.encode(source);
+        var destination = new byte[2 + 2 + ushort.MaxValue];
+        encoder.Destination = destination;
 
-    //        assert_expect_exception(jpegls_errc::invalid_operation,
-    //                                [&encoder] { ignore = encoder.write_application_data(0, nullptr, 0); });
-    //    }
+        encoder.FrameInfo = new FrameInfo(3, 1, 16, 1);
+        encoder.Encode(source);
 
-    //    TEST_METHOD(write_application_data_with_bad_id_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteApplicationData(0, []));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
-    //        vector<byte> destination(100);
-    //        encoder.destination(destination);
+    [Fact]
+    public void WriteApplicationDataWithBadIdThrows()
+    {
+        JpegLSEncoder encoder = new();
 
-    //        assert_expect_exception(jpegls_errc::invalid_argument, [&encoder] {
-    //            MSVC_WARNING_SUPPRESS_NEXT_LINE(6387)
-    //            ignore = encoder.write_application_data(-1, nullptr, 0);
-    //        });
+        var destination = new byte[100];
+        encoder.Destination = destination;
 
-    //        assert_expect_exception(jpegls_errc::invalid_argument, [&encoder] {
-    //            MSVC_WARNING_SUPPRESS_NEXT_LINE(6387)
-    //            ignore = encoder.write_application_data(16, nullptr, 0);
-    //        });
-    //    }
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteApplicationData(-1, []));
+        Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteApplicationData(16, []));
+        Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+    }
 
     [Fact]
     public void WriteApplicationDataBeforeEncode()
@@ -963,9 +958,9 @@ public class JpegLSEncoderTest
         var destination = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = destination;
 
-        var jpegls_pc_parameters = new JpegLSPresetCodingParameters(1, 1, 1, 1, 1);
+        var jpegLSPresetCodingParameters = new JpegLSPresetCodingParameters(1, 1, 1, 1, 1);
 
-        encoder.PresetCodingParameters = jpegls_pc_parameters;
+        encoder.PresetCodingParameters = jpegLSPresetCodingParameters;
 
         var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source));
         Assert.Equal(ErrorCode.InvalidArgumentPresetCodingParameters, exception.GetErrorCode());
@@ -1046,24 +1041,27 @@ public class JpegLSEncoderTest
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
-    //    TEST_METHOD(encode_without_destination_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void EncodeWithoutDestinationThrows()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) };
+        byte[] source = new byte[20];
 
-    //        encoder.frame_info({ 1, 1, 2, 1});
-    //        vector<byte> source(20);
-    //        assert_expect_exception(jpegls_errc::invalid_operation, [&encoder, &source] { ignore = encoder.encode(source); });
-    //    }
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.Encode(source));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
-    //    TEST_METHOD(encode_without_frame_info_throws) // NOLINT
-    //    {
-    //        jpegls_encoder encoder;
+    [Fact]
+    public void EncodeWithoutFrameInfoThrows()
+    {
+        JpegLSEncoder encoder = new();
+        byte[] source = new byte[20];
+        byte[] destination = new byte[20];
+        encoder.Destination = destination;
 
-    //        vector<byte> destination(20);
-    //        encoder.destination(destination);
-    //        const vector<byte> source(20);
-    //        assert_expect_exception(jpegls_errc::invalid_operation, [&encoder, &source] { ignore = encoder.encode(source); });
-    //    }
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.Encode(source));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
 
     //    TEST_METHOD(encode_with_spiff_header) // NOLINT
     //    {

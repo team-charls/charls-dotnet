@@ -280,6 +280,7 @@ public sealed class JpegLSEncoder
     {
         if (source.IsEmpty)
             throw new ArgumentException("", nameof(source));
+        ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured() && _state != State.Initial);
         CheckInterleaveModeAgainstComponentCount();
 
         int maximumSampleValue = Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
@@ -408,10 +409,24 @@ public sealed class JpegLSEncoder
     public void WriteSpiffEntry(int entryTag, ReadOnlySpan<byte> entryData)
     {
         ThrowHelper.ThrowArgumentExceptionIfFalse(entryTag != Constants.SpiffEndOfDirectoryEntryType, nameof(entryTag));
-        ThrowHelper.ThrowArgumentExceptionIfFalse(entryData.Length <= 65528, nameof(entryData));
+        ThrowHelper.ThrowArgumentExceptionIfFalse(entryData.Length <= 65528, nameof(entryData), ErrorCode.InvalidArgumentSize);
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.SpiffHeader);
 
         _writer.WriteSpiffDirectoryEntry(entryTag, entryData);
+    }
+
+    /// <summary>
+    /// Writes a SPIFF end of directory entry to the destination.
+    /// The encoder will normally do this automatically. It is made available
+    /// for the scenario to create SPIFF headers in front of existing JPEG-LS streams.
+    /// </summary>
+    /// <remarks>
+    /// The end of directory also includes a SOI marker. This marker should be skipped from the JPEG-LS stream.
+    /// </remarks>
+    public void WriteSpiffEndOfDirectoryEntry()
+    {
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.SpiffHeader);
+        TransitionToTablesAndMiscellaneousState();
     }
 
     /// <summary>
@@ -424,7 +439,7 @@ public sealed class JpegLSEncoder
     public void WriteComment(ReadOnlySpan<byte> comment)
     {
         ThrowHelper.ThrowArgumentExceptionIfFalse(comment.Length <= Constants.SegmentMaxDataSize, nameof(comment));
-        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and <= State.Completed);
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and < State.Completed);
 
         TransitionToTablesAndMiscellaneousState();
         _writer.WriteCommentSegment(comment);
@@ -452,8 +467,9 @@ public sealed class JpegLSEncoder
     /// <param name="applicationData">The 'application data' bytes. Application specific.</param>
     public void WriteApplicationData(int applicationDataId, ReadOnlySpan<byte> applicationData)
     {
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumApplicationDataId, Constants.MaximumApplicationDataId, applicationDataId);
         ThrowHelper.ThrowArgumentExceptionIfFalse(applicationData.Length <= Constants.SegmentMaxDataSize, nameof(applicationData));
-        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and <= State.Completed);
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and < State.Completed);
 
         TransitionToTablesAndMiscellaneousState();
         _writer.WriteApplicationDataSegment(applicationDataId, applicationData);
