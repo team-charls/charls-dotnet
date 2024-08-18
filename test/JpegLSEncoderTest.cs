@@ -1205,40 +1205,25 @@ public class JpegLSEncoderTest
     }
 
 
-    //    TEST_METHOD(encode_with_too_small_stride_interleave_none_throws) // NOLINT
-    //    {
-    //        constexpr array source{
-    //            byte{ 100}, byte{ 100}, byte{ 100}, byte{ },    byte{ },    byte{ },    byte{ },
-    //                               byte{ },    byte{ },    byte{ },    byte{ 150}, byte{ 150}, byte{ 150}, byte{ },
-    //                               byte{ },    byte{ },    byte{ },    byte{ },    byte{ },    byte{ },    byte{ 200}
-    //        };
-    //        constexpr frame_info frame_info{ 2, 1, 8, 3};
+    [Fact]
+    public void EncodeWithTooSmallStrideInterleaveNoneThrows()
+    {
+        byte[] source = [100, 100, 100, 0, 0, 0, 0, 0, 0, 0, 150, 150, 150, 0, 0, 0, 0, 0, 0, 0, 200];
+        JpegLSEncoder encoder = new(2, 1, 8, 3);
 
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info);
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+        var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source, 1));
+        Assert.Equal(ErrorCode.InvalidArgumentStride, exception.GetErrorCode());
+    }
 
-    //        assert_expect_exception(jpegls_errc::invalid_argument_stride,
-    //                                [&encoder, &source] { ignore = encoder.encode(source, 1); });
-    //    }
+    [Fact]
+    public void EncodeWithTooSmallStrideInterleaveSampleThrows()
+    {
+        byte[] source = [100, 150, 200, 100, 150, 200, 100, 150, 200];
+        JpegLSEncoder encoder = new(2, 1, 8, 3) { InterleaveMode = InterleaveMode.Sample };
 
-    //    TEST_METHOD(encode_with_too_small_stride_interleave_sample_throws) // NOLINT
-    //    {
-    //        constexpr array<byte, 12 > source{
-    //            byte{ 100}, byte{ 150}, byte{ 200}, byte{ 100}, byte{ 150},
-    //                                         byte{ 200}, byte{ 100}, byte{ 150}, byte{ 200}
-    //        };
-    //        constexpr frame_info frame_info{ 2, 1, 8, 3};
-
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info).interleave_mode(interleave_mode::sample);
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
-
-    //        assert_expect_exception(jpegls_errc::invalid_argument_stride,
-    //                                [&encoder, &source] { ignore = encoder.encode(source, 5); });
-    //    }
+        var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source, 5));
+        Assert.Equal(ErrorCode.InvalidArgumentStride, exception.GetErrorCode());
+    }
 
     [Fact]
     public void Encode1Component4BitWithHighBitsSet()
@@ -1255,186 +1240,150 @@ public class JpegLSEncoderTest
         Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expected, InterleaveMode.None);
     }
 
-    //    TEST_METHOD(encode_1_component_12_bit_with_high_bits_set) // NOLINT
-    //    {
-    //        const vector source(size_t{ 512}
-    //        *512 * 2, byte{ 0xFF});
-    //        constexpr frame_info frame_info{ 512, 512, 12, 1};
+    [Fact]
+    public void Encode1Component12BitWithHighBitsSet()
+    {
+        byte[] source = new byte[512 * 512 * 2];
+        Array.Fill(source, (byte)0xFF);
 
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info);
+        JpegLSEncoder encoder = new(512, 512, 12, 1);
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+        encoder.Encode(source);
 
-    //        const size_t bytes_written{ encoder.encode(source)};
-    //        destination.resize(bytes_written);
+        ushort[] expectedDestination = new ushort[512 * 512];
+        Array.Fill(expectedDestination, (ushort)4095);
 
-    //        const vector<uint16_t> expected(size_t{ 512}
-    //        *512, 4095);
-    //        test_by_decoding(destination, frame_info, expected.data(), expected.size() * sizeof(uint16_t),
-    //                         interleave_mode::none);
-    //    }
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+            MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.None);
+    }
 
-    //    TEST_METHOD(encode_3_components_6_bit_with_high_bits_set_interleave_mode_sample) // NOLINT
-    //    {
-    //        const vector source(size_t{ 512}
-    //        *512 * 3, byte{ 0xFF});
-    //        constexpr frame_info frame_info{ 512, 512, 6, 3};
+    [Fact]
+    public void Encode3Components6BitWithHighBitsSetInterleaveModeSample()
+    {
+        byte[] source = new byte[512 * 512 * 3];
+        Array.Fill(source, (byte)0xFF);
 
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info).interleave_mode(interleave_mode::sample);
+        JpegLSEncoder encoder = new(512, 512, 6, 3) { InterleaveMode = InterleaveMode.Sample };
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+        encoder.Encode(source);
 
-    //        const size_t bytes_written{ encoder.encode(source)};
-    //        destination.resize(bytes_written);
+        byte[] expectedDestination = new byte[512 * 512 * 3];
+        Array.Fill(expectedDestination, (byte)63);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Sample);
+    }
 
-    //        const vector expected(size_t{ 512}
-    //        *512 * 3, byte{ 63});
-    //        test_by_decoding(destination, frame_info, expected.data(), expected.size(), interleave_mode::sample);
-    //    }
+    [Fact]
+    public void Encode3Components6BitWithHighBitsSetInterleaveModeLine()
+    {
+        byte[] source = new byte[512 * 512 * 3];
+        Array.Fill(source, (byte)0xFF);
 
-    //    TEST_METHOD(encode_3_components_6_bit_with_high_bits_set_interleave_mode_line) // NOLINT
-    //    {
-    //        const vector source(size_t{ 512}
-    //        *512 * 3, byte{ 0xFF});
-    //        constexpr frame_info frame_info{ 512, 512, 6, 3};
+        JpegLSEncoder encoder = new(512, 512, 6, 3) { InterleaveMode = InterleaveMode.Line };
 
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info).interleave_mode(interleave_mode::line);
+        encoder.Encode(source);
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+        byte[] expectedDestination = new byte[512 * 512 * 3];
+        Array.Fill(expectedDestination, (byte)63);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Line);
+    }
 
-    //        const size_t bytes_written{ encoder.encode(source)};
-    //        destination.resize(bytes_written);
+    [Fact]
+    public void Encode3Components10BitWithHighBitsSetInterleaveModeSample()
+    {
+        byte[] source = new byte[512 * 512 * 3 * 2];
+        Array.Fill(source, (byte)0xFF);
 
-    //        const vector expected(size_t{ 512}
-    //        *512 * 3, byte{ 63});
-    //        test_by_decoding(destination, frame_info, expected.data(), expected.size(), interleave_mode::line);
-    //    }
+        JpegLSEncoder encoder = new(512, 512, 10, 3) { InterleaveMode = InterleaveMode.Sample };
 
-    //    TEST_METHOD(encode_3_components_10_bit_with_high_bits_set_interleave_mode_sample) // NOLINT
-    //    {
-    //        const vector source(size_t{ 512}
-    //        *512 * 2 * 3, byte{ 0xFF});
-    //        constexpr frame_info frame_info{ 512, 512, 10, 3};
+        encoder.Encode(source);
 
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info).interleave_mode(interleave_mode::sample);
+        ushort[] expectedDestination = new ushort[512 * 512 * 3];
+        Array.Fill(expectedDestination, (ushort)1023);
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+            MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Sample);
+    }
 
-    //        const size_t bytes_written{ encoder.encode(source)};
-    //        destination.resize(bytes_written);
+    [Fact]
+    public void Encode3Components10BitWithHighBitsSetInterleaveModeLine()
+    {
+        byte[] source = new byte[512 * 512 * 3 * 2];
+        Array.Fill(source, (byte)0xFF);
 
-    //        const vector<uint16_t> expected(size_t{ 512}
-    //        *512 * 3, 1023);
-    //        test_by_decoding(destination, frame_info, expected.data(), expected.size() * 2, interleave_mode::sample);
-    //    }
+        JpegLSEncoder encoder = new(512, 512, 10, 3) { InterleaveMode = InterleaveMode.Line };
 
-    //    TEST_METHOD(encode_3_components_10_bit_with_high_bits_set_interleave_mode_line) // NOLINT
-    //    {
-    //        const vector source(size_t{ 512}
-    //        *512 * 2 * 3, byte{ 0xFF});
-    //        constexpr frame_info frame_info{ 512, 512, 10, 3};
+        encoder.Encode(source);
 
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info).interleave_mode(interleave_mode::line);
+        ushort[] expectedDestination = new ushort[512 * 512 * 3];
+        Array.Fill(expectedDestination, (ushort)1023);
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+            MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Line);
+    }
 
-    //        const size_t bytes_written{ encoder.encode(source)};
-    //        destination.resize(bytes_written);
+    [Fact]
+    public void Encode4Components6BitWithHighBitsSetInterleaveModeLine()
+    {
+        byte[] source = new byte[512 * 512 * 4];
+        Array.Fill(source, (byte)0xFF);
 
-    //        const vector<uint16_t> expected(size_t{ 512}
-    //        *512 * 3, 1023);
-    //        test_by_decoding(destination, frame_info, expected.data(), expected.size() * 2, interleave_mode::line);
-    //    }
+        JpegLSEncoder encoder = new(512, 512, 6, 4) { InterleaveMode = InterleaveMode.Line }; // TODO: change in 5 bits
 
-    //    TEST_METHOD(encode_4_components_6_bit_with_high_bits_set_interleave_mode_sample) // NOLINT
-    //    {
-    //        const vector source(size_t{ 512}
-    //        *512 * 4, byte{ 0xFF});
-    //        constexpr frame_info frame_info{ 512, 512, 6, 4};
+        encoder.Encode(source);
 
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info).interleave_mode(interleave_mode::sample);
+        byte[] expectedDestination = new byte[512 * 512 * 4];
+        Array.Fill(expectedDestination, (byte)63);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Line);
+    }
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+    [Fact]
+    public void Encode4Components6BitWithHighBitsSetInterleaveModeSample()
+    {
+        byte[] source = new byte[512 * 512 * 4];
+        Array.Fill(source, (byte)0xFF);
 
-    //        const size_t bytes_written{ encoder.encode(source)};
-    //        destination.resize(bytes_written);
+        JpegLSEncoder encoder = new(512, 512, 6, 4) { InterleaveMode = InterleaveMode.Sample }; // TODO: change in 7 bits
 
-    //        const vector expected(size_t{ 512}
-    //        *512 * 4, byte{ 63});
-    //        test_by_decoding(destination, frame_info, expected.data(), expected.size(), interleave_mode::sample);
-    //    }
+        encoder.Encode(source);
 
-    //    TEST_METHOD(encode_4_components_6_bit_with_high_bits_set_interleave_mode_line) // NOLINT
-    //    {
-    //        const vector source(size_t{ 512}
-    //        *512 * 4, byte{ 0xFF});
-    //        constexpr frame_info frame_info{ 512, 512, 6, 4};
+        byte[] expectedDestination = new byte[512 * 512 * 4];
+        Array.Fill(expectedDestination, (byte)63);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Sample);
+    }
 
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info).interleave_mode(interleave_mode::line);
+    [Fact]
+    public void Encode4Components10BitWithHighBitsSetInterleaveModeLine()
+    {
+        byte[] source = new byte[512 * 512 * 4 * 2];
+        Array.Fill(source, (byte)0xFF);
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+        JpegLSEncoder encoder = new(512, 512, 10, 4) { InterleaveMode = InterleaveMode.Line }; // TODO change to 11 bits.
 
-    //        const size_t bytes_written{ encoder.encode(source)};
-    //        destination.resize(bytes_written);
+        encoder.Encode(source);
 
-    //        const vector expected(size_t{ 512}
-    //        *512 * 4, byte{ 63});
-    //        test_by_decoding(destination, frame_info, expected.data(), expected.size(), interleave_mode::line);
-    //    }
+        ushort[] expectedDestination = new ushort[512 * 512 * 4];
+        Array.Fill(expectedDestination, (ushort)1023);
 
-    //    TEST_METHOD(encode_4_components_10_bit_with_high_bits_set_interleave_mode_sample) // NOLINT
-    //    {
-    //        const vector source(size_t{ 512}
-    //        *512 * 2 * 4, byte{ 0xFF});
-    //        constexpr frame_info frame_info{ 512, 512, 10, 4};
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+            MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Line);
+    }
 
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info).interleave_mode(interleave_mode::sample);
+    //[Fact]
+    //public void Encode4Components10BitWithHighBitsSetInterleaveModeSample()
+    //{
+    //    byte[] source = new byte[512 * 512 * 4 * 2];
+    //    //Array.Fill(source, (byte)0xFF);
 
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
+    //    JpegLSEncoder encoder = new(512, 512, 12, 4) { InterleaveMode = InterleaveMode.Sample }; // TODO change to 13 bits
 
-    //        const size_t bytes_written{ encoder.encode(source)};
-    //        destination.resize(bytes_written);
+    //    encoder.Encode(source);
 
-    //        const vector<uint16_t> expected(size_t{ 512}
-    //        *512 * 4, 1023);
-    //        test_by_decoding(destination, frame_info, expected.data(), expected.size() * 2, interleave_mode::sample);
-    //    }
+    //    ushort[] expectedDestination = new ushort[512 * 512 * 4];
+    //    Array.Fill(expectedDestination, (ushort)1023);
 
-    //    TEST_METHOD(encode_4_components_10_bit_with_high_bits_set_interleave_mode_line) // NOLINT
-    //    {
-    //        const vector source(size_t{ 512}
-    //        *512 * 2 * 4, byte{ 0xFF});
-    //        constexpr frame_info frame_info{ 512, 512, 10, 4};
-
-    //        jpegls_encoder encoder;
-    //        encoder.frame_info(frame_info).interleave_mode(interleave_mode::line);
-
-    //        vector<byte> destination(encoder.estimated_destination_size());
-    //        encoder.destination(destination);
-
-    //        const size_t bytes_written{ encoder.encode(source)};
-    //        destination.resize(bytes_written);
-
-    //        const vector<uint16_t> expected(size_t{ 512}
-    //        *512 * 4, 1023);
-    //        test_by_decoding(destination, frame_info, expected.data(), expected.size() * 2, interleave_mode::line);
-    //    }
+    //    Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+    //        MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Sample);
+    //}
 
     [Fact]
     public void Rewind()
@@ -1469,28 +1418,29 @@ public class JpegLSEncoderTest
         Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, source, InterleaveMode.None);
     }
 
-    //    TEST_METHOD(encode_image_odd_size) // NOLINT
-    //    {
-    //        constexpr frame_info frame_info{ 512, 512, 8, 1};
-    //        const vector<byte> source(static_cast<size_t>(frame_info.width)* frame_info.height);
+    [Fact]
+    public void EncodeImageOddSize()
+    {
+        JpegLSEncoder encoder = new(512, 512, 8, 1);
 
-    //        const auto destination{ jpegls_encoder::encode(source, frame_info)};
+        byte[] source = new byte[512 * 512];
+        encoder.Encode(source);
 
-    //        Assert.Equal(size_t{ 99}, destination.size());
-    //        test_by_decoding(destination, frame_info, source.data(), source.size(), interleave_mode::none);
-    //    }
+        Assert.Equal(99, encoder.EncodedData.Length);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, source, InterleaveMode.None);
+    }
 
-    //    TEST_METHOD(encode_image_odd_size_forced_even) // NOLINT
-    //    {
-    //        constexpr frame_info frame_info{ 512, 512, 8, 1};
-    //        const vector<byte> source(static_cast<size_t>(frame_info.width)* frame_info.height);
+    [Fact]
+    public void EncodeImageOddSizeForcedEven()
+    {
+        JpegLSEncoder encoder = new(512, 512, 8, 1) { EncodingOptions = EncodingOptions.EvenDestinationSize };
 
-    //        const auto destination{
-    //            jpegls_encoder::encode(source, frame_info, interleave_mode::none, encoding_options::even_destination_size)};
+        byte[] source = new byte[512 * 512];
+        encoder.Encode(source);
 
-    //        Assert.Equal(size_t{ 100}, destination.size());
-    //        test_by_decoding(destination, frame_info, source.data(), source.size(), interleave_mode::none);
-    //    }
+        Assert.Equal(100, encoder.EncodedData.Length);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, source, InterleaveMode.None);
+    }
 
     //    TEST_METHOD(encode_image_forced_version_comment) // NOLINT
     //    {

@@ -900,7 +900,7 @@ internal class ScanEncoderImpl : ScanEncoder
     private void CopySourceToLineBufferInterleaveModeNone(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
-        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 2, _mask);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
     }
 
     private void CopySourceToLineBufferInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
@@ -923,7 +923,7 @@ internal class ScanEncoderImpl : ScanEncoder
     private void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<ushort>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(destination);
-        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3 * 2, _mask);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3, _mask);
     }
 
     private void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<byte>> destination, int pixelCount)
@@ -935,6 +935,6 @@ internal class ScanEncoderImpl : ScanEncoder
     private void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<ushort>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(destination);
-        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4 * 2, _mask);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4, _mask);
     }
 }

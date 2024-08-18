@@ -12,65 +12,75 @@ internal class CopyToLineBuffer
 
     internal static CopyToLineBufferFn GetMethod(int bitsPerSample, int componentCount, InterleaveMode interleaveMode, ColorTransformation colorTransformation)
     {
-        if (bitsPerSample <= 8)
-        {
-            switch (interleaveMode)
-            {
-                case InterleaveMode.None:
-                    return GetMethodCopySamples(bitsPerSample);
+        return bitsPerSample <= 8 ?
+            GetMethod8Bit(bitsPerSample, componentCount, interleaveMode, colorTransformation) :
+            GetMethod16Bit(bitsPerSample, componentCount, interleaveMode, colorTransformation);
+    }
 
-                case InterleaveMode.Line:
-                    switch (componentCount)
-                    {
-                        case 3:
-                            switch (colorTransformation)
-                            {
-                                case ColorTransformation.None:
-                                default:
-                                    Debug.Assert(colorTransformation == ColorTransformation.None);
-                                    return CopyLine8Bit3Components;
-                                case ColorTransformation.HP1:
-                                    Debug.Assert(bitsPerSample == 8);
-                                    return CopyLine8Bit3ComponentsHP1;
-                                case ColorTransformation.HP2:
-                                    Debug.Assert(bitsPerSample == 8);
-                                    return CopyLine8Bit3ComponentsHP2;
-                                case ColorTransformation.HP3:
-                                    Debug.Assert(bitsPerSample == 8);
-                                    return CopyLine8Bit3ComponentsHP3;
-                            }
-
-                        default:
-                            Debug.Assert(componentCount == 4);
-                            return CopyToLine8Bit4Components;
-                    }
-
-                case InterleaveMode.Sample:
-                default:
-                    Debug.Assert(interleaveMode == InterleaveMode.Sample);
-                    switch (colorTransformation)
-                    {
-                        case ColorTransformation.None:
-                        default:
-                            Debug.Assert(colorTransformation == ColorTransformation.None);
-                            return GetMethodCopySamples(bitsPerSample);
-                        case ColorTransformation.HP1:
-                            Debug.Assert(bitsPerSample == 8);
-                            return CopyPixels8BitHP1;
-                        case ColorTransformation.HP2:
-                            Debug.Assert(bitsPerSample == 8);
-                            return CopyPixels8BitHP2;
-                        case ColorTransformation.HP3:
-                            Debug.Assert(bitsPerSample == 8);
-                            return CopyPixels8BitHP3;
-                    }
-            }
-        }
-
+    private static CopyToLineBufferFn GetMethod8Bit(int bitsPerSample, int componentCount, InterleaveMode interleaveMode,
+        ColorTransformation colorTransformation)
+    {
         switch (interleaveMode)
         {
             case InterleaveMode.None:
-                return CopySamples;
+                return GetMethodCopySamples8Bit(bitsPerSample);
+
+            case InterleaveMode.Line:
+                switch (componentCount)
+                {
+                    case 3:
+                        switch (colorTransformation)
+                        {
+                            case ColorTransformation.None:
+                            default:
+                                Debug.Assert(colorTransformation == ColorTransformation.None);
+                                return CopyLine8Bit3Components;
+                            case ColorTransformation.HP1:
+                                Debug.Assert(bitsPerSample == 8);
+                                return CopyLine8Bit3ComponentsHP1;
+                            case ColorTransformation.HP2:
+                                Debug.Assert(bitsPerSample == 8);
+                                return CopyLine8Bit3ComponentsHP2;
+                            case ColorTransformation.HP3:
+                                Debug.Assert(bitsPerSample == 8);
+                                return CopyLine8Bit3ComponentsHP3;
+                        }
+
+                    default:
+                        Debug.Assert(componentCount == 4);
+                        return CopyToLine8Bit4Components;
+                }
+
+            case InterleaveMode.Sample:
+            default:
+                Debug.Assert(interleaveMode == InterleaveMode.Sample);
+                switch (colorTransformation)
+                {
+                    case ColorTransformation.None:
+                    default:
+                        Debug.Assert(colorTransformation == ColorTransformation.None);
+                        return GetMethodCopySamples8Bit(bitsPerSample);
+                    case ColorTransformation.HP1:
+                        Debug.Assert(bitsPerSample == 8);
+                        return CopyPixels8BitHP1;
+                    case ColorTransformation.HP2:
+                        Debug.Assert(bitsPerSample == 8);
+                        return CopyPixels8BitHP2;
+                    case ColorTransformation.HP3:
+                        Debug.Assert(bitsPerSample == 8);
+                        return CopyPixels8BitHP3;
+                }
+        }
+    }
+
+    private static CopyToLineBufferFn GetMethod16Bit(int bitsPerSample, int componentCount,
+        InterleaveMode interleaveMode,
+        ColorTransformation colorTransformation)
+    {
+        switch (interleaveMode)
+        {
+            case InterleaveMode.None:
+                return GetMethodCopySamples16Bit(bitsPerSample);
 
             case InterleaveMode.Line:
                 switch (componentCount)
@@ -102,7 +112,7 @@ internal class CopyToLineBuffer
                 {
                     case ColorTransformation.None:
                     default:
-                        return CopySamples;
+                        return GetMethodCopySamples16Bit(bitsPerSample);
                     case ColorTransformation.HP1:
                         return CopyPixels16BitHP1;
                     case ColorTransformation.HP2:
@@ -113,22 +123,44 @@ internal class CopyToLineBuffer
         }
     }
 
-    private static CopyToLineBufferFn GetMethodCopySamples(int bitsPerSample)
+    private static CopyToLineBufferFn GetMethodCopySamples8Bit(int bitsPerSample)
     {
-        bool maskNeeded = !(bitsPerSample == 8 || bitsPerSample == 16);
-        return maskNeeded ? CopySamplesMasked : CopySamples;
+        bool maskNeeded = bitsPerSample != 8;
+        return maskNeeded ? CopySamplesMasked8Bit : CopySamples8Bit;
     }
 
-    private static void CopySamples(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int mask)
+    private static CopyToLineBufferFn GetMethodCopySamples16Bit(int bitsPerSample)
+    {
+        bool maskNeeded = bitsPerSample != 16;
+        return maskNeeded ? CopySamplesMasked16Bit : CopySamples16Bit;
+    }
+
+    private static void CopySamples8Bit(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int mask)
     {
         source[..pixelCount].CopyTo(destination);
     }
 
-    private static void CopySamplesMasked(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int mask)
+    private static void CopySamples16Bit(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int mask)
+    {
+        source[..(pixelCount * 2)].CopyTo(destination);
+    }
+
+    private static void CopySamplesMasked8Bit(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int mask)
     {
         for (int i = 0; i < pixelCount; ++i)
         {
             destination[i] = (byte)(source[i] & mask);
+        }
+    }
+
+    private static void CopySamplesMasked16Bit(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int mask)
+    {
+        var sourceUint16 = MemoryMarshal.Cast<byte, ushort>(source);
+        var destinationUint16 = MemoryMarshal.Cast<byte, ushort>(destination);
+
+        for (int i = 0; i < pixelCount; ++i)
+        {
+            destinationUint16[i] = (ushort)(sourceUint16[i] & mask);
         }
     }
 
@@ -260,9 +292,9 @@ internal class CopyToLineBuffer
         {
             var pixel = sourceTriplet[i];
 
-            destinationUshort[i] = pixel.V1;
-            destinationUshort[i + pixelStride] = pixel.V2;
-            destinationUshort[i + 2 * pixelStride] = pixel.V3;
+            destinationUshort[i] = (ushort)(pixel.V1 & mask);
+            destinationUshort[i + pixelStride] = (ushort)(pixel.V2 & mask);
+            destinationUshort[i + 2 * pixelStride] = (ushort)(pixel.V3 & mask);
         }
     }
 
@@ -326,12 +358,11 @@ internal class CopyToLineBuffer
         for (int i = 0; i < pixelCount; ++i)
         {
             var pixel = sourceTriplet[i];
-            ////const triplet<SampleType> color_transformed{ transform(color.v1 & mask, color.v2 & mask, color.v3 & mask)};
 
-            destinationUshort[i] = pixel.V1;
-            destinationUshort[i + pixelStride] = pixel.V2;
-            destinationUshort[i + 2 * pixelStride] = pixel.V3;
-            destinationUshort[i + 3 * pixelStride] = pixel.V4;
+            destinationUshort[i] = (ushort)(pixel.V1 & mask);
+            destinationUshort[i + pixelStride] = (ushort)(pixel.V2 & mask);
+            destinationUshort[i + 2 * pixelStride] = (ushort)(pixel.V3 & mask);
+            destinationUshort[i + 3 * pixelStride] = (ushort)(pixel.V4 & mask);
         }
     }
 
@@ -339,7 +370,7 @@ internal class CopyToLineBuffer
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
-        pixelCount = pixelCount / (3 * 2);
+        pixelCount = pixelCount / 3;
 
         for (int i = 0; i < pixelCount; ++i)
         {
@@ -352,7 +383,7 @@ internal class CopyToLineBuffer
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
-        pixelCount = pixelCount / (3 * 2);
+        pixelCount = pixelCount / 3;
 
         for (int i = 0; i < pixelCount; ++i)
         {
@@ -365,7 +396,7 @@ internal class CopyToLineBuffer
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
-        pixelCount = pixelCount / (3 * 2);
+        pixelCount = pixelCount / 3;
 
         for (int i = 0; i < pixelCount; ++i)
         {
