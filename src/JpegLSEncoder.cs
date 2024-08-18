@@ -195,15 +195,15 @@ public sealed class JpegLSEncoder
 
         set
         {
-            if (!value.IsValid())
-                throw new ArgumentOutOfRangeException(nameof(value));
+            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(value.IsValid(),
+                ErrorCode.InvalidArgumentColorTransformation);
 
             _colorTransformation = value;
         }
     }
 
     /// <summary>
-    /// Gets the estimated size in bytes of the memory buffer that should used as output destination.
+    /// Gets the estimated size in bytes of the memory buffer that should be used as output destination.
     /// </summary>
     /// <value>
     /// The size in bytes of the memory buffer.
@@ -263,12 +263,24 @@ public sealed class JpegLSEncoder
     /// Configures the mapping table ID the encoder should reference when encoding a component.
     /// The referenced mapping table can be included in the stream or provided in another JPEG-LS abbreviated format stream.
     /// </summary>
-    public void SetMappingTableId(int componentIndex, int tableId)
+    public void SetMappingTableId(int componentIndex, int mappingTableId)
     {
         ThrowHelper.ThrowIfOutsideRange(Constants.MinimumComponentIndex, Constants.MaximumComponentIndex, componentIndex);
-        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumTableId, Constants.MaximumTableId, tableId);
+        ThrowHelper.ThrowIfOutsideRange(0, Constants.MaximumTableId, mappingTableId);
 
-        _writer.SetTableId(componentIndex, tableId);
+        _writer.SetTableId(componentIndex, mappingTableId);
+    }
+
+    /// <summary>
+    /// Resets the write position of the destination buffer to the beginning.
+    /// </summary>
+    public void Rewind()
+    {
+        if (_state == State.Initial)
+            return; // Nothing to do, stay in the same state.
+
+        _writer.Rewind();
+        _state = State.DestinationSet;
     }
 
     /// <summary>
@@ -294,7 +306,7 @@ public sealed class JpegLSEncoder
         }
         else
         {
-            ////check_stride(stride, source.size());
+            CheckStride(stride, source.Length);
         }
 
         TransitionToTablesAndMiscellaneousState();
@@ -583,6 +595,30 @@ public sealed class JpegLSEncoder
             return stride;
 
         return stride * FrameInfo.ComponentCount;
+    }
+
+    private void CheckStride(int stride, int sourceSize)
+    {
+        int minimumStride = CalculateStride();
+        if (stride < minimumStride)
+            ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
+
+        // Simple check to verify user input, and prevent out-of-bound read access.
+        // Stride parameter defines the number of bytes on a scan line.
+        if (InterleaveMode == InterleaveMode.None)
+        {
+            int minimumSourceSize =
+                stride * FrameInfo!.ComponentCount * FrameInfo.Height - (stride - minimumStride);
+
+            if (sourceSize < minimumSourceSize)
+                ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
+        }
+        else
+        {
+            int minimumSourceSize = stride * FrameInfo!.Height - (stride - minimumStride);
+            if (sourceSize < minimumSourceSize)
+                ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
+        }
     }
 
     private bool IsFrameInfoConfigured()

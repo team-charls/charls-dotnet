@@ -15,6 +15,14 @@ internal class ThrowHelper
         throw AddErrorCode(new ArgumentOutOfRangeException(GetErrorMessage(errorCode)), errorCode);
     }
 
+    internal static void ThrowArgumentOutOfRangeExceptionIfFalse(bool condition, ErrorCode errorCode)
+    {
+        if (condition)
+            return;
+
+        ThrowArgumentOutOfRangeException(errorCode);
+    }
+
     [DoesNotReturn]
     internal static void ThrowArgumentException(ErrorCode errorCode)
     {
@@ -35,9 +43,9 @@ internal class ThrowHelper
             throw AddErrorCode(new ArgumentOutOfRangeException(paramName, GetErrorMessage(errorCode)), errorCode);
     }
 
-    internal static void ThrowInvalidOperationIfFalse(bool value)
+    internal static void ThrowInvalidOperationIfFalse(bool condition)
     {
-        if (value)
+        if (condition)
             return;
 
         const ErrorCode errorCode = ErrorCode.InvalidOperation;

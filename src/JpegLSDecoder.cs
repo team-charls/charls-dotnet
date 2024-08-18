@@ -204,6 +204,19 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
+    /// Returns the mapping table ID referenced by the component or 0 when no mapping table is used.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    public int GetMappingTableId(int componentIndex)
+    {
+        CheckStateCompleted();
+        ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount, componentIndex);
+        return _reader.GetMappingTableId(componentIndex);
+    }
+
+    /// <summary>
     /// Reads the SPIFF (Still Picture Interchange File Format) header.
     /// </summary>
     /// <param name="spiffHeader">The header or null when no valid header was found.</param>
@@ -329,6 +342,11 @@ public sealed class JpegLSDecoder
     private void CheckHeaderRead()
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(_state >= State.HeaderRead);
+    }
+
+    private void CheckStateCompleted()
+    {
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.Completed);
     }
 
     private int CalculateMinimumStride()

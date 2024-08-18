@@ -10,6 +10,18 @@ using static Algorithm;
 
 internal struct JpegStreamReader
 {
+    private struct ScanInfo
+    {
+        internal readonly byte ComponentId;
+        internal readonly byte MappingTableId;
+
+        internal ScanInfo(byte componentId, byte mappingTableId = 0)
+        {
+            ComponentId = componentId;
+            MappingTableId = mappingTableId;
+        }
+    }
+
     private enum State
     {
         BeforeStartOfImage,
@@ -30,7 +42,7 @@ internal struct JpegStreamReader
     private uint _restartInterval;
     private int _segmentDataSize;
     private int _segmentStartPosition;
-    private readonly List<int> _componentIds = [];
+    private readonly List<ScanInfo> _scanInfos = [];
     private readonly List<MappingTableEntry> _mappingTables = [];
 
     public event EventHandler<CommentEventArgs>? Comment;
@@ -59,10 +71,15 @@ internal struct JpegStreamReader
         get { return _restartInterval; }
     }
 
+    internal int ComponentCount
+    {
+        get { return _scanInfos.Count; }
+    }
+
     public JpegStreamReader()
     {
         _eventSender = this;
-        _componentIds = [];
+        _scanInfos = [];
     }
 
     internal JpegStreamReader(object? eventSender = null)
@@ -70,16 +87,20 @@ internal struct JpegStreamReader
         _eventSender = eventSender ?? this;
     }
 
-    internal int? FindMappingTableIndex(int tableId)
+    internal int GetMappingTableId(int componentIndex)
     {
-        var index = _mappingTables.FindIndex(entry => entry.TableId == tableId);
-        return index == -1 ? null : index;
+        return _scanInfos[componentIndex].MappingTableId;
+    }
+
+    internal int FindMappingTableIndex(int mappingTableId)
+    {
+        return _mappingTables.FindIndex(entry => entry.MappingTableId == mappingTableId);
     }
 
     internal MappingTableInfo GetMappingTableInfo(int index)
     {
         var entry = _mappingTables[index];
-        return new MappingTableInfo() { EntrySize = entry.EntrySize, TableId = entry.TableId };
+        return new MappingTableInfo { EntrySize = entry.EntrySize, TableId = entry.MappingTableId };
     }
 
     internal ReadOnlyMemory<byte> GetMappingTableData(int index)
@@ -534,7 +555,7 @@ internal struct JpegStreamReader
 
     private void AddMappingTable(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
     {
-        if (tableId == 0 || _mappingTables.FindIndex(entry => entry.TableId == tableId) != -1)
+        if (tableId == 0 || _mappingTables.FindIndex(entry => entry.MappingTableId == tableId) != -1)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterMappingTableId);
 
         _mappingTables.Add(new MappingTableEntry(tableId, entrySize, tableData));
@@ -542,7 +563,7 @@ internal struct JpegStreamReader
 
     private void ExtendMappingTable(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
     {
-        int index = _mappingTables.FindIndex(entry => entry.TableId == tableId);
+        int index = _mappingTables.FindIndex(entry => entry.MappingTableId == tableId);
 
         if (index == -1 || _mappingTables[index].EntrySize != entrySize)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterMappingTableContinuation);
@@ -577,10 +598,9 @@ internal struct JpegStreamReader
 
         for (int i = 0; i != componentCountInScan; i++)
         {
-            SkipByte(); // Skip scan component selector
-            int mappingTableSelector = ReadByte();
-            if (mappingTableSelector != 0)
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
+            byte componentId = ReadByte();
+            byte mappingTableId = ReadByte();
+            StoreMappingTableId(componentId, mappingTableId);
         }
 
         _nearLossless = ReadByte(); // Read NEAR parameter
@@ -714,12 +734,24 @@ internal struct JpegStreamReader
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidMarkerSegmentSize);
     }
 
-    private void AddComponent(int componentId)
+    private void AddComponent(byte componentId)
     {
-        if (_componentIds.Contains(componentId))
+        if (_scanInfos.Any(scan => scan.ComponentId == componentId))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.DuplicateComponentIdInStartOfFrameSegment);
 
-        _componentIds.Add(componentId);
+        _scanInfos.Add(new ScanInfo(componentId));
+    }
+
+    private void StoreMappingTableId(byte componentId, byte tableId)
+    {
+        if (tableId == 0)
+            return; // default is already 0, no need to search and update.
+
+        int index = _scanInfos.FindIndex(scanInfo => scanInfo.ComponentId == componentId);
+        if (index == -1)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.UnknownComponentId);
+
+        _scanInfos[index] = new ScanInfo(componentId, tableId);
     }
 
     private void CheckInterleaveMode(InterleaveMode mode)
@@ -732,9 +764,9 @@ internal struct JpegStreamReader
     {
         private readonly List<ReadOnlyMemory<byte>> _dataFragments = [];
 
-        internal MappingTableEntry(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
+        internal MappingTableEntry(byte mappingTableId, byte entrySize, ReadOnlyMemory<byte> tableData)
         {
-            TableId = tableId;
+            MappingTableId = mappingTableId;
             EntrySize = entrySize;
             _dataFragments.Add(tableData);
         }
@@ -754,7 +786,7 @@ internal struct JpegStreamReader
             throw new NotImplementedException();
         }
 
-        internal byte TableId { get; }
+        internal byte MappingTableId { get; }
         internal byte EntrySize { get; }
     }
 

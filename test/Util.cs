@@ -184,7 +184,7 @@ internal sealed class Util
     }
 
     internal static void TestByDecoding(ReadOnlyMemory<byte> encodedSource, FrameInfo sourceFrameInfo,
-        ReadOnlyMemory<byte> expectedDestination,
+        ReadOnlySpan<byte> expectedDestination,
         InterleaveMode interleaveMode,
         ColorTransformation colorTransformation = ColorTransformation.None)
     {
@@ -210,9 +210,9 @@ internal sealed class Util
         {
             for (int i = 0; i != expectedDestination.Length; ++i)
             {
-                if (expectedDestination.Span[i] != destination[i])
+                if (expectedDestination[i] != destination[i])
                 {
-                    Assert.Equal(expectedDestination.Span[i], destination[i]);
+                    Assert.Equal(expectedDestination[i], destination[i]);
                 }
             }
         }
