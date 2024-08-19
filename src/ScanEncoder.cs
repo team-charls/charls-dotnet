@@ -19,10 +19,10 @@ internal struct ScanEncoder
     private bool _isFFWritten;
     private int _bytesWritten;
 
-    private readonly Traits _traits;
-    private readonly sbyte[] _quantizationLut;
+    private Traits _traits;
+    private sbyte[] _quantizationLut;
     private int _stride;
-    private readonly int _mask;
+    private int _mask;
 
     private CopyToLineBuffer.Method? _copyToLineBuffer;
 
@@ -46,13 +46,15 @@ internal struct ScanEncoder
     }
 
     internal ScanEncoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
-        CodingParameters codingParameters, Traits traits)
+        CodingParameters codingParameters)
     {
         _scanCodec = new ScanCodec(frameInfo, presetCodingParameters, codingParameters);
-        _traits = traits;
+
+        int maximumSampleValue = CalculateMaximumSampleValue(frameInfo.BitsPerSample);
+        _traits = new Traits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue);
         _mask = (1 << frameInfo.BitsPerSample) - 1;
 
-        _quantizationLut = _scanCodec.InitializeQuantizationLut(traits, presetCodingParameters.Threshold1,
+        _quantizationLut = _scanCodec.InitializeQuantizationLut(_traits, presetCodingParameters.Threshold1,
             presetCodingParameters.Threshold2, presetCodingParameters.Threshold3);
 
         _scanCodec.InitializeParameters(_traits.Range);
@@ -64,7 +66,7 @@ internal struct ScanEncoder
         _copyToLineBuffer = CopyToLineBuffer.GetMethod(FrameInfo.BitsPerSample, FrameInfo.ComponentCount,
             CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
 
-        Initialize(destination);
+        InitializeDestination(destination);
 
         if (FrameInfo.BitsPerSample <= 8)
         {
@@ -80,7 +82,7 @@ internal struct ScanEncoder
         return GetLength();
     }
 
-    private void Initialize(Memory<byte> destination)
+    private void InitializeDestination(Memory<byte> destination)
     {
         _destination = destination;
         _compressedLength = destination.Length;

@@ -3,9 +3,9 @@
 
 namespace CharLS.Managed;
 
-internal class LosslessTraitsImpl : Traits
+internal class LosslessTraits : Traits
 {
-    internal LosslessTraitsImpl(int maximumSampleValue, int nearLossless, int resetThreshold)
+    internal LosslessTraits(int maximumSampleValue, int nearLossless, int resetThreshold)
         : base(maximumSampleValue, nearLossless, resetThreshold)
     {
     }
@@ -15,93 +15,78 @@ internal class LosslessTraitsImpl : Traits
         return ModuloRange(errorValue);
     }
 
-    public override bool IsNear(int lhs, int rhs)
-    {
-        return lhs == rhs;
-    }
-
-    public override int ModuloRange(int errorValue)
-    {
-        return (errorValue << (Constants.Int32BitCount - BitsPerSample)) >> (Constants.Int32BitCount - BitsPerSample);
-    }
-
-    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
+    internal override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
         return MaximumSampleValue & (predictedValue + errorValue);
     }
 
-    public override int CorrectPrediction(int predicted)
+    internal override int ModuloRange(int errorValue)
     {
-        if ((predicted & MaximumSampleValue) == predicted)
-            return predicted;
-
-        return ~(predicted >> (Constants.Int32BitCount - 1)) & MaximumSampleValue;
+        return (errorValue << (Constants.Int32BitCount - BitsPerSample)) >> (Constants.Int32BitCount - BitsPerSample);
     }
 
-    public override int NearLossless => 0;
+    internal sealed override bool IsNear(int lhs, int rhs)
+    {
+        return lhs == rhs;
+    }
+
+    internal sealed override bool IsNear(Triplet<byte> lhs, Triplet<byte> rhs)
+    {
+        return lhs.V1 == rhs.V1 && lhs.V2 == rhs.V2 && lhs.V3 == rhs.V3;
+    }
+
+    internal sealed override bool IsNear(Triplet<ushort> lhs, Triplet<ushort> rhs)
+    {
+        return lhs.V1 == rhs.V1 && lhs.V2 == rhs.V2 && lhs.V3 == rhs.V3;
+    }
+
+    internal sealed override bool IsNear(Quad<byte> lhs, Quad<byte> rhs)
+    {
+        return lhs.V1 == rhs.V1 && lhs.V2 == rhs.V2 && lhs.V3 == rhs.V3 && lhs.V4 == rhs.V4;
+    }
+
+    internal sealed override bool IsNear(Quad<ushort> lhs, Quad<ushort> rhs)
+    {
+        return lhs.V1 == rhs.V1 && lhs.V2 == rhs.V2 && lhs.V3 == rhs.V3 && lhs.V4 == rhs.V4;
+    }
 }
 
 
-internal class LosslessTraits8 : LosslessTraitsImpl
+internal sealed class LosslessTraits8(int maximumSampleValue, int nearLossless, int resetThreshold)
+    : LosslessTraits(maximumSampleValue, nearLossless, resetThreshold)
 {
-    public LosslessTraits8(int maximumSampleValue, int nearLossless, int resetThreshold)
-        : base(maximumSampleValue, nearLossless, resetThreshold)
-    {
-    }
-
     internal override int ComputeErrorValue(int errorValue)
     {
         return (sbyte)errorValue;
     }
 
-    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
+    internal override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
         return predictedValue + errorValue;
+    }
+
+    internal override int ModuloRange(int errorValue)
+    {
+        return (sbyte)errorValue;
     }
 }
 
 
-internal class LosslessTraits16 : LosslessTraitsImpl
+internal sealed class LosslessTraits16(int maximumSampleValue, int nearLossless, int resetThreshold)
+    : LosslessTraits(maximumSampleValue, nearLossless, resetThreshold)
 {
-    public LosslessTraits16(int maximumSampleValue, int nearLossless, int resetThreshold)
-        : base(maximumSampleValue, nearLossless, resetThreshold)
-    {
-    }
-
     internal override int ComputeErrorValue(int errorValue)
     {
-        return (ushort)errorValue;
+        return (short)errorValue;
     }
 
-    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
+    internal override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
         return predictedValue + errorValue;
     }
-}
 
-
-internal class LosslessTraitsTriplet : LosslessTraitsImpl
-{
-    public LosslessTraitsTriplet(int maximumSampleValue, int nearLossless, int resetThreshold)
-        : base(maximumSampleValue, nearLossless, resetThreshold)
+    internal override int ModuloRange(int errorValue)
     {
-    }
-
-    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
-    {
-        return predictedValue + errorValue;
-    }
-}
-
-internal class LosslessTraitsQuad : LosslessTraitsImpl
-{
-    public LosslessTraitsQuad(int maximumSampleValue, int nearLossless, int resetThreshold)
-        : base(maximumSampleValue, nearLossless, resetThreshold)
-    {
-    }
-
-    public override int ComputeReconstructedSample(int predictedValue, int errorValue)
-    {
-        return predictedValue + errorValue;
+        return (short)errorValue;
     }
 }

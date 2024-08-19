@@ -54,16 +54,16 @@ internal struct ScanDecoder
         GolombCodeTable.Create(12), GolombCodeTable.Create(13), GolombCodeTable.Create(14), GolombCodeTable.Create(15)
     ];
 
-    internal ScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters, Traits traits)
+    internal ScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
         _scanCodec = new ScanCodec(frameInfo, presetCodingParameters, codingParameters);
 
         _copyFromLineBuffer = CopyFromLineBuffer.GetMethod(FrameInfo.BitsPerSample, FrameInfo.ComponentCount,
             CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
 
-        _traits = traits;
+        _traits = Traits.Create(frameInfo, codingParameters.NearLossless, presetCodingParameters.ResetValue);
 
-        _quantizationLut = _scanCodec.InitializeQuantizationLut(traits, presetCodingParameters.Threshold1,
+        _quantizationLut = _scanCodec.InitializeQuantizationLut(_traits, presetCodingParameters.Threshold1,
             presetCodingParameters.Threshold2, presetCodingParameters.Threshold3);
 
         _scanCodec.InitializeParameters(_traits.Range);

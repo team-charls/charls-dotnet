@@ -9,10 +9,7 @@ internal sealed class TestScanDecoder
 
     internal TestScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
-        int maximumSampleValue = Algorithm.CalculateMaximumSampleValue(frameInfo.BitsPerSample);
-
-        _scanDecoder = new ScanDecoder(frameInfo, presetCodingParameters, codingParameters,
-            new DefaultTraits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue));
+        _scanDecoder = new ScanDecoder(frameInfo, presetCodingParameters, codingParameters);
     }
 
     public void TestInitialize(ReadOnlyMemory<byte> source)

@@ -333,7 +333,7 @@ public sealed class JpegLSDecoder
 
         for (int plane = 0; ;)
         {
-            _scanDecoder = ScanCodecFactory.CreateScanDecoder(FrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
+            _scanDecoder = new ScanDecoder(FrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
             int bytesRead = _scanDecoder.DecodeScan(_reader.RemainingSource(), destination, stride);
             _reader.AdvancePosition(bytesRead);
 

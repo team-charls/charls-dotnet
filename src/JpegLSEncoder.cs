@@ -341,7 +341,7 @@ public sealed class JpegLSEncoder
 
     private void EncodeScan(ReadOnlyMemory<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
     {
-        _scanEncoder = ScanCodecFactory.CreateScanEncoder(
+        _scanEncoder = new ScanEncoder(
             new FrameInfo(FrameInfo!.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
             codingParameters,
             new CodingParameters
