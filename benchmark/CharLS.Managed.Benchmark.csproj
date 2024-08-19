@@ -10,6 +10,10 @@
     <RootNamespace>CharLS.Managed.Benchmark</RootNamespace>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <!--
+      CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'
+      -->
+    <NoWarn>$(NoWarn),1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

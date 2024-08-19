@@ -33,15 +33,21 @@ public class JpegLSEncoderTest
     [Fact]
     public void FrameInfoBadBitsPerSampleThrows()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 1, 1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 17, 1));
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 1, 1));
+        Assert.Equal(ErrorCode.InvalidArgumentBitsPerSample, exception.GetErrorCode());
+
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 17, 1));
+        Assert.Equal(ErrorCode.InvalidArgumentBitsPerSample, exception.GetErrorCode());
     }
 
     [Fact]
     public void FrameInfoBadComponentCountThrows()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 2, 0));
-        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 2, 256));
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 2, 0));
+        Assert.Equal(ErrorCode.InvalidArgumentComponentCount, exception.GetErrorCode());
+
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 2, 256));
+        Assert.Equal(ErrorCode.InvalidArgumentComponentCount, exception.GetErrorCode());
     }
 
     [Fact]
@@ -58,8 +64,11 @@ public class JpegLSEncoderTest
     {
         JpegLSEncoder encoder = new();
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => encoder.InterleaveMode = (InterleaveMode)(-1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => encoder.InterleaveMode = (InterleaveMode)(3));
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.InterleaveMode = (InterleaveMode)(-1));
+        Assert.Equal(ErrorCode.InvalidArgumentInterleaveMode, exception.GetErrorCode());
+
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.InterleaveMode = (InterleaveMode)3);
+        Assert.Equal(ErrorCode.InvalidArgumentInterleaveMode, exception.GetErrorCode());
     }
 
     [Fact]
@@ -112,7 +121,7 @@ public class JpegLSEncoderTest
         var frameInfo = new FrameInfo(int.MaxValue, int.MaxValue, 8, 1);
         encoder.FrameInfo = frameInfo;
 
-        Assert.Throws<OverflowException>(() => encoder.EstimatedDestinationSize);
+        _ = Assert.Throws<OverflowException>(() => encoder.EstimatedDestinationSize);
     }
 
     [Fact]
@@ -187,7 +196,8 @@ public class JpegLSEncoderTest
 
         var destination = new byte[20];
         encoder.Destination = destination;
-        Assert.Throws<InvalidOperationException>(() => encoder.Destination = destination);
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.Destination = destination);
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -295,7 +305,7 @@ public class JpegLSEncoderTest
         byte[] destination = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = destination;
 
-        SpiffHeader spiffHeader = new SpiffHeader() { Width = 1 };
+        SpiffHeader spiffHeader = new() { Width = 1 };
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteSpiffHeader(spiffHeader));
         Assert.Equal(ErrorCode.InvalidArgumentHeight, exception.GetErrorCode());
@@ -310,7 +320,7 @@ public class JpegLSEncoderTest
         byte[] destination = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = destination;
 
-        SpiffHeader spiffHeader = new SpiffHeader() { Height = 1 };
+        SpiffHeader spiffHeader = new() { Height = 1 };
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteSpiffHeader(spiffHeader));
         Assert.Equal(ErrorCode.InvalidArgumentWidth, exception.GetErrorCode());
@@ -637,7 +647,7 @@ public class JpegLSEncoderTest
 
         // Check that SOI marker has been written.
         Assert.Equal(0xFF, destination[0]);
-        Assert.Equal((byte)(JpegMarkerCode.StartOfImage), destination[1]);
+        Assert.Equal((byte)JpegMarkerCode.StartOfImage, destination[1]);
 
         // Verify that a APPn segment has been written.
         Assert.Equal(0xFF, destination[2]);
@@ -709,7 +719,7 @@ public class JpegLSEncoderTest
 
         byte[] applicationData = [1, 2, 3, 4];
         encoder.WriteApplicationData(0, applicationData);
-        encoder.WriteApplicationData(8, ReadOnlySpan<byte>.Empty);
+        encoder.WriteApplicationData(8, []);
 
         Assert.Equal(destination.Length, encoder.BytesWritten);
 
@@ -790,7 +800,7 @@ public class JpegLSEncoderTest
         encoder.Destination = encoded;
         encoder.FrameInfo = frameInfo;
 
-        encoder.WriteApplicationData(11, ReadOnlySpan<byte>.Empty);
+        encoder.WriteApplicationData(11, []);
 
         encoder.Encode(source);
         Util.TestByDecoding(encoder.EncodedData, frameInfo, source, InterleaveMode.None);
@@ -946,7 +956,7 @@ public class JpegLSEncoderTest
         var destination = new byte[12];
         encoder.Destination = destination;
 
-        var exception = Assert.Throws<InvalidOperationException>(() => encoder.CreateAbbreviatedFormat());
+        var exception = Assert.Throws<InvalidOperationException>(encoder.CreateAbbreviatedFormat);
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -1483,9 +1493,9 @@ public class JpegLSEncoderTest
         Assert.Equal("charls-dotnet " + expectedVersion, versionString);
         return;
 
-        string RemoveGitHash(string version)
+        static string RemoveGitHash(string version)
         {
-            int index = version.IndexOf('+');
+            int index = version.IndexOf('+', StringComparison.InvariantCulture);
             return index != -1 ? version[..index] : version;
         }
     }
@@ -1516,11 +1526,11 @@ public class JpegLSEncoderTest
         Assert.Equal(255, destination[21]);
 
         var expected = JpegLSPresetCodingParametersTest.ComputeDefaultsUsingReferenceImplementation(ushort.MaxValue, 0);
-        int threshold1 = destination[22] << 8 | destination[23];
+        int threshold1 = (destination[22] << 8) | destination[23];
         Assert.Equal(expected.T1, threshold1);
-        int threshold2 = destination[24] << 8 | destination[25];
+        int threshold2 = (destination[24] << 8) | destination[25];
         Assert.Equal(expected.T2, threshold2);
-        int threshold3 = destination[26] << 8 | destination[27];
+        int threshold3 = (destination[26] << 8) | destination[27];
         Assert.Equal(expected.T3, threshold3);
         int reset = (destination[28] << 8) | destination[29];
         Assert.Equal(expected.Reset, reset);
@@ -1630,7 +1640,7 @@ public class JpegLSEncoderTest
     private static void EncodeWithCustomPresetCodingParameters(JpegLSPresetCodingParameters pcParameters)
     {
         byte[] source = [0, 1, 1, 1, 0];
-        FrameInfo frameInfo = new FrameInfo(5, 1, 8, 1);
+        FrameInfo frameInfo = new(5, 1, 8, 1);
 
         JpegLSEncoder encoder = new() { FrameInfo = frameInfo };
         var destination = new byte[encoder.EstimatedDestinationSize];

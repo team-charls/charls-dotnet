@@ -1,11 +1,11 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-namespace CharLS.Managed;
-
 using System.Diagnostics;
 
-using static Algorithm;
+using static CharLS.Managed.Algorithm;
+
+namespace CharLS.Managed;
 
 internal class Traits
 {
@@ -145,11 +145,11 @@ internal class Traits
     {
         if (value < -NearLossless)
         {
-            value = value + Range * (2 * NearLossless + 1);
+            value += Range * ((2 * NearLossless) + 1);
         }
         else if (value > MaximumSampleValue + NearLossless)
         {
-            value = value - Range * (2 * NearLossless + 1);
+            value -= Range * ((2 * NearLossless) + 1);
         }
 
         return CorrectPrediction(value);
@@ -158,13 +158,13 @@ internal class Traits
     private static int Quantize(int errorValue, int nearLossless)
     {
         if (errorValue > 0)
-            return (errorValue + nearLossless) / (2 * nearLossless + 1);
+            return (errorValue + nearLossless) / ((2 * nearLossless) + 1);
 
-        return -(nearLossless - errorValue) / (2 * nearLossless + 1);
+        return -(nearLossless - errorValue) / ((2 * nearLossless) + 1);
     }
 
     private static int Dequantize(int errorValue, int nearLossless)
     {
-        return errorValue * (2 * nearLossless + 1);
+        return errorValue * ((2 * nearLossless) + 1);
     }
 }

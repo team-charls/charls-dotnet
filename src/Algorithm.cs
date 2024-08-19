@@ -88,7 +88,7 @@ internal static class Algorithm
     /// </summary>
     internal static int ComputeRangeParameter(int maximumSampleValue, int nearLossless)
     {
-        return (maximumSampleValue + 2 * nearLossless) / (2 * nearLossless + 1) + 1;
+        return ((maximumSampleValue + (2 * nearLossless)) / ((2 * nearLossless) + 1)) + 1;
     }
 
     /// <summary>
@@ -141,6 +141,6 @@ internal static class Algorithm
 
     internal static int ComputeContextId(int q1, int q2, int q3)
     {
-        return (q1 * 9 + q2) * 9 + q3;
+        return (((q1 * 9) + q2) * 9) + q3;
     }
 }

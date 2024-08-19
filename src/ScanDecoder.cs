@@ -5,9 +5,9 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace CharLS.Managed;
+using static CharLS.Managed.Algorithm;
 
-using static Algorithm;
+namespace CharLS.Managed;
 
 internal struct ScanDecoder
 {
@@ -29,21 +29,15 @@ internal struct ScanDecoder
     private readonly sbyte[] _quantizationLut;
     private readonly CopyFromLineBuffer.Method _copyFromLineBuffer;
 
-    private FrameInfo FrameInfo => _scanCodec.FrameInfo;
+    private readonly FrameInfo FrameInfo => _scanCodec.FrameInfo;
 
-    private CodingParameters CodingParameters => _scanCodec.CodingParameters;
+    private readonly CodingParameters CodingParameters => _scanCodec.CodingParameters;
 
     private int RunIndex
     {
-        get
-        {
-            return _scanCodec.RunIndex;
-        }
+        readonly get => _scanCodec.RunIndex;
 
-        set
-        {
-            _scanCodec.RunIndex = value;
-        }
+        set => _scanCodec.RunIndex = value;
     }
 
     private static readonly GolombCodeTable[] ColombCodeTable =
@@ -129,7 +123,7 @@ internal struct ScanDecoder
 
         EndScan();
 
-        return get_cur_byte_pos();
+        return GetActualPosition();
     }
 
     internal void Initialize(ReadOnlyMemory<byte> source)
@@ -147,7 +141,7 @@ internal struct ScanDecoder
         Debug.Assert(bitCount > 0);
 
         _validBits -= bitCount; // Note: valid_bits_ may become negative to indicate that extra bits are needed.
-        _readCache = _readCache << bitCount;
+        _readCache <<= bitCount;
     }
 
     internal void EndScan()
@@ -171,7 +165,7 @@ internal struct ScanDecoder
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
     }
 
-    internal int get_cur_byte_pos()
+    internal int GetActualPosition()
     {
         int validBits = _validBits;
 
@@ -235,12 +229,12 @@ internal struct ScanDecoder
             FillReadCache();
         }
 
-        bool set = (_readCache & 1UL << (CacheBitCount - 1)) != 0;
+        bool set = (_readCache & (1UL << (CacheBitCount - 1))) != 0;
         SkipBits(1);
         return set;
     }
 
-    internal int peek_0_bits()
+    internal int Peek0Bits()
     {
         if (_validBits < 16)
         {
@@ -260,7 +254,7 @@ internal struct ScanDecoder
 
     internal int ReadHighBits()
     {
-        int count = peek_0_bits();
+        int count = Peek0Bits();
         if (count >= 0)
         {
             SkipBits(count + 1);
@@ -762,10 +756,10 @@ internal struct ScanDecoder
         }
     }
 
-    private int QuantizeGradient(int di)
+    private readonly int QuantizeGradient(int di)
     {
-        Debug.Assert(_scanCodec.QuantizeGradientOrg(di, _traits.NearLossless) == _quantizationLut[_quantizationLut.Length / 2 + di]);
-        return _quantizationLut[_quantizationLut.Length / 2 + di];
+        Debug.Assert(_scanCodec.QuantizeGradientOrg(di, _traits.NearLossless) == _quantizationLut[(_quantizationLut.Length / 2) + di]);
+        return _quantizationLut[(_quantizationLut.Length / 2) + di];
     }
 
     private void DecodeSampleLine(Span<byte> previousLine, Span<byte> currentLine)
@@ -982,7 +976,7 @@ internal struct ScanDecoder
 
         if (k == 0)
         {
-            errorValue = errorValue ^ context.GetErrorCorrection(_traits.NearLossless);
+            errorValue ^= context.GetErrorCorrection(_traits.NearLossless);
         }
 
         context.UpdateVariablesAndBias(errorValue, _traits.NearLossless, _traits.ResetThreshold);
@@ -1377,47 +1371,47 @@ internal struct ScanDecoder
         return errorValue;
     }
 
-    private int CopyLineBufferToDestination(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly int CopyLineBufferToDestination(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         return _copyFromLineBuffer(source, destination, pixelCount, pixelStride);
     }
 
-    private int CopyLineBufferToDestinationInterleaveLine(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly int CopyLineBufferToDestinationInterleaveLine(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         return _copyFromLineBuffer(source, destination, pixelCount, pixelStride);
     }
 
-    private int CopyLineBufferToDestination(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly int CopyLineBufferToDestination(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
         return _copyFromLineBuffer(sourceInBytes, destination, pixelCount * 2, pixelStride);
     }
 
-    private int CopyLineBufferToDestinationInterleaveLine(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly int CopyLineBufferToDestinationInterleaveLine(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
         return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
-    private int CopyLineBufferToDestination(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly int CopyLineBufferToDestination(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<byte>, byte>(source);
         return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
-    private int CopyLineBufferToDestination(Span<Triplet<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly int CopyLineBufferToDestination(Span<Triplet<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(source);
         return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
-    private int CopyLineBufferToDestination(Span<Quad<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly int CopyLineBufferToDestination(Span<Quad<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<byte>, byte>(source);
         return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
-    private int CopyLineBufferToDestination(Span<Quad<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly int CopyLineBufferToDestination(Span<Quad<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(source);
         return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);

@@ -111,6 +111,7 @@ internal class ThrowHelper
             ErrorCode.InvalidArgumentHeight => "The height argument is outside the supported range [1, 2147483647]",
             ErrorCode.InvalidArgumentWidth => "The width argument is outside the supported range [1, 2147483647]",
             ErrorCode.InvalidArgumentBitsPerSample => "The bit per sample argument is outside the range [2, 16]",
+            ErrorCode.InvalidArgumentComponentCount => "The component count argument is outside the range [1, 255]",
             ErrorCode.InvalidArgumentInterleaveMode => "The interleave mode is not None, Sample, Line or invalid in combination with component count",
             ErrorCode.InvalidArgumentNearLossless => "The near lossless argument is outside the range [0, min(255, MAXVAL/2)]",
             ErrorCode.InvalidArgumentPresetCodingParameters => "The argument for the JPEG-LS preset coding parameters is not valid",

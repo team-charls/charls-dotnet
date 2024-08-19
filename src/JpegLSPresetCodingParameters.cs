@@ -138,28 +138,28 @@ public sealed record JpegLSPresetCodingParameters
         {
             int factor = (Math.Min(maximumSampleValue, 4095) + 128) / 256;
             int threshold1 =
-                Clamp(factor * (Constants.DefaultThreshold1 - 2) + 2 + 3 * nearLossless, nearLossless + 1, maximumSampleValue);
+                Clamp((factor * (Constants.DefaultThreshold1 - 2)) + 2 + (3 * nearLossless), nearLossless + 1, maximumSampleValue);
             int threshold2 =
-                Clamp(factor * (Constants.DefaultThreshold2 - 3) + 3 + 5 * nearLossless, threshold1, maximumSampleValue);
+                Clamp((factor * (Constants.DefaultThreshold2 - 3)) + 3 + (5 * nearLossless), threshold1, maximumSampleValue);
 
             return new JpegLSPresetCodingParameters(
                 maximumSampleValue, threshold1, threshold2,
-                Clamp(factor * (Constants.DefaultThreshold3 - 4) + 4 + 7 * nearLossless, threshold2, maximumSampleValue),
+                Clamp((factor * (Constants.DefaultThreshold3 - 4)) + 4 + (7 * nearLossless), threshold2, maximumSampleValue),
                 Constants.DefaultResetThreshold);
         }
         else
         {
             int factor = 256 / (maximumSampleValue + 1);
             int threshold1 =
-                Clamp(Math.Max(2, Constants.DefaultThreshold1 / factor + 3 * nearLossless), nearLossless + 1,
+                Clamp(Math.Max(2, (Constants.DefaultThreshold1 / factor) + (3 * nearLossless)), nearLossless + 1,
                     maximumSampleValue);
             int threshold2 =
-                Clamp(Math.Max(3, Constants.DefaultThreshold2 / factor + 5 * nearLossless), threshold1,
+                Clamp(Math.Max(3, (Constants.DefaultThreshold2 / factor) + (5 * nearLossless)), threshold1,
                     maximumSampleValue);
 
             return new JpegLSPresetCodingParameters(
                 maximumSampleValue, threshold1, threshold2,
-                Clamp(Math.Max(4, Constants.DefaultThreshold3 / factor + 7 * nearLossless), threshold2, maximumSampleValue),
+                Clamp(Math.Max(4, (Constants.DefaultThreshold3 / factor) + (7 * nearLossless)), threshold2, maximumSampleValue),
                 Constants.DefaultResetThreshold);
         }
     }

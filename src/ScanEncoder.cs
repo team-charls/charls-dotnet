@@ -4,9 +4,9 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace CharLS.Managed;
+using static CharLS.Managed.Algorithm;
 
-using static Algorithm;
+namespace CharLS.Managed;
 
 internal struct ScanEncoder
 {
@@ -26,23 +26,16 @@ internal struct ScanEncoder
 
     private CopyToLineBuffer.Method? _copyToLineBuffer;
 
-    private int PixelStride => _scanCodec.FrameInfo.Width + 2;
+    private readonly int PixelStride => _scanCodec.FrameInfo.Width + 2;
 
-    private FrameInfo FrameInfo => _scanCodec.FrameInfo;
+    private readonly FrameInfo FrameInfo => _scanCodec.FrameInfo;
 
-    private CodingParameters CodingParameters => _scanCodec.CodingParameters;
+    private readonly CodingParameters CodingParameters => _scanCodec.CodingParameters;
 
     private int RunIndex
-    {
-        get
-        {
-            return _scanCodec.RunIndex;
-        }
+    { readonly get => _scanCodec.RunIndex;
 
-        set
-        {
-            _scanCodec.RunIndex = value;
-        }
+        set => _scanCodec.RunIndex = value;
     }
 
     internal ScanEncoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
@@ -93,7 +86,7 @@ internal struct ScanEncoder
         while (runLength >= 1 << ScanCodec.J[RunIndex])
         {
             AppendOnesToBitStream(1);
-            runLength = runLength - (1 << ScanCodec.J[RunIndex]);
+            runLength -= 1 << ScanCodec.J[RunIndex];
             _scanCodec.IncrementRunIndex();
         }
 
@@ -157,9 +150,9 @@ internal struct ScanEncoder
         Debug.Assert(_freeBitCount == 32);
     }
 
-    private int GetLength()
+    private readonly int GetLength()
     {
-        return _bytesWritten - ((_freeBitCount) - 32) / 8;
+        return _bytesWritten - ((_freeBitCount - 32) / 8);
     }
 
     private void Flush()
@@ -1001,7 +994,7 @@ internal struct ScanEncoder
     {
         int k = context.GetGolombCode();
         int map = context.ComputeMap(errorValue, k) ? 1 : 0;
-        int eMappedErrorValue = 2 * Math.Abs(errorValue) - context.RunInterruptionType - map;
+        int eMappedErrorValue = (2 * Math.Abs(errorValue)) - context.RunInterruptionType - map;
         Debug.Assert(errorValue == context.ComputeErrorValue(eMappedErrorValue + context.RunInterruptionType, k));
         EncodeMappedValue(k, eMappedErrorValue, _traits.Limit - ScanCodec.J[RunIndex] - 1);
         context.UpdateVariables(errorValue, eMappedErrorValue, (byte)_scanCodec.PresetCodingParameters.ResetValue);
@@ -1015,7 +1008,7 @@ internal struct ScanEncoder
             if (highBits + 1 > 31)
             {
                 AppendToBitStream(0, highBits / 2);
-                highBits = highBits - highBits / 2;
+                highBits -= highBits / 2;
             }
             AppendToBitStream(1, highBits + 1);
             AppendToBitStream((uint)(mappedError & ((1 << k) - 1)), k);
@@ -1034,53 +1027,53 @@ internal struct ScanEncoder
         AppendToBitStream((uint)((mappedError - 1) & ((1 << _traits.QuantizedBitsPerSample) - 1)), _traits.QuantizedBitsPerSample);
     }
 
-    private int QuantizeGradient(int di)
+    private readonly int QuantizeGradient(int di)
     {
-        Debug.Assert(_scanCodec.QuantizeGradientOrg(di, _traits.NearLossless) == _quantizationLut[_quantizationLut.Length / 2 + di]);
-        return _quantizationLut[_quantizationLut.Length / 2 + di];
+        Debug.Assert(_scanCodec.QuantizeGradientOrg(di, _traits.NearLossless) == _quantizationLut[(_quantizationLut.Length / 2) + di]);
+        return _quantizationLut[(_quantizationLut.Length / 2) + di];
     }
 
-    private void CopySourceToLineBufferInterleaveModeNone(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
+    private readonly void CopySourceToLineBufferInterleaveModeNone(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
     {
         _copyToLineBuffer!(source, destination, pixelCount, _mask);
     }
 
-    private void CopySourceToLineBufferInterleaveModeNone(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
+    private readonly void CopySourceToLineBufferInterleaveModeNone(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
     }
 
-    private void CopySourceToLineBufferInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
+    private readonly void CopySourceToLineBufferInterleaveModeLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
     {
         _copyToLineBuffer!(source, destination, pixelCount, _mask);
     }
 
-    private void CopySourceToLineBufferInterleaveModeLine(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
+    private readonly void CopySourceToLineBufferInterleaveModeLine(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
     }
 
-    private void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<byte>> destination, int pixelCount)
+    private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<byte>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Triplet<byte>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3, _mask);
     }
 
-    private void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<ushort>> destination, int pixelCount)
+    private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<ushort>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3, _mask);
     }
 
-    private void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<byte>> destination, int pixelCount)
+    private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<byte>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Quad<byte>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4, _mask);
     }
 
-    private void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<ushort>> destination, int pixelCount)
+    private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<ushort>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4, _mask);

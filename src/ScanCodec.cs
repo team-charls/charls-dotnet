@@ -25,7 +25,7 @@ internal struct ScanCodec
     [InlineArray(2)]
     internal struct RunModeContextArray
     {
-        private RunModeContext _element;
+        private RunModeContext _;
     }
 
     [InlineArray(365)]
@@ -60,14 +60,14 @@ internal struct ScanCodec
         RunIndex = 0;
     }
 
-    internal sbyte QuantizeGradientOrg(int di, int nearLossless)
+    internal readonly sbyte QuantizeGradientOrg(int di, int nearLossless)
     {
         return Algorithm.QuantizeGradientOrg(di,
             PresetCodingParameters.Threshold1, PresetCodingParameters.Threshold2, PresetCodingParameters.Threshold3,
             nearLossless);
     }
 
-    internal bool IsInterleaved()
+    internal readonly bool IsInterleaved()
     {
         //ASSERT((parameters().interleave_mode == interleave_mode::none && frame_info().component_count == 1) ||
         //       parameters().interleave_mode != interleave_mode::none);
@@ -85,7 +85,7 @@ internal struct ScanCodec
         RunIndex = Math.Max(0, RunIndex - 1);
     }
 
-    internal sbyte[] InitializeQuantizationLut(Traits traits, int threshold1, int threshold2, int threshold3)
+    internal readonly sbyte[] InitializeQuantizationLut(Traits traits, int threshold1, int threshold2, int threshold3)
     {
         //// For lossless mode with default parameters, we have precomputed the lookup table for bit counts 8, 10, 12 and 16.
         //if (precomputed_quantization_lut_available(traits, threshold1, threshold2, threshold3))

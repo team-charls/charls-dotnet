@@ -42,7 +42,7 @@ public class ScanDecoderTest
     {
         byte[] source = [0, 0, Constants.JpegMarkerStartByte, 0xD8];
         var frameInfo = new FrameInfo(1, 1, 8, 1);
-        DefaultParameters.IsValid(255, 0, out var cp);
+        _ = DefaultParameters.IsValid(255, 0, out var cp);
         var codingParameters = new CodingParameters();
 
         var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
@@ -62,7 +62,7 @@ public class ScanDecoderTest
     {
         byte[] source = [0, 0, 0, 0, 0, 0, 0, 0, 0, Constants.JpegMarkerStartByte, 0xD8];
         var frameInfo = new FrameInfo(1, 1, 8, 1);
-        DefaultParameters.IsValid(255, 0, out var cp);
+        _ = DefaultParameters.IsValid(255, 0, out var cp);
         var codingParameters = new CodingParameters();
 
         var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
@@ -82,7 +82,7 @@ public class ScanDecoderTest
     {
         byte[] source = [7, 8, Constants.JpegMarkerStartByte, 0xD8];
         var frameInfo = new FrameInfo(1, 1, 8, 1);
-        DefaultParameters.IsValid(255, 0, out var cp);
+        _ = DefaultParameters.IsValid(255, 0, out var cp);
         var codingParameters = new CodingParameters();
 
         var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);

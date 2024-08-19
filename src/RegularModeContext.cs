@@ -3,6 +3,8 @@
 
 using System.Diagnostics;
 
+using static CharLS.Managed.Algorithm;
+
 namespace CharLS.Managed;
 
 internal struct RegularModeContext
@@ -14,7 +16,7 @@ internal struct RegularModeContext
 
     internal RegularModeContext(int range)
     {
-        _a = Algorithm.InitializationValueForA(range);
+        _a = InitializationValueForA(range);
     }
 
     internal int C { get; private set; }
@@ -22,7 +24,7 @@ internal struct RegularModeContext
     /// <summary>
     /// Computes the Golomb coding parameter using the algorithm as defined in ISO 14495-1, code segment A.10
     /// </summary>
-    internal int ComputeGolombCodingParameter()
+    internal readonly int ComputeGolombCodingParameter()
     {
         int k = 0;
         for (; _n << k < _a && k < Constants.MaxKValue; ++k)
@@ -36,9 +38,9 @@ internal struct RegularModeContext
         return k;
     }
 
-    internal int GetErrorCorrection(int k)
+    internal readonly int GetErrorCorrection(int k)
     {
-        return k != 0 ? 0 : Algorithm.BitWiseSign(2 * _b + _n - 1);
+        return k != 0 ? 0 : BitWiseSign((2 * _b) + _n - 1);
     }
 
     /// <summary>Code segment A.12 – Variables update. ISO 14495-1, page 22</summary>
@@ -47,7 +49,7 @@ internal struct RegularModeContext
         Debug.Assert(_n != 0);
 
         _a += Math.Abs(errorValue);
-        _b += errorValue* (2 * nearLossless + 1);
+        _b += errorValue* ((2 * nearLossless) + 1);
 
         const int limit = 65536 * 256;
         if (_a >= limit || Math.Abs(_b) >= limit)

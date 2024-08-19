@@ -410,10 +410,10 @@ public class JpegLSDecoderTest
         var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.CallbackFailed, exception.GetErrorCode());
-        Assert.IsType<ArgumentNullException>(exception.InnerException);
+        _ = Assert.IsType<ArgumentNullException>(exception.InnerException);
         return;
 
-        void EventHandler(object? sender, CommentEventArgs e)
+        static void EventHandler(object? sender, CommentEventArgs e)
         {
             throw new ArgumentNullException();
         }

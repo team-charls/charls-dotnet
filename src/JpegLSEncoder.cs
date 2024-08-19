@@ -136,9 +136,7 @@ public sealed class JpegLSEncoder
 
         set
         {
-            if (!value.IsValid())
-                throw new ArgumentOutOfRangeException(nameof(value));
-
+            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(value.IsValid(), ErrorCode.InvalidArgumentInterleaveMode, nameof(value));
             _interleaveMode = value;
         }
     }
@@ -236,8 +234,7 @@ public sealed class JpegLSEncoder
 
         set
         {
-            if (!_writer.Destination.IsEmpty)
-                throw new InvalidOperationException();
+            ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.Initial);
             _writer.Destination = value;
             _state = State.DestinationSet;
         }
@@ -547,7 +544,7 @@ public sealed class JpegLSEncoder
 
         static string RemoveGitHash(string version)
         {
-            int plusIndex = version.IndexOf('+');
+            int plusIndex = version.IndexOf('+', StringComparison.InvariantCulture);
             return plusIndex != -1 ? version[..plusIndex] : version;
         }
     }
@@ -616,14 +613,14 @@ public sealed class JpegLSEncoder
         if (InterleaveMode == InterleaveMode.None)
         {
             int minimumSourceSize =
-                stride * FrameInfo!.ComponentCount * FrameInfo.Height - (stride - minimumStride);
+                (stride * FrameInfo!.ComponentCount * FrameInfo.Height) - (stride - minimumStride);
 
             if (sourceSize < minimumSourceSize)
                 ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
         }
         else
         {
-            int minimumSourceSize = stride * FrameInfo!.Height - (stride - minimumStride);
+            int minimumSourceSize = (stride * FrameInfo!.Height) - (stride - minimumStride);
             if (sourceSize < minimumSourceSize)
                 ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
         }

@@ -14,6 +14,6 @@ internal struct GolombCode
         _length = length;
     }
 
-    internal int Value => _value;
-    internal int Length => _length;
+    internal readonly int Value => _value;
+    internal readonly int Length => _length;
 }

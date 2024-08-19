@@ -29,8 +29,8 @@ public sealed class JpegLSDecoder
     /// </summary>
     public event EventHandler<CommentEventArgs>? Comment
     {
-        add { _reader.Comment += value; }
-        remove { _reader.Comment -= value; }
+        add => _reader.Comment += value;
+        remove => _reader.Comment -= value;
     }
 
     /// <summary>
@@ -38,8 +38,8 @@ public sealed class JpegLSDecoder
     /// </summary>
     public event EventHandler<ApplicationDataEventArgs> ApplicationData
     {
-        add { _reader.ApplicationData += value; }
-        remove { _reader.ApplicationData -= value; }
+        add => _reader.ApplicationData += value;
+        remove => _reader.ApplicationData -= value;
     }
 
     /// <summary>

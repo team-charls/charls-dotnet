@@ -32,8 +32,7 @@ public sealed record FrameInfo
         ThrowHelper.ThrowIfNegativeOrZero(width, ErrorCode.InvalidArgumentWidth);
         ThrowHelper.ThrowIfNegativeOrZero(height, ErrorCode.InvalidArgumentHeight);
         ThrowHelper.ThrowIfOutsideRange(Constants.MinimumBitsPerSample, Constants.MaximumBitsPerSample, bitsPerSample, ErrorCode.InvalidArgumentBitsPerSample);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(componentCount);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(componentCount, Constants.MaximumComponentCount);
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumComponentCount, Constants.MaximumComponentCount, componentCount, ErrorCode.InvalidArgumentComponentCount);
 
         _width = width;
         _height = height;
