@@ -26,7 +26,7 @@ internal sealed class JpegTestStreamWriter
     {
         WriteByte((byte)(value >> 16));
         WriteByte((byte)(value >> 8));
-        WriteByte((byte)(value));
+        WriteByte((byte)value);
     }
 
     public void WriteUint32(uint value)
@@ -34,7 +34,7 @@ internal sealed class JpegTestStreamWriter
         WriteByte((byte)(value >> 24));
         WriteByte((byte)(value >> 16));
         WriteByte((byte)(value >> 8));
-        WriteByte((byte)(value));
+        WriteByte((byte)value);
     }
 
     public void WriteBytes(ReadOnlySpan<byte> values)

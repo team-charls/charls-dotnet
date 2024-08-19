@@ -3,7 +3,7 @@
 
 namespace CharLS.Managed;
 
-internal record struct CodingParameters
+internal readonly record struct CodingParameters
 {
     public int NearLossless { get; init; }
     public int RestartInterval { get; init; }

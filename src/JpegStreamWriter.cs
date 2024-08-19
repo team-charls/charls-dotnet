@@ -12,12 +12,12 @@ internal struct JpegStreamWriter
     private int _componentIndex;
     private byte[]? _mappingTableIds;
 
-    private byte MappingTableSelector => (byte)(_mappingTableIds == null ? 0 : _mappingTableIds[_componentIndex]);
+    private readonly byte MappingTableSelector => (byte)(_mappingTableIds == null ? 0 : _mappingTableIds[_componentIndex]);
 
     internal Memory<byte> Destination { get; set; }
 
     // ReSharper disable once ConvertToAutoPropertyWithPrivateSetter
-    internal int BytesWritten => _position;
+    internal readonly int BytesWritten => _position;
 
     internal void WriteStartOfImage()
     {
@@ -93,7 +93,7 @@ internal struct JpegStreamWriter
 
     internal void WriteJpegLSPresetParametersSegment(JpegLSPresetCodingParameters presetCodingParameters)
     {
-        WriteSegmentHeader(JpegMarkerCode.JpegLSPresetParameters, 1 + 5 * sizeof(ushort));
+        WriteSegmentHeader(JpegMarkerCode.JpegLSPresetParameters, 1 + (5 * sizeof(ushort)));
         WriteByte((byte)JpegLSPresetParametersType.PresetCodingParameters);
         WriteUint16(presetCodingParameters.MaximumSampleValue);
         WriteUint16(presetCodingParameters.Threshold1);
@@ -127,7 +127,7 @@ internal struct JpegStreamWriter
     internal void WriteJpegLSPresetParametersSegment(int height, int width)
     {
         // Format is defined in ISO/IEC 14495-1, C.2.4.1.4
-        WriteSegmentHeader(JpegMarkerCode.JpegLSPresetParameters, 1 + 1 + 2 * sizeof(uint));
+        WriteSegmentHeader(JpegMarkerCode.JpegLSPresetParameters, 1 + 1 + (2 * sizeof(uint)));
         WriteByte((byte)JpegLSPresetParametersType.OversizeImageDimension);
         WriteByte(sizeof(uint)); // Wxy: number of bytes used to represent Ye and Xe [2..4]. Always 4 for simplicity.
         WriteUint32(height);     // Ye: number of lines in the image.
@@ -137,7 +137,7 @@ internal struct JpegStreamWriter
     internal bool WriteStartOfFrameSegment(FrameInfo frameInfo)
     {
         // Create a Frame Header as defined in ISO/IEC 14495-1, C.2.2 and T.81, B.2.2
-        int dataSize = 6 + frameInfo.ComponentCount * 3;
+        int dataSize = 6 + (frameInfo.ComponentCount * 3);
         WriteSegmentHeader(JpegMarkerCode.StartOfFrameJpegLS, dataSize);
         WriteByte((byte)frameInfo.BitsPerSample); // P = Sample precision
 
@@ -194,7 +194,7 @@ internal struct JpegStreamWriter
         WriteSegmentWithoutData(JpegMarkerCode.EndOfImage);
     }
 
-    internal Memory<byte> GetRemainingDestination()
+    internal readonly Memory<byte> GetRemainingDestination()
     {
         return Destination[_position..];
     }

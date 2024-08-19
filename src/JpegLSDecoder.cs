@@ -11,6 +11,7 @@ namespace CharLS.Managed;
 public sealed class JpegLSDecoder
 {
     private JpegStreamReader _reader;
+    private ScanDecoder _scanDecoder;
     private State _state = State.Initial;
 
     private enum State
@@ -28,8 +29,8 @@ public sealed class JpegLSDecoder
     /// </summary>
     public event EventHandler<CommentEventArgs>? Comment
     {
-        add { _reader.Comment += value; }
-        remove { _reader.Comment -= value; }
+        add => _reader.Comment += value;
+        remove => _reader.Comment -= value;
     }
 
     /// <summary>
@@ -37,8 +38,8 @@ public sealed class JpegLSDecoder
     /// </summary>
     public event EventHandler<ApplicationDataEventArgs> ApplicationData
     {
-        add { _reader.ApplicationData += value; }
-        remove { _reader.ApplicationData -= value; }
+        add => _reader.ApplicationData += value;
+        remove => _reader.ApplicationData -= value;
     }
 
     /// <summary>
@@ -120,19 +121,16 @@ public sealed class JpegLSDecoder
     /// Gets the near lossless parameter used to encode the JPEG-LS stream.
     /// </summary>
     /// <remarks>
-    /// Property should be obtained after calling <see cref="ReadHeader"/>".
+    /// Value should be obtained after calling <see cref="ReadHeader"/>".
     /// </remarks>
-    /// <value>
+    /// <returns>
     /// The near lossless parameter. A value of 0 means that the image is lossless encoded.
-    /// </value>
+    /// </returns>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public int NearLossless // TODO Change to method with componentIndex = 0;
+    public int GetNearLossless(int componentIndex = 0)
     {
-        get
-        {
-            CheckHeaderRead();
-            return _reader.GetCodingParameters().NearLossless;
-        }
+        CheckHeaderRead();
+        return _reader.GetCodingParameters().NearLossless;
     }
 
     /// <summary>
@@ -223,6 +221,44 @@ public sealed class JpegLSDecoder
         CheckStateCompleted();
         ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount, componentIndex);
         return _reader.GetMappingTableId(componentIndex);
+    }
+
+    /// <summary>
+    /// Converts the mapping table ID to a mapping table index.
+    /// When the requested table is not present in the JPEG-LS stream the value -1 will be returned.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    public int FindMappingTableIndex(int mappingTableId)
+    {
+        CheckStateCompleted();
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumMappingTableId, Constants.MaximumMappingTableId, mappingTableId);
+        return _reader.FindMappingTableIndex(mappingTableId);
+    }
+
+    /// <summary>
+    /// Returns information about a mapping table.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    public MappingTableInfo GetMappingTableInfo(int mappingTableIndex)
+    {
+        CheckMappingTableIndex(mappingTableIndex);
+        return _reader.GetMappingTableInfo(mappingTableIndex);
+    }
+
+    /// <summary>
+    /// Returns a mapping table.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    public ReadOnlyMemory<byte> GetMappingTableData(int mappingTableIndex)
+    {
+        CheckMappingTableIndex(mappingTableIndex);
+        return _reader.GetMappingTableData(mappingTableIndex);
     }
 
     /// <summary>
@@ -332,8 +368,8 @@ public sealed class JpegLSDecoder
 
         for (int plane = 0; ;)
         {
-            var scanDecoder = ScanCodecFactory.CreateScanDecoder(FrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
-            int bytesRead = scanDecoder.DecodeScan(_reader.RemainingSource(), destination, stride);
+            _scanDecoder = new ScanDecoder(FrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
+            int bytesRead = _scanDecoder.DecodeScan(_reader.RemainingSource(), destination, stride);
             _reader.AdvancePosition(bytesRead);
 
             ++plane;
@@ -356,6 +392,11 @@ public sealed class JpegLSDecoder
     private void CheckStateCompleted()
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.Completed);
+    }
+
+    private void CheckMappingTableIndex(int mappingTableIndex)
+    {
+        ThrowHelper.ThrowIfOutsideRange(0, _reader.MappingTableCount -1, mappingTableIndex);
     }
 
     private int CalculateMinimumStride()

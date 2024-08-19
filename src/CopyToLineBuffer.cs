@@ -8,16 +8,16 @@ namespace CharLS.Managed;
 
 internal class CopyToLineBuffer
 {
-    internal delegate void CopyToLineBufferFn(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int mask);
+    internal delegate void Method(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int mask);
 
-    internal static CopyToLineBufferFn GetMethod(int bitsPerSample, int componentCount, InterleaveMode interleaveMode, ColorTransformation colorTransformation)
+    internal static Method GetMethod(int bitsPerSample, int componentCount, InterleaveMode interleaveMode, ColorTransformation colorTransformation)
     {
         return bitsPerSample <= 8 ?
             GetMethod8Bit(bitsPerSample, componentCount, interleaveMode, colorTransformation) :
             GetMethod16Bit(bitsPerSample, componentCount, interleaveMode, colorTransformation);
     }
 
-    private static CopyToLineBufferFn GetMethod8Bit(int bitsPerSample, int componentCount, InterleaveMode interleaveMode,
+    private static Method GetMethod8Bit(int bitsPerSample, int componentCount, InterleaveMode interleaveMode,
         ColorTransformation colorTransformation)
     {
         switch (interleaveMode)
@@ -73,7 +73,7 @@ internal class CopyToLineBuffer
         }
     }
 
-    private static CopyToLineBufferFn GetMethod16Bit(int bitsPerSample, int componentCount,
+    private static Method GetMethod16Bit(int bitsPerSample, int componentCount,
         InterleaveMode interleaveMode,
         ColorTransformation colorTransformation)
     {
@@ -123,13 +123,13 @@ internal class CopyToLineBuffer
         }
     }
 
-    private static CopyToLineBufferFn GetMethodCopySamples8Bit(int bitsPerSample)
+    private static Method GetMethodCopySamples8Bit(int bitsPerSample)
     {
         bool maskNeeded = bitsPerSample != 8;
         return maskNeeded ? CopySamplesMasked8Bit : CopySamples8Bit;
     }
 
-    private static CopyToLineBufferFn GetMethodCopySamples16Bit(int bitsPerSample)
+    private static Method GetMethodCopySamples16Bit(int bitsPerSample)
     {
         bool maskNeeded = bitsPerSample != 16;
         return maskNeeded ? CopySamplesMasked16Bit : CopySamples16Bit;
@@ -175,7 +175,7 @@ internal class CopyToLineBuffer
 
             destination[i] = (byte)(pixel.V1 & mask);
             destination[i + pixelStride] = (byte)(pixel.V2 & mask);
-            destination[i + 2 * pixelStride] = (byte)(pixel.V3 & mask);
+            destination[i + (2 * pixelStride)] = (byte)(pixel.V3 & mask);
         }
     }
 
@@ -191,7 +191,7 @@ internal class CopyToLineBuffer
 
             destination[i] = pixel.V1;
             destination[i + pixelStride] = pixel.V2;
-            destination[i + 2 * pixelStride] = pixel.V3;
+            destination[i + (2 * pixelStride)] = pixel.V3;
         }
     }
 
@@ -207,7 +207,7 @@ internal class CopyToLineBuffer
 
             destination[i] = pixel.V1;
             destination[i + pixelStride] = pixel.V2;
-            destination[i + 2 * pixelStride] = pixel.V3;
+            destination[i + (2 * pixelStride)] = pixel.V3;
         }
     }
 
@@ -223,7 +223,7 @@ internal class CopyToLineBuffer
 
             destination[i] = pixel.V1;
             destination[i + pixelStride] = pixel.V2;
-            destination[i + 2 * pixelStride] = pixel.V3;
+            destination[i + (2 * pixelStride)] = pixel.V3;
         }
     }
 
@@ -238,8 +238,8 @@ internal class CopyToLineBuffer
 
             destination[i] = (byte)(pixel.V1 & mask);
             destination[i + pixelStride] = (byte)(pixel.V2 & mask);
-            destination[i + 2 * pixelStride] = (byte)(pixel.V3 & mask);
-            destination[i + 3 * pixelStride] = (byte)(pixel.V4 & mask);
+            destination[i + (2 * pixelStride)] = (byte)(pixel.V3 & mask);
+            destination[i + (3 * pixelStride)] = (byte)(pixel.V4 & mask);
         }
     }
 
@@ -247,7 +247,7 @@ internal class CopyToLineBuffer
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
-        pixelCount = pixelCount / 3;
+        pixelCount /= 3;
 
         for (int i = 0; i < pixelCount; ++i)
         {
@@ -260,7 +260,7 @@ internal class CopyToLineBuffer
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
-        pixelCount = pixelCount / 3;
+        pixelCount /= 3;
 
         for (int i = 0; i < pixelCount; ++i)
         {
@@ -273,7 +273,7 @@ internal class CopyToLineBuffer
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
-        pixelCount = pixelCount / 3;
+        pixelCount /= 3;
 
         for (int i = 0; i < pixelCount; ++i)
         {
@@ -294,7 +294,7 @@ internal class CopyToLineBuffer
 
             destinationUshort[i] = (ushort)(pixel.V1 & mask);
             destinationUshort[i + pixelStride] = (ushort)(pixel.V2 & mask);
-            destinationUshort[i + 2 * pixelStride] = (ushort)(pixel.V3 & mask);
+            destinationUshort[i + (2 * pixelStride)] = (ushort)(pixel.V3 & mask);
         }
     }
 
@@ -311,7 +311,7 @@ internal class CopyToLineBuffer
 
             destinationUshort[i] = pixel.V1;
             destinationUshort[i + pixelStride] = pixel.V2;
-            destinationUshort[i + 2 * pixelStride] = pixel.V3;
+            destinationUshort[i + (2 * pixelStride)] = pixel.V3;
         }
     }
 
@@ -328,7 +328,7 @@ internal class CopyToLineBuffer
 
             destinationUshort[i] = pixel.V1;
             destinationUshort[i + pixelStride] = pixel.V2;
-            destinationUshort[i + 2 * pixelStride] = pixel.V3;
+            destinationUshort[i + (2 * pixelStride)] = pixel.V3;
         }
     }
 
@@ -345,7 +345,7 @@ internal class CopyToLineBuffer
 
             destinationUshort[i] = pixel.V1;
             destinationUshort[i + pixelStride] = pixel.V2;
-            destinationUshort[i + 2 * pixelStride] = pixel.V3;
+            destinationUshort[i + (2 * pixelStride)] = pixel.V3;
         }
     }
 
@@ -361,8 +361,8 @@ internal class CopyToLineBuffer
 
             destinationUshort[i] = (ushort)(pixel.V1 & mask);
             destinationUshort[i + pixelStride] = (ushort)(pixel.V2 & mask);
-            destinationUshort[i + 2 * pixelStride] = (ushort)(pixel.V3 & mask);
-            destinationUshort[i + 3 * pixelStride] = (ushort)(pixel.V4 & mask);
+            destinationUshort[i + (2 * pixelStride)] = (ushort)(pixel.V3 & mask);
+            destinationUshort[i + (3 * pixelStride)] = (ushort)(pixel.V4 & mask);
         }
     }
 
@@ -370,7 +370,7 @@ internal class CopyToLineBuffer
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
-        pixelCount = pixelCount / 3;
+        pixelCount /= 3;
 
         for (int i = 0; i < pixelCount; ++i)
         {
@@ -383,7 +383,7 @@ internal class CopyToLineBuffer
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
-        pixelCount = pixelCount / 3;
+        pixelCount /= 3;
 
         for (int i = 0; i < pixelCount; ++i)
         {
@@ -396,7 +396,7 @@ internal class CopyToLineBuffer
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
-        pixelCount = pixelCount / 3;
+        pixelCount /= 3;
 
         for (int i = 0; i < pixelCount; ++i)
         {

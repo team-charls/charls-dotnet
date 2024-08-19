@@ -106,7 +106,7 @@ public class AlgorithmTest
             return 2 * errorValue;
 
         // ReSharper disable once IntVariableOverflowInUncheckedContext
-        return -2 * errorValue - 1;
+        return (-2 * errorValue) - 1;
     }
 
     /// <summary>

@@ -154,22 +154,21 @@ public class ComplianceTest
             0x11, // Sub-sampling: H1 = 1, V1 = 1
             0x00, // Tq1 = 0 (this field is always 0)
 
-            // TODO
-            //0xFF, byte{ 0xF8},             // LSE - JPEG-LS preset parameters marker
-            //0x00, byte{ 0x11},             // Length of marker segment = 17 bytes including the length field
-            //0x02,                         // ID = 2, mapping table
-            //0x05,                         // TID = 5 Table identifier (arbitrary)
-            //0x03,                         // Wt = 3 Width of table entry
-            //0xFF, byte{ 0xFF}, byte{ 0xFF}, // Entry for index 0
-            //0xFF, byte{ 0x00}, byte{ 0x00}, // Entry for index 1
-            //0x00, byte{ 0xFF}, byte{ 0x00}, // Entry for index 2
-            //0x00, byte{ 0x00}, byte{ 0xFF}, // Entry for index 3
+            0xFF,  0xF8,        // LSE - JPEG-LS preset parameters marker
+            0x00,  0x11,        // Length of marker segment = 17 bytes including the length field
+            0x02,               // ID = 2, mapping table
+            0x05,               // TID = 5 Table identifier (arbitrary)
+            0x03,               // Wt = 3 Width of table entry
+            0xFF,  0xFF,  0xFF, // Entry for index 0
+            0xFF,  0x00,  0x00, // Entry for index 1
+            0x00,  0xFF,  0x00, // Entry for index 2
+            0x00,  0x00,  0xFF, // Entry for index 3
 
             0xFF, 0xDA, // Start of scan (SOS) marker
             0x00, 0x08, // Length of marker segment = 8 bytes including the length field
             0x01, // Ns = Number of components for this scan = 1
             0x01, // C1 = Component ID = 1
-            0x00, // Tm 1  = Mapping table identifier = 5
+            0x05, // Tm 1  = Mapping table identifier = 5
             0x00, // NEAR = 0 (near-lossless max error)
             0x00, // ILV = 0 (interleave mode = non-interleaved)
             0x00, // Al = 0, Ah = 0 (no point transform)
@@ -186,27 +185,19 @@ public class ComplianceTest
         byte[] expected = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3];
         Util.CompareBuffers(destination, expected);
 
-        // TODO
-        //const int32_t mapping_table_id{ decoder.mapping_table_id(0)};
-        //Assert::AreEqual(5, mapping_table_id);
+        int mappingTableId = decoder.GetMappingTableId(0);
+        Assert.Equal(5, mappingTableId);
 
-        //const auto optional_table_index{ decoder.mapping_table_index(mapping_table_id)};
-        //Assert::IsTrue(optional_table_index.has_value());
-        //const auto table_index{ optional_table_index.value_or(-1)};
+        int mappingTableIndex = decoder.FindMappingTableIndex(mappingTableId);
+        Assert.NotEqual(-1, mappingTableId);
 
-        //const table_info table_info{ decoder.mapping_table_info(table_index)};
-        //vector<byte> mapping_table(table_info.data_size);
+        var mappingTableInfo = decoder.GetMappingTableInfo(mappingTableIndex);
+        Assert.NotNull(mappingTableInfo);
 
-        //decoder.mapping_table(table_index, mapping_table);
-
-        //constexpr array expected_mapping_table{
-        //    byte{ 0xFF}, byte{ 0xFF}, byte{ 0xFF}, byte{ 0xFF}, byte{ 0}, byte{ 0},
-        //                                       byte{ 0},    byte{ 0xFF}, byte{ 0},    byte{ 0},    byte{ 0}, byte{ 0xFF}
-        //};
-        //compare_buffers(expected_mapping_table.data(), expected_mapping_table.size(), mapping_table.data(),
-        //                mapping_table.size());
+        ReadOnlyMemory<byte> mappingTableData = decoder.GetMappingTableData(mappingTableIndex);
+        byte[] expectedMappingTable = [0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0xFF, 0, 0, 0, 0xFF];
+        Assert.True(mappingTableData.Span.SequenceEqual(expectedMappingTable));
     }
-
 
     private static void DecompressFile(string encodedFilename, string rawFilename, bool checkEncode = true)
     {
@@ -218,6 +209,4 @@ public class ComplianceTest
 
         Util.TestCompliance(encodedSource, referenceFile.ImageData, checkEncode);
     }
-
-
 }

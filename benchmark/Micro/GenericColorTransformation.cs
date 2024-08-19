@@ -51,9 +51,9 @@ public class ColorTransformation
         const int range = 1 << (sizeof(byte) * 8);
 
         return new Triplet<byte>(
-            (byte)(red - green + range / 2),
+            (byte)(red - green + (range / 2)),
             green,
-            (byte)(blue - green + range / 2));
+            (byte)(blue - green + (range / 2)));
     }
 
     internal static Triplet<byte> TransformHP1IntParameters(int red, int green, int blue)
@@ -61,9 +61,9 @@ public class ColorTransformation
         const int range = 1 << (sizeof(byte) * 8);
 
         return new Triplet<byte>(
-            (byte)(red - green + range / 2),
+            (byte)(red - green + (range / 2)),
             (byte)green,
-            (byte)(blue - green + range / 2));
+            (byte)(blue - green + (range / 2)));
     }
 
     internal static TripletByte TransformHP1IntParametersReturnTripletByte(int red, int green, int blue)
@@ -71,9 +71,9 @@ public class ColorTransformation
         const int range = 1 << (sizeof(byte) * 8);
 
         return new TripletByte(
-            (byte)(red - green + range / 2),
+            (byte)(red - green + (range / 2)),
             (byte)green,
-            (byte)(blue - green + range / 2));
+            (byte)(blue - green + (range / 2)));
     }
 
     internal static int TransformHP1IntParametersReturnUint(int red, int green, int blue)
@@ -81,9 +81,9 @@ public class ColorTransformation
         const int range = 1 << (sizeof(byte) * 8);
 
         return
-            (((byte)(red - green + range / 2)) << 16) |
+            (((byte)(red - green + (range / 2))) << 16) |
             ((byte)green << 8) |
-            (byte)(blue - green + range / 2);
+            (byte)(blue - green + (range / 2));
     }
 
     internal static Triplet<T> TransformHP1Generic<T>(int red, int green, int blue)
@@ -92,9 +92,9 @@ public class ColorTransformation
         const int range = 1 << (sizeof(byte) * 8);
 
         return new Triplet<T>(
-            T.CreateTruncating((red - green + range / 2)),
+            T.CreateTruncating(red - green + (range / 2)),
             T.CreateTruncating(green),
-            T.CreateTruncating(blue - green + range / 2));
+            T.CreateTruncating(blue - green + (range / 2)));
     }
 
     [GlobalSetup]
@@ -187,7 +187,7 @@ public class ColorTransformation
             int pixel = TransformHP1IntParametersReturnUint(_source[i], _source[i + 1], _source[i + 2]);
             _destination[i] = (byte)(pixel >> 16);
             _destination[i + 1] = (byte)(pixel >> 8);
-            _destination[i + 2] = (byte)(pixel);
+            _destination[i + 2] = (byte)pixel;
         }
     }
 

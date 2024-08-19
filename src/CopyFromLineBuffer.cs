@@ -33,6 +33,7 @@ internal class CopyFromLineBuffer
                                     return CopyLine8Bit3ComponentsHP2;
                                 case ColorTransformation.HP3:
                                 default:
+                                    Debug.Assert(colorTransformation == ColorTransformation.HP3);
                                     return CopyLine8Bit3ComponentsHP3;
                             }
 
@@ -135,7 +136,7 @@ internal class CopyFromLineBuffer
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] = new Triplet<byte>(
-                source[i], source[i + sourceStride], source[i + 2 * sourceStride]);
+                source[i], source[i + sourceStride], source[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3;
@@ -149,7 +150,7 @@ internal class CopyFromLineBuffer
         {
             destinationTriplet[i] =
                 ColorTransformations.ReverseTransformHP1(source[i], source[i + sourceStride],
-                    source[i + 2 * sourceStride]);
+                    source[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3;
@@ -163,7 +164,7 @@ internal class CopyFromLineBuffer
         {
             destinationTriplet[i] =
                 ColorTransformations.ReverseTransformHP2(source[i], source[i + sourceStride],
-                    source[i + 2 * sourceStride]);
+                    source[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3;
@@ -177,7 +178,7 @@ internal class CopyFromLineBuffer
         {
             destinationTriplet[i] =
                 ColorTransformations.ReverseTransformHP3(source[i], source[i + sourceStride],
-                    source[i + 2 * sourceStride]);
+                    source[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3;
@@ -190,7 +191,7 @@ internal class CopyFromLineBuffer
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationQuad[i] = new Quad<byte>(
-                source[i], source[i + sourceStride], source[i + 2 * sourceStride], source[i + 3 * sourceStride]);
+                source[i], source[i + sourceStride], source[i + (2 * sourceStride)], source[i + (3 * sourceStride)]);
         }
 
         return pixelCount * 4;
@@ -260,7 +261,7 @@ internal class CopyFromLineBuffer
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] = new Triplet<ushort>(
-                sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + 2 * sourceStride]);
+                sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3 * 2;
@@ -275,7 +276,7 @@ internal class CopyFromLineBuffer
         {
             destinationTriplet[i] =
                 ColorTransformations.ReverseTransformHP1(sourceUshort[i], sourceUshort[i + sourceStride],
-                    sourceUshort[i + 2 * sourceStride]);
+                    sourceUshort[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3 * 2;
@@ -290,7 +291,7 @@ internal class CopyFromLineBuffer
         {
             destinationTriplet[i] =
                 ColorTransformations.ReverseTransformHP2(sourceUshort[i], sourceUshort[i + sourceStride],
-                    sourceUshort[i + 2 * sourceStride]);
+                    sourceUshort[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3 * 2;
@@ -305,7 +306,7 @@ internal class CopyFromLineBuffer
         {
             destinationTriplet[i] =
                 ColorTransformations.ReverseTransformHP3(sourceUshort[i], sourceUshort[i + sourceStride],
-                    sourceUshort[i + 2 * sourceStride]);
+                    sourceUshort[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3 * 2;
@@ -319,7 +320,7 @@ internal class CopyFromLineBuffer
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationQuad[i] = new Quad<ushort>(
-                sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + 2 * sourceStride], sourceUshort[i + 3 * sourceStride]);
+                sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)], sourceUshort[i + (3 * sourceStride)]);
         }
 
         return pixelCount * 4 * 2;

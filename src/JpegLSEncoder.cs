@@ -13,6 +13,7 @@ namespace CharLS.Managed;
 public sealed class JpegLSEncoder
 {
     private JpegStreamWriter _writer;
+    private ScanEncoder _scanEncoder;
     private FrameInfo? _frameInfo;
     private int _nearLossless;
     private InterleaveMode _interleaveMode;
@@ -135,9 +136,7 @@ public sealed class JpegLSEncoder
 
         set
         {
-            if (!value.IsValid())
-                throw new ArgumentOutOfRangeException(nameof(value));
-
+            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(value.IsValid(), ErrorCode.InvalidArgumentInterleaveMode, nameof(value));
             _interleaveMode = value;
         }
     }
@@ -235,8 +234,7 @@ public sealed class JpegLSEncoder
 
         set
         {
-            if (!_writer.Destination.IsEmpty)
-                throw new InvalidOperationException();
+            ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.Initial);
             _writer.Destination = value;
             _state = State.DestinationSet;
         }
@@ -340,7 +338,7 @@ public sealed class JpegLSEncoder
 
     private void EncodeScan(ReadOnlyMemory<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
     {
-        var encoder = ScanCodecFactory.CreateScanEncoder(
+        _scanEncoder = new ScanEncoder(
             new FrameInfo(FrameInfo!.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
             codingParameters,
             new CodingParameters
@@ -351,7 +349,7 @@ public sealed class JpegLSEncoder
                 ColorTransformation = ColorTransformation
             });
 
-        int bytesWritten = encoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
+        int bytesWritten = _scanEncoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
 
         // Synchronize the destination encapsulated in the writer (encode_scan works on a local copy)
         _writer.AdvancePosition(bytesWritten);
@@ -535,7 +533,7 @@ public sealed class JpegLSEncoder
         {
             string informationVersion = RemoveGitHash(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion!);
 
-            byte[] utfBytes = Encoding.UTF8.GetBytes(informationVersion!);
+            byte[] utfBytes = Encoding.UTF8.GetBytes(informationVersion);
 
             var versionNumber = "charls-dotnet "u8.ToArray().Concat(utfBytes).ToArray();
             _writer.WriteCommentSegment(versionNumber);
@@ -546,7 +544,7 @@ public sealed class JpegLSEncoder
 
         static string RemoveGitHash(string version)
         {
-            int plusIndex = version.IndexOf('+');
+            int plusIndex = version.IndexOf('+', StringComparison.InvariantCulture);
             return plusIndex != -1 ? version[..plusIndex] : version;
         }
     }
@@ -615,14 +613,14 @@ public sealed class JpegLSEncoder
         if (InterleaveMode == InterleaveMode.None)
         {
             int minimumSourceSize =
-                stride * FrameInfo!.ComponentCount * FrameInfo.Height - (stride - minimumStride);
+                (stride * FrameInfo!.ComponentCount * FrameInfo.Height) - (stride - minimumStride);
 
             if (sourceSize < minimumSourceSize)
                 ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
         }
         else
         {
-            int minimumSourceSize = stride * FrameInfo!.Height - (stride - minimumStride);
+            int minimumSourceSize = (stride * FrameInfo!.Height) - (stride - minimumStride);
             if (sourceSize < minimumSourceSize)
                 ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
         }

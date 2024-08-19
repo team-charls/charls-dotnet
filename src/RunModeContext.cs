@@ -20,9 +20,9 @@ internal struct RunModeContext
 
     internal int RunInterruptionType { get; }
 
-    internal int GetGolombCode()
+    internal readonly int GetGolombCode()
     {
-        int temp = _a + (_n >> 1) * RunInterruptionType;
+        int temp = _a + ((_n >> 1) * RunInterruptionType);
         int nTest = _n;
         int k = 0;
         for (; nTest < temp; ++k)
@@ -33,7 +33,7 @@ internal struct RunModeContext
         return k;
     }
 
-    internal int ComputeErrorValue(int temp, int k)
+    internal readonly int ComputeErrorValue(int temp, int k)
     {
         bool map = (temp & 1) == 1;
         int errorValueAbs = (temp + Convert.ToInt32(map)) / 2;
@@ -69,7 +69,7 @@ internal struct RunModeContext
     }
 
     /// <summary>Code segment A.21 – Computation of map for error value mapping.</summary>
-    internal bool ComputeMap(int errorValue, int k)
+    internal readonly bool ComputeMap(int errorValue, int k)
     {
         if (k == 0 && errorValue > 0 && 2 * _nn < _n)
             return true;
@@ -83,7 +83,7 @@ internal struct RunModeContext
         return false;
     }
 
-    internal bool ComputeMapNegativeE(int k)
+    internal readonly bool ComputeMapNegativeE(int k)
     {
         return k != 0 || 2 * _nn >= _n;
     }

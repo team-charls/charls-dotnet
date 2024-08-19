@@ -3,45 +3,46 @@
 
 namespace CharLS.Managed.Test;
 
-internal sealed class TestScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters) :
-    ScanDecoder(frameInfo, presetCodingParameters, codingParameters)
+internal sealed class TestScanDecoder
 {
-    public override int DecodeScan(ReadOnlyMemory<byte> source, Span<byte> destination, int stride)
+    private ScanDecoder _scanDecoder;
+
+    internal TestScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
-        throw new NotImplementedException();
+        _scanDecoder = new ScanDecoder(frameInfo, presetCodingParameters, codingParameters);
     }
 
     public void TestInitialize(ReadOnlyMemory<byte> source)
     {
-        Initialize(source);
+        _scanDecoder.Initialize(source);
     }
 
     public bool TestReadBit()
     {
-        return ReadBit();
+        return _scanDecoder.ReadBit();
     }
 
     public void TestEndScan()
     {
-        EndScan();
+        _scanDecoder.EndScan();
     }
 
     public byte TestPeekByte()
     {
-        return PeekByte();
+        return _scanDecoder.PeekByte();
     }
 }
 
 public class ScanDecoderTest
 {
-    private static readonly JpegLSPresetCodingParameters DefaultParameters = new JpegLSPresetCodingParameters();
+    private static readonly JpegLSPresetCodingParameters DefaultParameters = new();
 
     [Fact]
     public void ReadBit()
     {
         byte[] source = [0, 0, Constants.JpegMarkerStartByte, 0xD8];
         var frameInfo = new FrameInfo(1, 1, 8, 1);
-        DefaultParameters.IsValid(255, 0, out var cp);
+        _ = DefaultParameters.IsValid(255, 0, out var cp);
         var codingParameters = new CodingParameters();
 
         var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
@@ -61,7 +62,7 @@ public class ScanDecoderTest
     {
         byte[] source = [0, 0, 0, 0, 0, 0, 0, 0, 0, Constants.JpegMarkerStartByte, 0xD8];
         var frameInfo = new FrameInfo(1, 1, 8, 1);
-        DefaultParameters.IsValid(255, 0, out var cp);
+        _ = DefaultParameters.IsValid(255, 0, out var cp);
         var codingParameters = new CodingParameters();
 
         var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
@@ -81,7 +82,7 @@ public class ScanDecoderTest
     {
         byte[] source = [7, 8, Constants.JpegMarkerStartByte, 0xD8];
         var frameInfo = new FrameInfo(1, 1, 8, 1);
-        DefaultParameters.IsValid(255, 0, out var cp);
+        _ = DefaultParameters.IsValid(255, 0, out var cp);
         var codingParameters = new CodingParameters();
 
         var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
