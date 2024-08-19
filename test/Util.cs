@@ -142,7 +142,7 @@ internal sealed class Util
         var destination = new byte[decoder.GetDestinationSize()];
         decoder.Decode(destination);
 
-        if (decoder.NearLossless == 0)
+        if (decoder.GetNearLossless() == 0)
         {
             for (int i = 0; i != uncompressedSource.Length; ++i)
             {
@@ -155,7 +155,7 @@ internal sealed class Util
         else
         {
             var frameInfo = decoder.FrameInfo;
-            int nearLossless = decoder.NearLossless;
+            int nearLossless = decoder.GetNearLossless();
 
             if (frameInfo.BitsPerSample <= 8)
             {
@@ -206,7 +206,7 @@ internal sealed class Util
 
         Assert.Equal(destination.Length, expectedDestination.Length);
 
-        if (decoder.NearLossless == 0)
+        if (decoder.GetNearLossless() == 0)
         {
             for (int i = 0; i != expectedDestination.Length; ++i)
             {
@@ -312,7 +312,7 @@ internal sealed class Util
             Destination = ourEncodedBytes,
             FrameInfo = decoder.FrameInfo,
             InterleaveMode = decoder.InterleaveMode,
-            NearLossless = decoder.NearLossless,
+            NearLossless = decoder.GetNearLossless(),
             PresetCodingParameters = decoder.PresetCodingParameters
         };
         encoder.Encode(uncompressedSource);

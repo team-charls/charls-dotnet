@@ -121,19 +121,16 @@ public sealed class JpegLSDecoder
     /// Gets the near lossless parameter used to encode the JPEG-LS stream.
     /// </summary>
     /// <remarks>
-    /// Property should be obtained after calling <see cref="ReadHeader"/>".
+    /// Value should be obtained after calling <see cref="ReadHeader"/>".
     /// </remarks>
-    /// <value>
+    /// <returns>
     /// The near lossless parameter. A value of 0 means that the image is lossless encoded.
-    /// </value>
+    /// </returns>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public int NearLossless // TODO Change to method with componentIndex = 0;
+    public int GetNearLossless(int componentIndex = 0)
     {
-        get
-        {
-            CheckHeaderRead();
-            return _reader.GetCodingParameters().NearLossless;
-        }
+        CheckHeaderRead();
+        return _reader.GetCodingParameters().NearLossless;
     }
 
     /// <summary>

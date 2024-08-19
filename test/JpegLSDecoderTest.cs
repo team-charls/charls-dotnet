@@ -77,12 +77,12 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
-    public void NearLosslessWithoutReadHeader()
+    public void GetNearLosslessWithoutReadHeader()
     {
         var buffer = new byte[2000];
         JpegLSDecoder decoder = new() { Source = buffer };
 
-        var exception = Assert.Throws<InvalidOperationException>(() => decoder.NearLossless);
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetNearLossless());
         Assert.False(string.IsNullOrEmpty(exception.Message));
     }
 
