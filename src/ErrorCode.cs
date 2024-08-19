@@ -172,9 +172,9 @@ public enum ErrorCode
     InvalidParameterNearLossless = 32,
 
     /// <summary>
-    /// This error is returned when the stream contains an invalid JPEG-LS preset coding parameters segment.
+    /// This error is returned when the stream contains an invalid JPEG-LS preset parameters segment.
     /// </summary>
-    InvalidParameterJpegLSPresetCodingParameters = 33,
+    InvalidParameterJpegLSPresetParameters = 33,
 
     /// <summary>
     /// This error is returned when the stream contains an invalid color transformation segment or one that doesn't match with frame info.

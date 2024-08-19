@@ -10,6 +10,18 @@ using static Algorithm;
 
 internal struct JpegStreamReader
 {
+    private struct ScanInfo
+    {
+        internal readonly byte ComponentId;
+        internal readonly byte MappingTableId;
+
+        internal ScanInfo(byte componentId, byte mappingTableId = 0)
+        {
+            ComponentId = componentId;
+            MappingTableId = mappingTableId;
+        }
+    }
+
     private enum State
     {
         BeforeStartOfImage,
@@ -30,7 +42,11 @@ internal struct JpegStreamReader
     private uint _restartInterval;
     private int _segmentDataSize;
     private int _segmentStartPosition;
-    private readonly List<int> _componentIds = [];
+    private int _width;
+    private int _height;
+    private int _bitsPerSample;
+    private int _componentCount;
+    private readonly List<ScanInfo> _scanInfos = [];
     private readonly List<MappingTableEntry> _mappingTables = [];
 
     public event EventHandler<CommentEventArgs>? Comment;
@@ -42,7 +58,13 @@ internal struct JpegStreamReader
 
     public JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
 
-    public FrameInfo? FrameInfo { get; private set; }
+    public FrameInfo FrameInfo
+    {
+        get
+        {
+            return new FrameInfo(_width, _height, _bitsPerSample, _componentCount);
+        }
+    }
 
     public SpiffHeader? SpiffHeader { get; private set; }
 
@@ -52,17 +74,22 @@ internal struct JpegStreamReader
 
     internal int MappingTableCount => _mappingTables.Count;
 
-    private int SegmentBytesToRead => (_segmentStartPosition + _segmentDataSize) - Position;
-
     internal uint RestartInterval
     {
         get { return _restartInterval; }
     }
 
+    internal int ComponentCount
+    {
+        get { return _scanInfos.Count; }
+    }
+
+    private int SegmentBytesToRead => (_segmentStartPosition + _segmentDataSize) - Position;
+
     public JpegStreamReader()
     {
         _eventSender = this;
-        _componentIds = [];
+        _scanInfos = [];
     }
 
     internal JpegStreamReader(object? eventSender = null)
@@ -70,16 +97,20 @@ internal struct JpegStreamReader
         _eventSender = eventSender ?? this;
     }
 
-    internal int? FindMappingTableIndex(int tableId)
+    internal int GetMappingTableId(int componentIndex)
     {
-        var index = _mappingTables.FindIndex(entry => entry.TableId == tableId);
-        return index == -1 ? null : index;
+        return _scanInfos[componentIndex].MappingTableId;
+    }
+
+    internal int FindMappingTableIndex(int mappingTableId)
+    {
+        return _mappingTables.FindIndex(entry => entry.MappingTableId == mappingTableId);
     }
 
     internal MappingTableInfo GetMappingTableInfo(int index)
     {
         var entry = _mappingTables[index];
-        return new MappingTableInfo() { EntrySize = entry.EntrySize, TableId = entry.TableId };
+        return new MappingTableInfo { EntrySize = entry.EntrySize, TableId = entry.MappingTableId };
     }
 
     internal ReadOnlyMemory<byte> GetMappingTableData(int index)
@@ -99,7 +130,7 @@ internal struct JpegStreamReader
         JpegLSPresetCodingParameters ??= new JpegLSPresetCodingParameters();
 
         if (!JpegLSPresetCodingParameters.IsValid(CalculateMaximumSampleValue(FrameInfo!.BitsPerSample), _nearLossless, out var validatedCodingParameters))
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterJpegLSPresetCodingParameters);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterJpegLSPresetParameters);
 
         return validatedCodingParameters;
     }
@@ -402,26 +433,20 @@ internal struct JpegStreamReader
         // with some modifications.
         CheckMinimalSegmentSize(6);
 
-        FrameInfo = new FrameInfo
-        {
-            BitsPerSample = ReadByte(),
-            Height = ReadUint16(),
-            Width = ReadUint16(),
-            ComponentCount = ReadByte()
-        };
-
-        if (!Validation.IsBitsPerSampleValid(FrameInfo.BitsPerSample))
+        _bitsPerSample = ReadByte();
+        if (!Validation.IsBitsPerSampleValid(_bitsPerSample))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterBitsPerSample);
 
-        if (FrameInfo.Height < 1 || FrameInfo.Width < 1)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
+        SetHeight(ReadUint16());
+        SetWidth(ReadUint16());
 
-        if (FrameInfo.ComponentCount < 1)
+        _componentCount = ReadByte();
+        if (_componentCount == 0)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterComponentCount);
 
-        CheckSegmentSize(6 + (FrameInfo.ComponentCount * 3));
+        CheckSegmentSize(6 + (_componentCount * 3));
 
-        for (int i = 0; i != FrameInfo.ComponentCount; i++)
+        for (int i = 0; i != _componentCount; i++)
         {
             // Component specification parameters
             AddComponent(ReadByte()); // Ci = Component identifier
@@ -485,8 +510,8 @@ internal struct JpegStreamReader
                 return;
 
             case JpegLSPresetParametersType.OversizeImageDimension:
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
-                break;
+                ReadOversizeImageDimension();
+                return;
         }
 
         const byte jpegLSExtendedPresetParameterLast = 0xD; // defined in JPEG-LS Extended (ISO/IEC 14495-2) (first = 0x5)
@@ -532,9 +557,46 @@ internal struct JpegStreamReader
         SkipRemainingSegmentData();
     }
 
+    private void ReadOversizeImageDimension()
+    {
+        // Note: The JPEG-LS standard supports a 2,3 or 4 bytes for the size.
+        const int pcAndDimensionBytes = 2;
+        CheckMinimalSegmentSize(PcTableIdEntrySizeBytes);
+        byte dimensionSize = ReadByte();
+
+        int height;
+        int width;
+        switch (dimensionSize)
+        {
+            case 2:
+                CheckSegmentSize(pcAndDimensionBytes + sizeof(ushort) * 2);
+                height = ReadUint16();
+                width = ReadUint16();
+                break;
+
+            case 3:
+                CheckSegmentSize(pcAndDimensionBytes + (sizeof(ushort) + 1) * 2);
+                height = (int)ReadUint24();
+                width = (int)ReadUint24();
+                break;
+
+            case 4:
+                CheckSegmentSize(pcAndDimensionBytes + sizeof(uint) * 2);
+                height = (int)ReadUint32(); // TODO
+                width = (int)ReadUint32(); // TODO
+                break;
+
+            default:
+                throw ThrowHelper.CreateInvalidDataException(ErrorCode.InvalidParameterJpegLSPresetParameters);
+        }
+
+        SetHeight(height);
+        SetWidth(width);
+    }
+
     private void AddMappingTable(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
     {
-        if (tableId == 0 || _mappingTables.FindIndex(entry => entry.TableId == tableId) != -1)
+        if (tableId == 0 || _mappingTables.FindIndex(entry => entry.MappingTableId == tableId) != -1)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterMappingTableId);
 
         _mappingTables.Add(new MappingTableEntry(tableId, entrySize, tableData));
@@ -542,7 +604,7 @@ internal struct JpegStreamReader
 
     private void ExtendMappingTable(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
     {
-        int index = _mappingTables.FindIndex(entry => entry.TableId == tableId);
+        int index = _mappingTables.FindIndex(entry => entry.MappingTableId == tableId);
 
         if (index == -1 || _mappingTables[index].EntrySize != entrySize)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterMappingTableContinuation);
@@ -554,7 +616,7 @@ internal struct JpegStreamReader
 
     private void ReadDefineRestartIntervalSegment()
     {
-        // Note: The JPEG-LS standard supports a 2,3 or 4 byte restart interval (see ISO/IEC 14495-1, C.2.5)
+        // Note: The JPEG-LS standard supports a 2, 3 or 4 byte restart interval (see ISO/IEC 14495-1, C.2.5)
         //       The original JPEG standard only supports 2 bytes (16 bit big endian).
         _restartInterval = _segmentDataSize switch
         {
@@ -577,14 +639,13 @@ internal struct JpegStreamReader
 
         for (int i = 0; i != componentCountInScan; i++)
         {
-            SkipByte(); // Skip scan component selector
-            int mappingTableSelector = ReadByte();
-            if (mappingTableSelector != 0)
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
+            byte componentId = ReadByte();
+            byte mappingTableId = ReadByte();
+            StoreMappingTableId(componentId, mappingTableId);
         }
 
         _nearLossless = ReadByte(); // Read NEAR parameter
-        if (_nearLossless > Algorithm.ComputeMaximumNearLossless((int)(MaximumSampleValue)))
+        if (_nearLossless > ComputeMaximumNearLossless((int)(MaximumSampleValue)))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterNearLossless);
 
         InterleaveMode = (InterleaveMode)ReadByte(); // Read ILV parameter
@@ -714,12 +775,46 @@ internal struct JpegStreamReader
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidMarkerSegmentSize);
     }
 
-    private void AddComponent(int componentId)
+    private void AddComponent(byte componentId)
     {
-        if (_componentIds.Contains(componentId))
+        if (_scanInfos.Any(scan => scan.ComponentId == componentId))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.DuplicateComponentIdInStartOfFrameSegment);
 
-        _componentIds.Add(componentId);
+        _scanInfos.Add(new ScanInfo(componentId));
+    }
+
+    private void SetWidth(int value)
+    {
+        if (value == 0)
+            return;
+
+        if (_width != 0)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterWidth);
+
+        _width = value;
+    }
+
+    private void SetHeight(int value)
+    {
+        if (value == 0)
+            return;
+
+        if (_height != 0)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterHeight);
+
+        _height = value;
+    }
+
+    private void StoreMappingTableId(byte componentId, byte tableId)
+    {
+        if (tableId == 0)
+            return; // default is already 0, no need to search and update.
+
+        int index = _scanInfos.FindIndex(scanInfo => scanInfo.ComponentId == componentId);
+        if (index == -1)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.UnknownComponentId);
+
+        _scanInfos[index] = new ScanInfo(componentId, tableId);
     }
 
     private void CheckInterleaveMode(InterleaveMode mode)
@@ -732,9 +827,9 @@ internal struct JpegStreamReader
     {
         private readonly List<ReadOnlyMemory<byte>> _dataFragments = [];
 
-        internal MappingTableEntry(byte tableId, byte entrySize, ReadOnlyMemory<byte> tableData)
+        internal MappingTableEntry(byte mappingTableId, byte entrySize, ReadOnlyMemory<byte> tableData)
         {
-            TableId = tableId;
+            MappingTableId = mappingTableId;
             EntrySize = entrySize;
             _dataFragments.Add(tableData);
         }
@@ -754,7 +849,7 @@ internal struct JpegStreamReader
             throw new NotImplementedException();
         }
 
-        internal byte TableId { get; }
+        internal byte MappingTableId { get; }
         internal byte EntrySize { get; }
     }
 

@@ -56,6 +56,7 @@ internal sealed class Util
         return referenceFile;
     }
 
+    // TODO
     byte[] create_test_spiff_header(int highVersion, int lowVersion, bool end_of_directory, int component_count)
     {
         List<byte> buffer = new();
@@ -135,8 +136,7 @@ internal sealed class Util
 
         if (checkEncode)
         {
-            // TODO: enable!
-            //Assert::IsTrue(verify_encoded_bytes(uncompressed_source, encoded_source));
+            Assert.True(VerifyEncodedBytes(uncompressedSource, encodedSource));
         }
 
         var destination = new byte[decoder.GetDestinationSize()];
@@ -184,7 +184,7 @@ internal sealed class Util
     }
 
     internal static void TestByDecoding(ReadOnlyMemory<byte> encodedSource, FrameInfo sourceFrameInfo,
-        ReadOnlyMemory<byte> expectedDestination,
+        ReadOnlySpan<byte> expectedDestination,
         InterleaveMode interleaveMode,
         ColorTransformation colorTransformation = ColorTransformation.None)
     {
@@ -210,9 +210,9 @@ internal sealed class Util
         {
             for (int i = 0; i != expectedDestination.Length; ++i)
             {
-                if (expectedDestination.Span[i] != destination[i])
+                if (expectedDestination[i] != destination[i])
                 {
-                    Assert.Equal(expectedDestination.Span[i], destination[i]);
+                    Assert.Equal(expectedDestination[i], destination[i]);
                 }
             }
         }
@@ -299,6 +299,36 @@ internal sealed class Util
                 break;
             }
         }
+    }
+
+    private static bool VerifyEncodedBytes(ReadOnlyMemory<byte> uncompressedSource, ReadOnlyMemory<byte> encodedSource)
+    {
+        JpegLSDecoder decoder = new(encodedSource);
+
+        byte[] ourEncodedBytes = new byte[encodedSource.Length + 16]; // TODO: get rid of 16.
+
+        JpegLSEncoder encoder = new()
+        {
+            Destination = ourEncodedBytes,
+            FrameInfo = decoder.FrameInfo,
+            InterleaveMode = decoder.InterleaveMode,
+            NearLossless = decoder.NearLossless,
+            PresetCodingParameters = decoder.PresetCodingParameters
+        };
+        encoder.Encode(uncompressedSource);
+
+        if (encoder.BytesWritten != encodedSource.Length)
+            return false;
+
+        for (int i = 0; i != encodedSource.Length; ++i)
+        {
+            if (encodedSource.Span[i] != ourEncodedBytes[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static byte[] TripletToPlanar(byte[] tripletBuffer, int width, int height)

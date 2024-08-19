@@ -105,7 +105,16 @@ public sealed class JpegLSDecoder
     /// The frame information of the parsed JPEG-LS image.
     /// </value>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public FrameInfo FrameInfo => _reader.FrameInfo ?? throw new InvalidOperationException("Incorrect state. ReadHeader has not called.");
+    public FrameInfo FrameInfo
+    {
+        get
+        {
+            if (_state < State.HeaderRead)
+                throw new InvalidOperationException("Incorrect state. ReadHeader has not called.");
+
+            return _reader.FrameInfo;
+        }
+    }
 
     /// <summary>
     /// Gets the near lossless parameter used to encode the JPEG-LS stream.
@@ -117,7 +126,7 @@ public sealed class JpegLSDecoder
     /// The near lossless parameter. A value of 0 means that the image is lossless encoded.
     /// </value>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public int NearLossless
+    public int NearLossless // TODO Change to method with componentIndex = 0;
     {
         get
         {
@@ -204,6 +213,19 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
+    /// Returns the mapping table ID referenced by the component or 0 when no mapping table is used.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    public int GetMappingTableId(int componentIndex)
+    {
+        CheckStateCompleted();
+        ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount, componentIndex);
+        return _reader.GetMappingTableId(componentIndex);
+    }
+
+    /// <summary>
     /// Reads the SPIFF (Still Picture Interchange File Format) header.
     /// </summary>
     /// <param name="spiffHeader">The header or null when no valid header was found.</param>
@@ -252,7 +274,7 @@ public sealed class JpegLSDecoder
             if (_reader.SpiffHeader != null)
             {
                 _reader.ReadHeader(false);
-                if (_reader.SpiffHeader.IsValid(FrameInfo))
+                if (_reader.SpiffHeader.IsValid(_reader.FrameInfo))
                 {
                     SpiffHeader = _reader.SpiffHeader;
                 }
@@ -329,6 +351,11 @@ public sealed class JpegLSDecoder
     private void CheckHeaderRead()
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(_state >= State.HeaderRead);
+    }
+
+    private void CheckStateCompleted()
+    {
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.Completed);
     }
 
     private int CalculateMinimumStride()

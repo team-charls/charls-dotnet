@@ -3,20 +3,21 @@
 
 namespace CharLS.Managed;
 
+using static Algorithm;
+
 internal abstract class Traits
 {
     protected Traits(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetThreshold)
     {
         MaximumSampleValue = maximumSampleValue;
-        Range = Algorithm.ComputeRangeParameter(maximumSampleValue, nearLossless);
+        Range = ComputeRangeParameter(maximumSampleValue, nearLossless);
         NearLossless = nearLossless;
-        QuantizedBitsPerSample = Algorithm.Log2Ceiling(Range);
-        BitsPerSample = Algorithm.Log2Ceiling(maximumSampleValue);
-        Limit = 2 * (BitsPerSample + Math.Max(8, BitsPerSample));
+        QuantizedBitsPerSample = Log2Ceiling(Range);
+        BitsPerSample = Log2Ceiling(maximumSampleValue);
+        Limit = ComputeLimitParameter(BitsPerSample);
         ResetThreshold = resetThreshold;
         QuantizationRange = 1 << BitsPerSample;
     }
-
 
     /// <summary>
     /// ISO 14495-1 MAX symbol: maximum possible image sample value over all components of a scan.
@@ -24,7 +25,7 @@ internal abstract class Traits
     internal int MaximumSampleValue { get; set; }
 
     /// <summary>
-    /// ISO 14495-1 bpp symbol: number of bits needed to represent MAXVAL (not less than 2).
+    /// ISO 14495-1 bpp (Bits per pixel per component) symbol: number of bits needed to represent MAXVAL (not less than 2).
     /// </summary>
     internal int BitsPerSample { get; }
 

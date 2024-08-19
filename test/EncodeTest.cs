@@ -86,7 +86,7 @@ public class EncodeTest
     [Fact]
     public void EncodeColor16BitInterleaveNone()
     {
-        byte[] data = [ 10, 20, 30, 40, 50, 60 ];
+        byte[] data = [10, 20, 30, 40, 50, 60];
         Encode(new FrameInfo(1, 1, 16, 3), data, 66, InterleaveMode.None);
     }
 
@@ -100,8 +100,14 @@ public class EncodeTest
     [Fact]
     public void EncodeColor16BitInterleaveSample()
     {
-        byte[] data = [10, 20, 30, 40, 50, 60];
-        Encode(new FrameInfo(1, 1, 16, 3), data, 45, InterleaveMode.Sample);
+        byte[] data =
+        [
+            0, 0, 0, 0, 0, 0,    // row 0, pixel 0
+            0, 0, 0, 0, 0, 0,    // row 0, pixel 1
+            1, 10, 1, 20, 1, 30, // row 1, pixel 0
+            1, 40, 1, 50, 1, 60  // row 1, pixel 1
+        ];
+        Encode(new FrameInfo(2, 2, 16, 3), data, 51, InterleaveMode.Sample);
     }
 
     [Fact]
@@ -149,7 +155,7 @@ public class EncodeTest
     [Fact]
     public void Encode4Components8BitInterleaveNone()
     {
-        byte[] data = [ 10, 20, 30, 40];
+        byte[] data = [10, 20, 30, 40];
         Encode(new FrameInfo(1, 1, 8, 4), data, 75, InterleaveMode.None);
     }
 
@@ -170,7 +176,7 @@ public class EncodeTest
     [Fact]
     public void Encode4Components16BitInterleaveNone()
     {
-        byte[] data = [10, 20, 30, 40, 50, 60, 70,  80];
+        byte[] data = [10, 20, 30, 40, 50, 60, 70, 80];
         Encode(new FrameInfo(1, 1, 16, 4), data, 86, InterleaveMode.None);
     }
 
@@ -184,8 +190,15 @@ public class EncodeTest
     [Fact]
     public void Encode4Components16BitInterleaveSample()
     {
-        byte[] data = [10, 20, 30, 40, 50, 60, 70, 80];
-        Encode(new FrameInfo(1, 1, 16, 4), data, 52, InterleaveMode.Sample);
+        byte[] data =
+        [
+            0, 0, 0, 0, 0, 0, 0, 0,     // row 0, pixel 0
+            0, 0, 0, 0, 0, 0, 0, 0,     // row 0, pixel 1
+            1, 10, 1, 20, 1, 30, 1, 40, // row 1, pixel 0
+            1, 50, 1, 60, 1, 70, 1, 80  // row 1, pixel 1
+        ];
+
+        Encode(new FrameInfo(2, 2, 16, 4), data, 61, InterleaveMode.Sample);
     }
 
     private static void Encode(string filename, int expectedSize, InterleaveMode interleaveMode = InterleaveMode.None,
@@ -200,7 +213,7 @@ public class EncodeTest
     private static void Encode(FrameInfo frameInfo, ReadOnlyMemory<byte> source, int expectedSize, InterleaveMode interleaveMode,
         ColorTransformation colorTransformation = ColorTransformation.None)
     {
-        JpegLSEncoder encoder = new() { FrameInfo = frameInfo, InterleaveMode = interleaveMode, ColorTransformation = colorTransformation};
+        JpegLSEncoder encoder = new() { FrameInfo = frameInfo, InterleaveMode = interleaveMode, ColorTransformation = colorTransformation };
 
         Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = encodedData;
@@ -210,6 +223,6 @@ public class EncodeTest
         Assert.Equal(expectedSize, encoder.BytesWritten);
 
         encodedData = encodedData[..encoder.BytesWritten];
-        Util.TestByDecoding(encodedData, frameInfo, source, interleaveMode /*, color_transformation*/);
+        Util.TestByDecoding(encodedData, frameInfo, source.Span, interleaveMode /*, color_transformation*/);
     }
 }

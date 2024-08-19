@@ -155,8 +155,7 @@ public sealed class JpegLSEncoder
 
         set
         {
-            if (!value.IsValid())
-                throw new ArgumentOutOfRangeException(nameof(value));
+            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(value.IsValid(), ErrorCode.InvalidArgumentEncodingOptions, nameof(value));
             _encodingOptions = value;
         }
     }
@@ -195,15 +194,15 @@ public sealed class JpegLSEncoder
 
         set
         {
-            if (!value.IsValid())
-                throw new ArgumentOutOfRangeException(nameof(value));
+            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(value.IsValid(),
+                ErrorCode.InvalidArgumentColorTransformation);
 
             _colorTransformation = value;
         }
     }
 
     /// <summary>
-    /// Gets the estimated size in bytes of the memory buffer that should used as output destination.
+    /// Gets the estimated size in bytes of the memory buffer that should be used as output destination.
     /// </summary>
     /// <value>
     /// The size in bytes of the memory buffer.
@@ -263,12 +262,24 @@ public sealed class JpegLSEncoder
     /// Configures the mapping table ID the encoder should reference when encoding a component.
     /// The referenced mapping table can be included in the stream or provided in another JPEG-LS abbreviated format stream.
     /// </summary>
-    public void SetMappingTableId(int componentIndex, int tableId)
+    public void SetMappingTableId(int componentIndex, int mappingTableId)
     {
         ThrowHelper.ThrowIfOutsideRange(Constants.MinimumComponentIndex, Constants.MaximumComponentIndex, componentIndex);
-        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumTableId, Constants.MaximumTableId, tableId);
+        ThrowHelper.ThrowIfOutsideRange(0, Constants.MaximumMappingTableId, mappingTableId);
 
-        _writer.SetTableId(componentIndex, tableId);
+        _writer.SetTableId(componentIndex, mappingTableId);
+    }
+
+    /// <summary>
+    /// Resets the write position of the destination buffer to the beginning.
+    /// </summary>
+    public void Rewind()
+    {
+        if (_state == State.Initial)
+            return; // Nothing to do, stay in the same state.
+
+        _writer.Rewind();
+        _state = State.DestinationSet;
     }
 
     /// <summary>
@@ -280,6 +291,7 @@ public sealed class JpegLSEncoder
     {
         if (source.IsEmpty)
             throw new ArgumentException("", nameof(source));
+        ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured() && _state != State.Initial);
         CheckInterleaveModeAgainstComponentCount();
 
         int maximumSampleValue = Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
@@ -293,7 +305,7 @@ public sealed class JpegLSEncoder
         }
         else
         {
-            ////check_stride(stride, source.size());
+            CheckStride(stride, source.Length);
         }
 
         TransitionToTablesAndMiscellaneousState();
@@ -354,7 +366,7 @@ public sealed class JpegLSEncoder
     public void WriteSpiffHeader(SpiffHeader spiffHeader)
     {
         ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Height, ErrorCode.InvalidArgumentHeight);
-        ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Width, ErrorCode.InvalidParameterWidth);
+        ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Width, ErrorCode.InvalidArgumentWidth);
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.DestinationSet);
 
         _writer.WriteStartOfImage();
@@ -408,10 +420,24 @@ public sealed class JpegLSEncoder
     public void WriteSpiffEntry(int entryTag, ReadOnlySpan<byte> entryData)
     {
         ThrowHelper.ThrowArgumentExceptionIfFalse(entryTag != Constants.SpiffEndOfDirectoryEntryType, nameof(entryTag));
-        ThrowHelper.ThrowArgumentExceptionIfFalse(entryData.Length <= 65528, nameof(entryData));
+        ThrowHelper.ThrowArgumentExceptionIfFalse(entryData.Length <= 65528, nameof(entryData), ErrorCode.InvalidArgumentSize);
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.SpiffHeader);
 
         _writer.WriteSpiffDirectoryEntry(entryTag, entryData);
+    }
+
+    /// <summary>
+    /// Writes a SPIFF end of directory entry to the destination.
+    /// The encoder will normally do this automatically. It is made available
+    /// for the scenario to create SPIFF headers in front of existing JPEG-LS streams.
+    /// </summary>
+    /// <remarks>
+    /// The end of directory also includes a SOI marker. This marker should be skipped from the JPEG-LS stream.
+    /// </remarks>
+    public void WriteSpiffEndOfDirectoryEntry()
+    {
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.SpiffHeader);
+        TransitionToTablesAndMiscellaneousState();
     }
 
     /// <summary>
@@ -424,7 +450,7 @@ public sealed class JpegLSEncoder
     public void WriteComment(ReadOnlySpan<byte> comment)
     {
         ThrowHelper.ThrowArgumentExceptionIfFalse(comment.Length <= Constants.SegmentMaxDataSize, nameof(comment));
-        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and <= State.Completed);
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and < State.Completed);
 
         TransitionToTablesAndMiscellaneousState();
         _writer.WriteCommentSegment(comment);
@@ -452,8 +478,9 @@ public sealed class JpegLSEncoder
     /// <param name="applicationData">The 'application data' bytes. Application specific.</param>
     public void WriteApplicationData(int applicationDataId, ReadOnlySpan<byte> applicationData)
     {
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumApplicationDataId, Constants.MaximumApplicationDataId, applicationDataId);
         ThrowHelper.ThrowArgumentExceptionIfFalse(applicationData.Length <= Constants.SegmentMaxDataSize, nameof(applicationData));
-        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and <= State.Completed);
+        ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and < State.Completed);
 
         TransitionToTablesAndMiscellaneousState();
         _writer.WriteApplicationDataSegment(applicationDataId, applicationData);
@@ -470,8 +497,8 @@ public sealed class JpegLSEncoder
     /// <param name="tableData">Buffer that holds the mapping table.</param>
     public void WriteMappingTable(int tableId, int entrySize, ReadOnlySpan<byte> tableData)
     {
-        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumTableId, Constants.MaximumTableId, tableId);
-        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumEntrySize, Constants.MaximumEntrySize, entrySize);
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumMappingTableId, Constants.MaximumMappingTableId, tableId);
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumMappingEntrySize, Constants.MaximumMappingEntrySize, entrySize);
         ThrowHelper.ThrowArgumentExceptionIfFalse(tableData.Length >= entrySize, nameof(tableData), ErrorCode.InvalidArgumentSize);
         ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and < State.Completed);
 
@@ -506,7 +533,8 @@ public sealed class JpegLSEncoder
 
         if (EncodingOptions.HasFlag(EncodingOptions.IncludeVersionNumber))
         {
-            var informationVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            string informationVersion = RemoveGitHash(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion!);
+
             byte[] utfBytes = Encoding.UTF8.GetBytes(informationVersion!);
 
             var versionNumber = "charls-dotnet "u8.ToArray().Concat(utfBytes).ToArray();
@@ -514,6 +542,13 @@ public sealed class JpegLSEncoder
         }
 
         _state = State.TablesAndMiscellaneous;
+        return;
+
+        static string RemoveGitHash(string version)
+        {
+            int plusIndex = version.IndexOf('+');
+            return plusIndex != -1 ? version[..plusIndex] : version;
+        }
     }
 
     private void WriteColorTransformSegment()
@@ -567,6 +602,30 @@ public sealed class JpegLSEncoder
             return stride;
 
         return stride * FrameInfo.ComponentCount;
+    }
+
+    private void CheckStride(int stride, int sourceSize)
+    {
+        int minimumStride = CalculateStride();
+        if (stride < minimumStride)
+            ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
+
+        // Simple check to verify user input, and prevent out-of-bound read access.
+        // Stride parameter defines the number of bytes on a scan line.
+        if (InterleaveMode == InterleaveMode.None)
+        {
+            int minimumSourceSize =
+                stride * FrameInfo!.ComponentCount * FrameInfo.Height - (stride - minimumStride);
+
+            if (sourceSize < minimumSourceSize)
+                ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
+        }
+        else
+        {
+            int minimumSourceSize = stride * FrameInfo!.Height - (stride - minimumStride);
+            if (sourceSize < minimumSourceSize)
+                ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
+        }
     }
 
     private bool IsFrameInfoConfigured()

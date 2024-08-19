@@ -10,9 +10,9 @@ internal struct JpegStreamWriter
 {
     private int _position;
     private int _componentIndex;
-    private byte[]? _tableIds;
+    private byte[]? _mappingTableIds;
 
-    private byte MappingTableSelector => (byte)(_tableIds == null ? 0 : _tableIds[_componentIndex]);
+    private byte MappingTableSelector => (byte)(_mappingTableIds == null ? 0 : _mappingTableIds[_componentIndex]);
 
     internal Memory<byte> Destination { get; set; }
 
@@ -215,12 +215,12 @@ internal struct JpegStreamWriter
     internal void SetTableId(int componentIndex, int tableId)
     {
         Debug.Assert(componentIndex < Constants.MaximumComponentCount);
-        Debug.Assert(tableId is >= 0 and <= Constants.MaximumTableId);
+        Debug.Assert(tableId is >= 0 and <= Constants.MaximumMappingTableId);
 
         // Usage of mapping tables is rare: use lazy initialization.
-        _tableIds ??= new byte[Constants.MaximumComponentCount];
+        _mappingTableIds ??= new byte[Constants.MaximumComponentCount];
 
-        _tableIds[componentIndex] = (byte)tableId;
+        _mappingTableIds[componentIndex] = (byte)tableId;
     }
 
     private void WriteJpegLSPresetParametersSegment(JpegLSPresetParametersType presetParametersType,

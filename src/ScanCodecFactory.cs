@@ -33,8 +33,6 @@ internal class ScanCodecFactory
                     var traits = new LosslessTraitsQuad(maximumSampleValue, 0, presetCodingParameters.ResetValue);
                     return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters, traits);
                 }
-
-                throw new NotImplementedException();
             }
             switch (frameInfo.BitsPerSample)
             {

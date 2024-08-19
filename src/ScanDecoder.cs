@@ -12,14 +12,16 @@ internal abstract class ScanDecoder(
     CodingParameters codingParameters)
     : ScanCodec(frameInfo, presetCodingParameters, codingParameters)
 {
+    private const int CacheBitCount = sizeof(ulong) * 8;
+    private const int MaxReadableCacheBits = CacheBitCount - 8;
+
     private ReadOnlyMemory<byte> _source;
     private int _position;
     private int _endPosition;
     private int _positionFF;
     private int _validBits;
     private ulong _readCache; // TODO: change for 32-bit build
-    private const int CacheBitCount = sizeof(ulong) * 8;
-    private const int MaxReadableCacheBits = CacheBitCount - 8;
+    private int _restartIntervalCounter;
 
     protected static readonly GolombCodeTable[] ColombCodeTable =
     [
@@ -36,15 +38,6 @@ internal abstract class ScanDecoder(
         _source = source;
         _position = 0;
         _endPosition = source.Length;
-
-        FindJpegMarkerStartByte();
-        FillReadCache();
-    }
-
-    protected void Reset()
-    {
-        _validBits = 0;
-        _readCache = 0;
 
         FindJpegMarkerStartByte();
         FillReadCache();
@@ -194,7 +187,15 @@ internal abstract class ScanDecoder(
         return value;
     }
 
-    protected void ReadRestartMarker(int expectedRestartMarkerId)
+    protected void ProcessRestartMarker()
+    {
+        ReadRestartMarker(Constants.JpegRestartMarkerBase + _restartIntervalCounter);
+        _restartIntervalCounter = (_restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+
+        ReInitializeReadCache();
+    }
+
+    private void ReadRestartMarker(int expectedRestartMarkerId)
     {
         byte value = ReadByte();
 
@@ -207,8 +208,17 @@ internal abstract class ScanDecoder(
             value = ReadByte();
         } while (value == Constants.JpegMarkerStartByte);
 
-        if (value != Constants.JpegRestartMarkerBase + expectedRestartMarkerId)
+        if (value != expectedRestartMarkerId)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.RestartMarkerNotFound);
+    }
+
+    private void ReInitializeReadCache()
+    {
+        _validBits = 0;
+        _readCache = 0;
+
+        FindJpegMarkerStartByte();
+        FillReadCache();
     }
 
     private void FindJpegMarkerStartByte()

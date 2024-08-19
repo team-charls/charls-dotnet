@@ -617,7 +617,7 @@ public class JpegStreamReaderTest
         reader.ReadHeader(false);
 
         Assert.Equal(1, reader.MappingTableCount);
-        Assert.Equal(0, reader.FindMappingTableIndex(1).GetValueOrDefault(-1));
+        Assert.Equal(0, reader.FindMappingTableIndex(1));
 
         var info = reader.GetMappingTableInfo(0);
         Assert.Equal(1, info.TableId);

@@ -13,12 +13,15 @@ internal class ScanDecoderImpl : ScanDecoder
     private int _restartInterval;
     private readonly Traits _traits;
     private readonly sbyte[] _quantizationLut;
-    CopyFromLineBuffer.CopyFromLineBufferFn? _copyFromLineBuffer;
+    private readonly CopyFromLineBuffer.Method _copyFromLineBuffer;
 
     internal ScanDecoderImpl(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
         CodingParameters codingParameters, Traits traits) :
         base(frameInfo, presetCodingParameters, codingParameters)
     {
+        _copyFromLineBuffer = CopyFromLineBuffer.GetMethod(FrameInfo.BitsPerSample, FrameInfo.ComponentCount,
+            CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
+
         _traits = traits;
 
         _quantizationLut = InitializeQuantizationLut(traits, PresetCodingParameters.Threshold1,
@@ -29,9 +32,6 @@ internal class ScanDecoderImpl : ScanDecoder
 
     public override int DecodeScan(ReadOnlyMemory<byte> source, Span<byte> destination, int stride)
     {
-        _copyFromLineBuffer = CopyFromLineBuffer.GetMethod(FrameInfo.BitsPerSample, FrameInfo.ComponentCount,
-            CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
-
         Initialize(source);
 
         // Process images without a restart interval, as 1 large restart interval.
@@ -99,7 +99,6 @@ internal class ScanDecoderImpl : ScanDecoder
     private void DecodeLines8BitInterleaveModeNone(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int restartIntervalCounter = 0;
 
         Span<byte> lineBuffer = new byte[pixelStride * 2];
 
@@ -131,12 +130,9 @@ internal class ScanDecoderImpl : ScanDecoder
             if (line == FrameInfo.Height)
                 break;
 
-            // At this point in the byte stream a restart marker should be present: process it.
-            ReadRestartMarker(restartIntervalCounter);
-            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+            ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
-            Reset();
             lineBuffer.Clear();
             InitializeParameters(_traits.Range);
         }
@@ -146,7 +142,6 @@ internal class ScanDecoderImpl : ScanDecoder
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = FrameInfo.ComponentCount;
-        int restartIntervalCounter = 0;
 
         Span<int> runIndex = stackalloc int[componentCount];
         Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
@@ -190,12 +185,9 @@ internal class ScanDecoderImpl : ScanDecoder
             if (line == FrameInfo.Height)
                 break;
 
-            // At this point in the byte stream a restart marker should be present: process it.
-            ReadRestartMarker(restartIntervalCounter);
-            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+            ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
-            Reset();
             lineBuffer.Clear();
             runIndex.Clear();
             InitializeParameters(_traits.Range);
@@ -206,7 +198,6 @@ internal class ScanDecoderImpl : ScanDecoder
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = FrameInfo.ComponentCount;
-        int restartIntervalCounter = 0;
 
         Span<int> runIndex = stackalloc int[componentCount];
         Span<ushort> lineBuffer = new ushort[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
@@ -250,12 +241,9 @@ internal class ScanDecoderImpl : ScanDecoder
             if (line == FrameInfo.Height)
                 break;
 
-            // At this point in the byte stream a restart marker should be present: process it.
-            ReadRestartMarker(restartIntervalCounter);
-            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+            ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
-            Reset();
             lineBuffer.Clear();
             runIndex.Clear();
             InitializeParameters(_traits.Range);
@@ -265,7 +253,6 @@ internal class ScanDecoderImpl : ScanDecoder
     private void DecodeLines8Bit3ComponentsInterleaveModeSample(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int restartIntervalCounter = 0;
 
         Span<Triplet<byte>> lineBuffer = new Triplet<byte>[pixelStride * 2];
 
@@ -297,12 +284,9 @@ internal class ScanDecoderImpl : ScanDecoder
             if (line == FrameInfo.Height)
                 break;
 
-            // At this point in the byte stream a restart marker should be present: process it.
-            ReadRestartMarker(restartIntervalCounter);
-            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+            ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
-            Reset();
             lineBuffer.Clear();
             InitializeParameters(_traits.Range);
         }
@@ -311,7 +295,6 @@ internal class ScanDecoderImpl : ScanDecoder
     private void DecodeLines16Bit3ComponentsInterleaveModeSample(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int restartIntervalCounter = 0;
 
         Span<Triplet<ushort>> lineBuffer = new Triplet<ushort>[pixelStride * 2];
 
@@ -343,12 +326,9 @@ internal class ScanDecoderImpl : ScanDecoder
             if (line == FrameInfo.Height)
                 break;
 
-            // At this point in the byte stream a restart marker should be present: process it.
-            ReadRestartMarker(restartIntervalCounter);
-            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+            ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
-            Reset();
             lineBuffer.Clear();
             InitializeParameters(_traits.Range);
         }
@@ -357,7 +337,6 @@ internal class ScanDecoderImpl : ScanDecoder
     private void DecodeLines8Bit4ComponentsInterleaveModeSample(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int restartIntervalCounter = 0;
 
         Span<Quad<byte>> lineBuffer = new Quad<byte>[pixelStride * 2];
 
@@ -389,12 +368,9 @@ internal class ScanDecoderImpl : ScanDecoder
             if (line == FrameInfo.Height)
                 break;
 
-            // At this point in the byte stream a restart marker should be present: process it.
-            ReadRestartMarker(restartIntervalCounter);
-            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+            ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
-            Reset();
             lineBuffer.Clear();
             InitializeParameters(_traits.Range);
         }
@@ -403,7 +379,6 @@ internal class ScanDecoderImpl : ScanDecoder
     private void DecodeLines16Bit4ComponentsInterleaveModeSample(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int restartIntervalCounter = 0;
 
         Span<Quad<ushort>> lineBuffer = new Quad<ushort>[pixelStride * 2];
 
@@ -435,12 +410,9 @@ internal class ScanDecoderImpl : ScanDecoder
             if (line == FrameInfo.Height)
                 break;
 
-            // At this point in the byte stream a restart marker should be present: process it.
-            ReadRestartMarker(restartIntervalCounter);
-            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+            ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
-            Reset();
             lineBuffer.Clear();
             InitializeParameters(_traits.Range);
         }
@@ -452,7 +424,6 @@ internal class ScanDecoderImpl : ScanDecoder
     private void DecodeLines16BitInterleaveModeNone(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
-        int restartIntervalCounter = 0;
 
         Span<ushort> lineBuffer = new ushort[pixelStride * 2];
 
@@ -484,12 +455,9 @@ internal class ScanDecoderImpl : ScanDecoder
             if (line == FrameInfo.Height)
                 break;
 
-            // At this point in the byte stream a restart marker should be present: process it.
-            ReadRestartMarker(restartIntervalCounter);
-            restartIntervalCounter = (restartIntervalCounter + 1) % Constants.JpegRestartMarkerRange;
+            ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
-            Reset();
             lineBuffer.Clear();
             InitializeParameters(_traits.Range);
         }
@@ -569,30 +537,22 @@ internal class ScanDecoderImpl : ScanDecoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 =
-                ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
-                    QuantizeGradient(rb.V1 - rc.V1),
+            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
                         QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 =
-                ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
-                    QuantizeGradient(rb.V2 - rc.V2),
-                    QuantizeGradient(rc.V2 - ra.V2));
-
-            int qs3 =
-                ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
-                    QuantizeGradient(rb.V3 - rc.V3),
-                    QuantizeGradient(rc.V3 - ra.V3));
+            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
+                        QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
+                        QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
             {
                 index += DecodeRunMode(index, previousLine, currentLine);
             }
             else
             {
-                Triplet<byte> rx;
-                rx.V1 = (byte)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (byte)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (byte)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
-                currentLine[index] = rx;
+                currentLine[index] = new Triplet<byte>(
+                    (byte)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1)),
+                    (byte)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2)),
+                    (byte)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3)));
                 ++index;
             }
         }
@@ -608,30 +568,22 @@ internal class ScanDecoderImpl : ScanDecoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 =
-                ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
-                    QuantizeGradient(rb.V1 - rc.V1),
-                    QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 =
-                ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
-                    QuantizeGradient(rb.V2 - rc.V2),
-                    QuantizeGradient(rc.V2 - ra.V2));
-
-            int qs3 =
-                ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
-                    QuantizeGradient(rb.V3 - rc.V3),
-                    QuantizeGradient(rc.V3 - ra.V3));
+            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
+                        QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
+                        QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
+                        QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
             {
                 index += DecodeRunMode(index, previousLine, currentLine);
             }
             else
             {
-                Triplet<ushort> rx;
-                rx.V1 = (ushort)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (ushort)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (ushort)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
-                currentLine[index] = rx;
+                currentLine[index] = new Triplet<ushort>(
+                    (ushort)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1)),
+                    (ushort)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2)),
+                    (ushort)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3)));
                 ++index;
             }
         }
@@ -647,22 +599,14 @@ internal class ScanDecoderImpl : ScanDecoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 =
-                ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
-                    QuantizeGradient(rb.V1 - rc.V1),
-                    QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 =
-                ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
-                    QuantizeGradient(rb.V2 - rc.V2),
-                    QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 =
-                ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
-                    QuantizeGradient(rb.V3 - rc.V3),
-                    QuantizeGradient(rc.V3 - ra.V3));
-            int qs4 =
-                ComputeContextId(QuantizeGradient(rd.V4 - rb.V4),
-                    QuantizeGradient(rb.V4 - rc.V4),
-                    QuantizeGradient(rc.V4 - ra.V4));
+            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
+                        QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
+                        QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
+                        QuantizeGradient(rc.V3 - ra.V3));
+            int qs4 = ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
+                        QuantizeGradient(rc.V4 - ra.V4));
 
             if (qs1 == 0 && qs2 == 0 && qs3 == 0 && qs4 == 0)
             {
@@ -670,12 +614,11 @@ internal class ScanDecoderImpl : ScanDecoder
             }
             else
             {
-                Quad<byte> rx;
-                rx.V1 = (byte)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (byte)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (byte)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
-                rx.V4 = (byte)DecodeRegular(qs3, ComputePredictedValue(ra.V4, rb.V4, rc.V4));
-                currentLine[index] = rx;
+                currentLine[index] = new Quad<byte>(
+                    (byte)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1)),
+                    (byte)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2)),
+                    (byte)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3)),
+                    (byte)DecodeRegular(qs3, ComputePredictedValue(ra.V4, rb.V4, rc.V4)));
                 ++index;
             }
         }
@@ -691,22 +634,14 @@ internal class ScanDecoderImpl : ScanDecoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 =
-                ComputeContextId(QuantizeGradient(rd.V1 - rb.V1),
-                    QuantizeGradient(rb.V1 - rc.V1),
-                    QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 =
-                ComputeContextId(QuantizeGradient(rd.V2 - rb.V2),
-                    QuantizeGradient(rb.V2 - rc.V2),
-                    QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 =
-                ComputeContextId(QuantizeGradient(rd.V3 - rb.V3),
-                    QuantizeGradient(rb.V3 - rc.V3),
-                    QuantizeGradient(rc.V3 - ra.V3));
-            int qs4 =
-                ComputeContextId(QuantizeGradient(rd.V4 - rb.V4),
-                    QuantizeGradient(rb.V4 - rc.V4),
-                    QuantizeGradient(rc.V4 - ra.V4));
+            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
+                        QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
+                        QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
+                        QuantizeGradient(rc.V3 - ra.V3));
+            int qs4 = ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
+                        QuantizeGradient(rc.V4 - ra.V4));
 
             if (qs1 == 0 && qs2 == 0 && qs3 == 0 && qs4 == 0)
             {
@@ -714,12 +649,11 @@ internal class ScanDecoderImpl : ScanDecoder
             }
             else
             {
-                Quad<ushort> rx;
-                rx.V1 = (ushort)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1));
-                rx.V2 = (ushort)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2));
-                rx.V3 = (ushort)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3));
-                rx.V4 = (ushort)DecodeRegular(qs3, ComputePredictedValue(ra.V4, rb.V4, rc.V4));
-                currentLine[index] = rx;
+                currentLine[index] = new Quad<ushort>(
+                    (ushort)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1)),
+                    (ushort)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2)),
+                    (ushort)DecodeRegular(qs3, ComputePredictedValue(ra.V3, rb.V3, rc.V3)),
+                    (ushort)DecodeRegular(qs3, ComputePredictedValue(ra.V4, rb.V4, rc.V4)));
                 ++index;
             }
         }
@@ -1146,47 +1080,47 @@ internal class ScanDecoderImpl : ScanDecoder
 
     private int CopyLineBufferToDestination(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
-        return _copyFromLineBuffer!(source, destination, pixelCount, pixelStride);
+        return _copyFromLineBuffer(source, destination, pixelCount, pixelStride);
     }
 
     private int CopyLineBufferToDestinationInterleaveLine(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
-        return _copyFromLineBuffer!(source, destination, pixelCount, pixelStride);
+        return _copyFromLineBuffer(source, destination, pixelCount, pixelStride);
     }
 
     private int CopyLineBufferToDestination(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
-        return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount * 2, pixelStride);
+        return _copyFromLineBuffer(sourceInBytes, destination, pixelCount * 2, pixelStride);
     }
 
     private int CopyLineBufferToDestinationInterleaveLine(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
-        return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);
+        return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
     private int CopyLineBufferToDestination(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<byte>, byte>(source);
-        return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);
+        return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
     private int CopyLineBufferToDestination(Span<Triplet<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(source);
-        return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);
+        return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
     private int CopyLineBufferToDestination(Span<Quad<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<byte>, byte>(source);
-        return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);
+        return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
     private int CopyLineBufferToDestination(Span<Quad<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(source);
-        return _copyFromLineBuffer!(sourceInBytes, destination, pixelCount, pixelStride);
+        return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 }
