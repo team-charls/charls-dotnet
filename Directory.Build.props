@@ -15,6 +15,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio><!-- Enable faster builds in Visual Studio 2022 17.5 and newer. -->
 
+    <!-- Version information -->
+    <Version>1.0.0-alpha.1</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Copyright>Copyright 2024 Team CharLS</Copyright>
+
     <!-- Build -->
     <!-- Build to a folder outside the source folders, making it easier to clean. -->
     <OutputPath>$(MSBuildThisFileDirectory)build\binaries\$(Configuration)\</OutputPath>

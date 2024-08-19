@@ -105,7 +105,16 @@ public sealed class JpegLSDecoder
     /// The frame information of the parsed JPEG-LS image.
     /// </value>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public FrameInfo FrameInfo => _reader.FrameInfo ?? throw new InvalidOperationException("Incorrect state. ReadHeader has not called.");
+    public FrameInfo FrameInfo
+    {
+        get
+        {
+            if (_state < State.HeaderRead)
+                throw new InvalidOperationException("Incorrect state. ReadHeader has not called.");
+
+            return _reader.FrameInfo;
+        }
+    }
 
     /// <summary>
     /// Gets the near lossless parameter used to encode the JPEG-LS stream.
@@ -265,7 +274,7 @@ public sealed class JpegLSDecoder
             if (_reader.SpiffHeader != null)
             {
                 _reader.ReadHeader(false);
-                if (_reader.SpiffHeader.IsValid(FrameInfo))
+                if (_reader.SpiffHeader.IsValid(_reader.FrameInfo))
                 {
                     SpiffHeader = _reader.SpiffHeader;
                 }

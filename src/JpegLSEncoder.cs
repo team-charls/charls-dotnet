@@ -155,8 +155,7 @@ public sealed class JpegLSEncoder
 
         set
         {
-            if (!value.IsValid())
-                throw new ArgumentOutOfRangeException(nameof(value));
+            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(value.IsValid(), ErrorCode.InvalidArgumentEncodingOptions, nameof(value));
             _encodingOptions = value;
         }
     }
@@ -367,7 +366,7 @@ public sealed class JpegLSEncoder
     public void WriteSpiffHeader(SpiffHeader spiffHeader)
     {
         ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Height, ErrorCode.InvalidArgumentHeight);
-        ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Width, ErrorCode.InvalidParameterWidth);
+        ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Width, ErrorCode.InvalidArgumentWidth);
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.DestinationSet);
 
         _writer.WriteStartOfImage();
@@ -534,7 +533,8 @@ public sealed class JpegLSEncoder
 
         if (EncodingOptions.HasFlag(EncodingOptions.IncludeVersionNumber))
         {
-            var informationVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            string informationVersion = RemoveGitHash(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion!);
+
             byte[] utfBytes = Encoding.UTF8.GetBytes(informationVersion!);
 
             var versionNumber = "charls-dotnet "u8.ToArray().Concat(utfBytes).ToArray();
@@ -542,6 +542,13 @@ public sealed class JpegLSEncoder
         }
 
         _state = State.TablesAndMiscellaneous;
+        return;
+
+        static string RemoveGitHash(string version)
+        {
+            int plusIndex = version.IndexOf('+');
+            return plusIndex != -1 ? version[..plusIndex] : version;
+        }
     }
 
     private void WriteColorTransformSegment()
