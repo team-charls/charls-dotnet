@@ -126,7 +126,7 @@ public sealed class JpegLSDecoder
     /// The near lossless parameter. A value of 0 means that the image is lossless encoded.
     /// </value>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public int NearLossless
+    public int NearLossless // TODO Change to method with componentIndex = 0;
     {
         get
         {

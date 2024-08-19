@@ -154,6 +154,7 @@ public class ComplianceTest
             0x11, // Sub-sampling: H1 = 1, V1 = 1
             0x00, // Tq1 = 0 (this field is always 0)
 
+            // TODO
             //0xFF, byte{ 0xF8},             // LSE - JPEG-LS preset parameters marker
             //0x00, byte{ 0x11},             // Length of marker segment = 17 bytes including the length field
             //0x02,                         // ID = 2, mapping table
@@ -185,6 +186,7 @@ public class ComplianceTest
         byte[] expected = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3];
         Util.CompareBuffers(destination, expected);
 
+        // TODO
         //const int32_t mapping_table_id{ decoder.mapping_table_id(0)};
         //Assert::AreEqual(5, mapping_table_id);
 
