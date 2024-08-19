@@ -328,7 +328,7 @@ internal class ScanEncoderImpl : ScanEncoder
 
         Span<Quad<ushort>> lineBuffer = new Quad<ushort>[pixelStride * 2];
 
-        for (int line = 0; line < FrameInfo.Height; ++line)
+        for (int line = 0; ;)
         {
             var previousLine = lineBuffer;
             var currentLine = lineBuffer[pixelStride..];

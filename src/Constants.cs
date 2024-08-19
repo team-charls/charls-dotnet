@@ -24,10 +24,10 @@ internal static class Constants
     internal const int MaximumApplicationDataId = 15;
 
     // The following limits for mapping tables are defined in ISO/IEC 14495-1, C.2.4.1.2, table C.4.
-    internal const int MinimumTableId = 1;
-    internal const int MaximumTableId = 255;
-    internal const int MinimumEntrySize = 1;
-    internal const int MaximumEntrySize = 255;
+    internal const int MinimumMappingTableId = 1;
+    internal const int MaximumMappingTableId = 255;
+    internal const int MinimumMappingEntrySize = 1;
+    internal const int MaximumMappingEntrySize = 255;
 
     internal const int AutoCalculateStride = 0;
     internal const byte JpegMarkerStartByte = 0xFF;

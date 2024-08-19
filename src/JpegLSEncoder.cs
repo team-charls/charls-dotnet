@@ -265,7 +265,7 @@ public sealed class JpegLSEncoder
     public void SetMappingTableId(int componentIndex, int mappingTableId)
     {
         ThrowHelper.ThrowIfOutsideRange(Constants.MinimumComponentIndex, Constants.MaximumComponentIndex, componentIndex);
-        ThrowHelper.ThrowIfOutsideRange(0, Constants.MaximumTableId, mappingTableId);
+        ThrowHelper.ThrowIfOutsideRange(0, Constants.MaximumMappingTableId, mappingTableId);
 
         _writer.SetTableId(componentIndex, mappingTableId);
     }
@@ -497,8 +497,8 @@ public sealed class JpegLSEncoder
     /// <param name="tableData">Buffer that holds the mapping table.</param>
     public void WriteMappingTable(int tableId, int entrySize, ReadOnlySpan<byte> tableData)
     {
-        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumTableId, Constants.MaximumTableId, tableId);
-        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumEntrySize, Constants.MaximumEntrySize, entrySize);
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumMappingTableId, Constants.MaximumMappingTableId, tableId);
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumMappingEntrySize, Constants.MaximumMappingEntrySize, entrySize);
         ThrowHelper.ThrowArgumentExceptionIfFalse(tableData.Length >= entrySize, nameof(tableData), ErrorCode.InvalidArgumentSize);
         ThrowHelper.ThrowInvalidOperationIfFalse(_state is >= State.DestinationSet and < State.Completed);
 

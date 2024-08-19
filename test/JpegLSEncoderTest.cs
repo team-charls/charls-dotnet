@@ -1336,70 +1336,68 @@ public class JpegLSEncoderTest
     }
 
     [Fact]
-    public void Encode4Components6BitWithHighBitsSetInterleaveModeLine()
+    public void Encode4Components5BitWithHighBitsSetInterleaveModeLine()
     {
         byte[] source = new byte[512 * 512 * 4];
         Array.Fill(source, (byte)0xFF);
 
-        JpegLSEncoder encoder = new(512, 512, 6, 4) { InterleaveMode = InterleaveMode.Line }; // TODO: change in 5 bits
+        JpegLSEncoder encoder = new(512, 512, 5, 4) { InterleaveMode = InterleaveMode.Line };
 
         encoder.Encode(source);
 
         byte[] expectedDestination = new byte[512 * 512 * 4];
-        Array.Fill(expectedDestination, (byte)63);
+        Array.Fill(expectedDestination, (byte)31);
         Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Line);
     }
 
     [Fact]
-    public void Encode4Components6BitWithHighBitsSetInterleaveModeSample()
+    public void Encode4Components7BitWithHighBitsSetInterleaveModeSample()
     {
         byte[] source = new byte[512 * 512 * 4];
         Array.Fill(source, (byte)0xFF);
 
-        JpegLSEncoder
-            encoder = new(512, 512, 6, 4) { InterleaveMode = InterleaveMode.Sample }; // TODO: change in 7 bits
+        JpegLSEncoder encoder = new(512, 512, 7, 4) { InterleaveMode = InterleaveMode.Sample };
 
         encoder.Encode(source);
 
         byte[] expectedDestination = new byte[512 * 512 * 4];
-        Array.Fill(expectedDestination, (byte)63);
+        Array.Fill(expectedDestination, (byte)127);
         Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Sample);
     }
 
     [Fact]
-    public void Encode4Components10BitWithHighBitsSetInterleaveModeLine()
+    public void Encode4Components11BitWithHighBitsSetInterleaveModeLine()
     {
         byte[] source = new byte[512 * 512 * 4 * 2];
         Array.Fill(source, (byte)0xFF);
 
-        JpegLSEncoder
-            encoder = new(512, 512, 10, 4) { InterleaveMode = InterleaveMode.Line }; // TODO change to 11 bits.
+        JpegLSEncoder encoder = new(512, 512, 11, 4) { InterleaveMode = InterleaveMode.Line };
 
         encoder.Encode(source);
 
         ushort[] expectedDestination = new ushort[512 * 512 * 4];
-        Array.Fill(expectedDestination, (ushort)1023);
+        Array.Fill(expectedDestination, (ushort)2047);
 
         Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
             MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Line);
     }
 
-    //[Fact]
-    //public void Encode4Components10BitWithHighBitsSetInterleaveModeSample()
-    //{
-    //    byte[] source = new byte[512 * 512 * 4 * 2];
-    //    //Array.Fill(source, (byte)0xFF);
+    [Fact]
+    public void Encode4Components13BitWithHighBitsSetInterleaveModeSample()
+    {
+        byte[] source = new byte[512 * 512 * 4 * 2];
+        Array.Fill(source, (byte)0xFF);
 
-    //    JpegLSEncoder encoder = new(512, 512, 12, 4) { InterleaveMode = InterleaveMode.Sample }; // TODO change to 13 bits
+        JpegLSEncoder encoder = new(512, 512, 13, 4) { InterleaveMode = InterleaveMode.Sample };
 
-    //    encoder.Encode(source);
+        encoder.Encode(source);
 
-    //    ushort[] expectedDestination = new ushort[512 * 512 * 4];
-    //    Array.Fill(expectedDestination, (ushort)1023);
+        ushort[] expectedDestination = new ushort[512 * 512 * 4];
+        Array.Fill(expectedDestination, (ushort)8191);
 
-    //    Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
-    //        MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Sample);
-    //}
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+            MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Sample);
+    }
 
     [Fact]
     public void Rewind()

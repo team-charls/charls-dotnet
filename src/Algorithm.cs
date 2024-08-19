@@ -91,6 +91,14 @@ internal static class Algorithm
         return (maximumSampleValue + 2 * nearLossless) / (2 * nearLossless + 1) + 1;
     }
 
+    /// <summary>
+    /// Computes the parameter LIMIT. (see ISO/IEC 14495-1, A.2.1)
+    /// </summary>
+    internal static int ComputeLimitParameter(int bitsPerSample)
+    {
+        return 2 * (bitsPerSample + Math.Max(8, bitsPerSample));
+    }
+
     internal static int ComputePredictedValue(int ra, int rb, int rc)
     {
         // sign trick reduces the number of if statements (branches)
