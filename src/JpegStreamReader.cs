@@ -107,15 +107,15 @@ internal struct JpegStreamReader
         return _mappingTables.FindIndex(entry => entry.MappingTableId == mappingTableId);
     }
 
-    internal MappingTableInfo GetMappingTableInfo(int index)
+    internal MappingTableInfo GetMappingTableInfo(int mappingTableIndex)
     {
-        var entry = _mappingTables[index];
+        var entry = _mappingTables[mappingTableIndex];
         return new MappingTableInfo { EntrySize = entry.EntrySize, TableId = entry.MappingTableId };
     }
 
-    internal ReadOnlyMemory<byte> GetMappingTableData(int index)
+    internal ReadOnlyMemory<byte> GetMappingTableData(int mappingTableIndex)
     {
-        var entry = _mappingTables[index];
+        var entry = _mappingTables[mappingTableIndex];
         return entry.GetData();
     }
 

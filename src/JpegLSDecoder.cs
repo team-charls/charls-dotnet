@@ -224,6 +224,44 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
+    /// Converts the mapping table ID to a mapping table index.
+    /// When the requested table is not present in the JPEG-LS stream the value -1 will be returned.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    public int FindMappingTableIndex(int mappingTableId)
+    {
+        CheckStateCompleted();
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumMappingTableId, Constants.MaximumMappingTableId, mappingTableId);
+        return _reader.FindMappingTableIndex(mappingTableId);
+    }
+
+    /// <summary>
+    /// Returns information about a mapping table.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    public MappingTableInfo GetMappingTableInfo(int mappingTableIndex)
+    {
+        CheckMappingTableIndex(mappingTableIndex);
+        return _reader.GetMappingTableInfo(mappingTableIndex);
+    }
+
+    /// <summary>
+    /// Returns a mapping table.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    public ReadOnlyMemory<byte> GetMappingTableData(int mappingTableIndex)
+    {
+        CheckMappingTableIndex(mappingTableIndex);
+        return _reader.GetMappingTableData(mappingTableIndex);
+    }
+
+    /// <summary>
     /// Reads the SPIFF (Still Picture Interchange File Format) header.
     /// </summary>
     /// <param name="spiffHeader">The header or null when no valid header was found.</param>
@@ -354,6 +392,11 @@ public sealed class JpegLSDecoder
     private void CheckStateCompleted()
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.Completed);
+    }
+
+    private void CheckMappingTableIndex(int mappingTableIndex)
+    {
+        ThrowHelper.ThrowIfOutsideRange(0, _reader.MappingTableCount -1, mappingTableIndex);
     }
 
     private int CalculateMinimumStride()

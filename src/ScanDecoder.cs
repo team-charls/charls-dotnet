@@ -443,7 +443,7 @@ internal struct ScanDecoder
         int componentCount = FrameInfo.ComponentCount;
 
         Span<int> runIndex = stackalloc int[componentCount];
-        Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
+        Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2];
 
         for (int line = 0; ;)
         {
@@ -499,7 +499,7 @@ internal struct ScanDecoder
         int componentCount = FrameInfo.ComponentCount;
 
         Span<int> runIndex = stackalloc int[componentCount];
-        Span<ushort> lineBuffer = new ushort[componentCount * pixelStride * 2]; // TODO: can use smaller buffer?
+        Span<ushort> lineBuffer = new ushort[componentCount * pixelStride * 2];
 
         for (int line = 0; ;)
         {
