@@ -16,36 +16,36 @@ internal class ScanCodecFactory
                 if (frameInfo.ComponentCount == 3 && frameInfo.BitsPerSample == 8)
                 {
                     var traits = new LosslessTraitsTriplet(maximumSampleValue, 0, presetCodingParameters.ResetValue);
-                    return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters, traits);
+                    return new ScanDecoder(frameInfo, presetCodingParameters, codingParameters, traits);
                 }
                 if (frameInfo.ComponentCount == 3 && frameInfo.BitsPerSample == 16)
                 {
                     var traits = new LosslessTraitsTriplet(maximumSampleValue, 0, presetCodingParameters.ResetValue);
-                    return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters, traits);
+                    return new ScanDecoder(frameInfo, presetCodingParameters, codingParameters, traits);
                 }
                 if (frameInfo.ComponentCount == 4 && frameInfo.BitsPerSample == 8)
                 {
                     var traits = new LosslessTraitsQuad(maximumSampleValue, 0, presetCodingParameters.ResetValue);
-                    return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters, traits);
+                    return new ScanDecoder(frameInfo, presetCodingParameters, codingParameters, traits);
                 }
                 if (frameInfo.ComponentCount == 4 && frameInfo.BitsPerSample == 16)
                 {
                     var traits = new LosslessTraitsQuad(maximumSampleValue, 0, presetCodingParameters.ResetValue);
-                    return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters, traits);
+                    return new ScanDecoder(frameInfo, presetCodingParameters, codingParameters, traits);
                 }
             }
             switch (frameInfo.BitsPerSample)
             {
                 case 8:
-                    return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters,
+                    return new ScanDecoder(frameInfo, presetCodingParameters, codingParameters,
                         new LosslessTraits8(maximumSampleValue, 0, presetCodingParameters.ResetValue));
 
                 case 12:
-                    return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters,
+                    return new ScanDecoder(frameInfo, presetCodingParameters, codingParameters,
                         new LosslessTraitsImpl(maximumSampleValue, 0, presetCodingParameters.ResetValue));
 
                 case 16:
-                    return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters,
+                    return new ScanDecoder(frameInfo, presetCodingParameters, codingParameters,
                         new LosslessTraits16(maximumSampleValue, 0, presetCodingParameters.ResetValue));
             }
         }
@@ -53,12 +53,12 @@ internal class ScanCodecFactory
         if (frameInfo.BitsPerSample <= 8)
         {
             var traits = new DefaultTraits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue);
-            return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters, traits);
+            return new ScanDecoder(frameInfo, presetCodingParameters, codingParameters, traits);
         }
         else
         {
             var traits = new DefaultTraits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue);
-            return new ScanDecoderImpl(frameInfo, presetCodingParameters, codingParameters, traits);
+            return new ScanDecoder(frameInfo, presetCodingParameters, codingParameters, traits);
         }
     }
 
@@ -67,6 +67,6 @@ internal class ScanCodecFactory
     {
         int maximumSampleValue = Algorithm.CalculateMaximumSampleValue(frameInfo.BitsPerSample);
         var traits = new DefaultTraits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue);
-        return new ScanEncoderImpl(frameInfo, presetCodingParameters, codingParameters, traits);
+        return new ScanEncoder(frameInfo, presetCodingParameters, codingParameters, traits);
     }
 }

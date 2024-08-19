@@ -3,38 +3,42 @@
 
 namespace CharLS.Managed.Test;
 
-internal sealed class TestScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters) :
-    ScanDecoder(frameInfo, presetCodingParameters, codingParameters)
+internal sealed class TestScanDecoder
 {
-    public override int DecodeScan(ReadOnlyMemory<byte> source, Span<byte> destination, int stride)
+    private ScanDecoder _scanDecoder;
+
+    internal TestScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
-        throw new NotImplementedException();
+        int maximumSampleValue = Algorithm.CalculateMaximumSampleValue(frameInfo.BitsPerSample);
+
+        _scanDecoder = new ScanDecoder(frameInfo, presetCodingParameters, codingParameters,
+            new DefaultTraits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue));
     }
 
     public void TestInitialize(ReadOnlyMemory<byte> source)
     {
-        Initialize(source);
+        _scanDecoder.Initialize(source);
     }
 
     public bool TestReadBit()
     {
-        return ReadBit();
+        return _scanDecoder.ReadBit();
     }
 
     public void TestEndScan()
     {
-        EndScan();
+        _scanDecoder.EndScan();
     }
 
     public byte TestPeekByte()
     {
-        return PeekByte();
+        return _scanDecoder.PeekByte();
     }
 }
 
 public class ScanDecoderTest
 {
-    private static readonly JpegLSPresetCodingParameters DefaultParameters = new JpegLSPresetCodingParameters();
+    private static readonly JpegLSPresetCodingParameters DefaultParameters = new();
 
     [Fact]
     public void ReadBit()

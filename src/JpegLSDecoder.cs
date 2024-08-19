@@ -11,6 +11,7 @@ namespace CharLS.Managed;
 public sealed class JpegLSDecoder
 {
     private JpegStreamReader _reader;
+    private ScanDecoder _scanDecoder;
     private State _state = State.Initial;
 
     private enum State
@@ -332,8 +333,8 @@ public sealed class JpegLSDecoder
 
         for (int plane = 0; ;)
         {
-            var scanDecoder = ScanCodecFactory.CreateScanDecoder(FrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
-            int bytesRead = scanDecoder.DecodeScan(_reader.RemainingSource(), destination, stride);
+            _scanDecoder = ScanCodecFactory.CreateScanDecoder(FrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
+            int bytesRead = _scanDecoder.DecodeScan(_reader.RemainingSource(), destination, stride);
             _reader.AdvancePosition(bytesRead);
 
             ++plane;

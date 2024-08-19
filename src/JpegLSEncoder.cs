@@ -13,6 +13,7 @@ namespace CharLS.Managed;
 public sealed class JpegLSEncoder
 {
     private JpegStreamWriter _writer;
+    private ScanEncoder _scanEncoder;
     private FrameInfo? _frameInfo;
     private int _nearLossless;
     private InterleaveMode _interleaveMode;
@@ -340,7 +341,7 @@ public sealed class JpegLSEncoder
 
     private void EncodeScan(ReadOnlyMemory<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
     {
-        var encoder = ScanCodecFactory.CreateScanEncoder(
+        _scanEncoder = ScanCodecFactory.CreateScanEncoder(
             new FrameInfo(FrameInfo!.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
             codingParameters,
             new CodingParameters
@@ -351,7 +352,7 @@ public sealed class JpegLSEncoder
                 ColorTransformation = ColorTransformation
             });
 
-        int bytesWritten = encoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
+        int bytesWritten = _scanEncoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
 
         // Synchronize the destination encapsulated in the writer (encode_scan works on a local copy)
         _writer.AdvancePosition(bytesWritten);
@@ -535,7 +536,7 @@ public sealed class JpegLSEncoder
         {
             string informationVersion = RemoveGitHash(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion!);
 
-            byte[] utfBytes = Encoding.UTF8.GetBytes(informationVersion!);
+            byte[] utfBytes = Encoding.UTF8.GetBytes(informationVersion);
 
             var versionNumber = "charls-dotnet "u8.ToArray().Concat(utfBytes).ToArray();
             _writer.WriteCommentSegment(versionNumber);
