@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Buffers.Binary;
-using System.Diagnostics;
 
 namespace CharLS.Managed;
 
@@ -75,7 +74,7 @@ internal struct JpegStreamWriter
 
     internal void WriteColorTransformSegment(ColorTransformation colorTransformation)
     {
-        byte[] segment = [(byte)'m', (byte)'r', (byte)'f', (byte)'x', (byte)colorTransformation];
+        Span<byte> segment = [(byte)'m', (byte)'r', (byte)'f', (byte)'x', (byte)colorTransformation];
         WriteSegment(JpegMarkerCode.ApplicationData8, segment);
     }
 

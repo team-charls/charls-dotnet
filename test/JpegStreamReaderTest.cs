@@ -643,6 +643,121 @@ public class JpegStreamReaderTest
         Assert.Equal(2, mappingTableData.Span[0]);
     }
 
+    [Fact]
+    public void ReadMappingTableContinuation()
+    {
+        const int tableSize = 100000;
+        byte[] source = new byte[tableSize + 100];
+
+        JpegStreamWriter writer = new() { Destination = source };
+        writer.WriteStartOfImage();
+
+        byte[] tableDataExpected = new byte[tableSize];
+        tableDataExpected[0] = 7;
+        tableDataExpected[tableSize - 1] = 8;
+
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableDataExpected);
+        _ = writer.WriteStartOfFrameSegment(new FrameInfo(1, 1, 2, 1));
+        writer.WriteStartOfScanSegment(1, 0, InterleaveMode.None);
+
+        var reader = new JpegStreamReader { Source = source };
+        reader.ReadHeader(false);
+
+        Assert.Equal( 1, reader.MappingTableCount);
+        Assert.Equal(0, reader.FindMappingTableIndex(1));
+
+        var info = reader.GetMappingTableInfo(0);
+        Assert.Equal( 1, info.TableId);
+        Assert.Equal( 1, info.EntrySize);
+        Assert.Equal( 100000, info.DataSize);
+
+        var tableData = reader.GetMappingTableData(0).Span;
+        Assert.Equal(7, tableData[0]);
+        Assert.Equal(8, tableData[tableSize - 1]);
+    }
+
+    [Fact]
+    public void ReadMappingTableContinuationWithoutMappingTableThrows()
+    {
+        byte[] tableData = new byte[255];
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, true);
+        writer.WriteStartOfFrameSegment(1, 1, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterMappingTableContinuation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadInvalidMappingTableContinuationThrows()
+    {
+        byte[] tableData = new byte[255];
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, false);
+        writer.WriteJpegLSPresetParametersSegment(1, 2, tableData, true);
+        writer.WriteStartOfFrameSegment(1, 1, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterMappingTableContinuation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void HeightZeroWhenReadingStartOfScanThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 0, 2, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.Sample);
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterHeight, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void WidthZeroWhenReadingStartOfScanThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(0, 11, 2, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.Sample);
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterWidth, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadColorTransformFrameInfoMismatchThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 1, 2, 3);
+        writer.WriteColorTransformSegment(ColorTransformation.HP1);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.Sample);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterColorTransformation, exception.GetErrorCode());
+    }
+
     private static void ReadSpiffHeaderImpl(byte lowVersion)
     {
         var buffer = Util.CreateTestSpiffHeader(2, lowVersion);

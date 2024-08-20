@@ -13,11 +13,11 @@ internal sealed class GolombCodeTable
     internal void AddEntry(int value, GolombCode code)
     {
         int length = code.Length;
-        //ASSERT(static_cast<size_t>(length) <= byte_bit_count);
+        Debug.Assert(length <= ByteBitCount);
 
         for (int i = 0; i < 1U << (ByteBitCount - length); ++i)
         {
-            //ASSERT(types_[(static_cast<size_t>(value) << (byte_bit_count - length)) + i].length() == 0);
+            Debug.Assert(_types[((value) << (ByteBitCount - length)) + i].Length == 0);
             _types[(value << (ByteBitCount - length)) + i] = code;
         }
     }

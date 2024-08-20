@@ -1,8 +1,6 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using System.Diagnostics;
-
 using static CharLS.Managed.Algorithm;
 
 namespace CharLS.Managed;

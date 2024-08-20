@@ -1,7 +1,6 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using System.Diagnostics;
 using System.Numerics;
 
 namespace CharLS.Managed;
@@ -52,7 +51,7 @@ internal static class Algorithm
     /// </summary>
     internal static int MapErrorValue(int errorValue)
     {
-        //ASSERT(error_value <= std::numeric_limits<int32_t>::max() / 2);
+        Debug.Assert(errorValue <= int.MaxValue / 2);
 
         int mappedError = (errorValue >> (Constants.Int32BitCount - 2)) ^ (2 * errorValue);
         return mappedError;

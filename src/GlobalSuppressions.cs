@@ -15,3 +15,4 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "False positive", Scope = "member", Target = "~F:CharLS.Managed.ScanCodec.RegularModeContextArray._")]
 [assembly: SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "False positive", Scope = "member", Target = "~F:CharLS.Managed.ScanCodec.RunModeContextArray._")]
 [assembly: SuppressMessage("Style", "IDE0032:Use auto property", Justification = "Private field is more clear", Scope = "member", Target = "~F:CharLS.Managed.JpegStreamWriter._position")]
+[assembly: SuppressMessage("Style", "IDE0251:Make member 'readonly'", Justification = "False positive", Scope = "member", Target = "~M:CharLS.Managed.JpegStreamReader.RaiseApplicationDataEvent(CharLS.Managed.JpegMarkerCode)")]

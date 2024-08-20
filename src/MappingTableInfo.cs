@@ -17,5 +17,10 @@ public sealed record MappingTableInfo
     /// Width of a table entry in bytes, range [1, 255].
     /// </summary>
     public int EntrySize { get; init; }
+
+    /// <summary>
+    /// Size of the table in bytes, range [1, 16711680]
+    /// </summary>
+    public int DataSize { get; init; }
 }
 
