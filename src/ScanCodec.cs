@@ -3,6 +3,8 @@
 
 using System.Runtime.CompilerServices;
 
+using static CharLS.Managed.Algorithm;
+
 namespace CharLS.Managed;
 
 /// <summary>
@@ -11,6 +13,9 @@ namespace CharLS.Managed;
 /// </summary>
 internal struct ScanCodec
 {
+    internal Traits Traits;
+    internal sbyte[] QuantizationLut;
+
     internal int RunIndex;
 
     internal RunModeContextArray RunModeContexts;
@@ -22,6 +27,11 @@ internal struct ScanCodec
     internal static readonly int[] J =
         [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
+    private static readonly Lazy<sbyte[]> QuantizationLutLossless8 = new(CreateQuantizeLutLossless(8));
+    private static readonly Lazy<sbyte[]> QuantizationLutLossless10 = new(CreateQuantizeLutLossless(10));
+    private static readonly Lazy<sbyte[]> QuantizationLutLossless12 = new(CreateQuantizeLutLossless(12));
+    private static readonly Lazy<sbyte[]> QuantizationLutLossless16 = new(CreateQuantizeLutLossless(16));
+
     [InlineArray(2)]
     internal struct RunModeContextArray
     {
@@ -31,11 +41,14 @@ internal struct ScanCodec
     [InlineArray(365)]
     internal struct RegularModeContextArray
     {
-        private RegularModeContext _element;
+        private RegularModeContext _;
     }
 
-    internal ScanCodec(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
+    internal ScanCodec(Traits traits, FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
+        Traits = traits;
+        QuantizationLut = GetQuantizationLut(traits, presetCodingParameters.Threshold1, presetCodingParameters.Threshold2, presetCodingParameters.Threshold3);
+
         FrameInfo = frameInfo;
         PresetCodingParameters = presetCodingParameters;
         CodingParameters = codingParameters;
@@ -60,19 +73,11 @@ internal struct ScanCodec
         RunIndex = 0;
     }
 
-    internal readonly sbyte QuantizeGradientOrg(int di, int nearLossless)
+    internal readonly sbyte QuantizeGradient(int di, int nearLossless)
     {
-        return Algorithm.QuantizeGradientOrg(di,
+        return QuantizeGradientOrg(di,
             PresetCodingParameters.Threshold1, PresetCodingParameters.Threshold2, PresetCodingParameters.Threshold3,
             nearLossless);
-    }
-
-    internal readonly bool IsInterleaved()
-    {
-        //ASSERT((parameters().interleave_mode == interleave_mode::none && frame_info().component_count == 1) ||
-        //       parameters().interleave_mode != interleave_mode::none);
-
-        return CodingParameters.InterleaveMode != InterleaveMode.None;
     }
 
     internal void IncrementRunIndex()
@@ -85,53 +90,56 @@ internal struct ScanCodec
         RunIndex = Math.Max(0, RunIndex - 1);
     }
 
-    internal readonly sbyte[] InitializeQuantizationLut(Traits traits, int threshold1, int threshold2, int threshold3)
+    internal readonly sbyte[] GetQuantizationLut(Traits traits, int threshold1, int threshold2, int threshold3)
     {
-        //// For lossless mode with default parameters, we have precomputed the lookup table for bit counts 8, 10, 12 and 16.
-        //if (precomputed_quantization_lut_available(traits, threshold1, threshold2, threshold3))
-        //{
-        //    if constexpr(Traits::fixed_bits_per_pixel)
-        //{
-        //    if constexpr(Traits::bits_per_pixel == 8)
-        //            return &quantization_lut_lossless_8[quantization_lut_lossless_8.size() / 2];
-        //    else
-        //    {
-        //        if constexpr(Traits::bits_per_pixel == 12)
-        //                return &quantization_lut_lossless_12[quantization_lut_lossless_12.size() / 2];
-        //        else
-        //        {
-        //            static_assert(Traits::bits_per_pixel == 16);
-        //            return &quantization_lut_lossless_16[quantization_lut_lossless_16.size() / 2];
-        //        }
-        //    }
-        //}
-        //    else
-        //    {
-        //        switch (traits.bits_per_pixel)
-        //        {
-        //        case 8:
-        //            return &quantization_lut_lossless_8[quantization_lut_lossless_8.size() / 2];
-        //        case 10:
-        //            return &quantization_lut_lossless_10[quantization_lut_lossless_10.size() / 2];
-        //        case 12:
-        //            return &quantization_lut_lossless_12[quantization_lut_lossless_12.size() / 2];
-        //        case 16:
-        //            return &quantization_lut_lossless_16[quantization_lut_lossless_16.size() / 2];
-        //        default:
-        //            break;
-        //        }
-        //    }
-        //}
+        if (IsCachedQuantizationLutAvailable(traits, threshold1, threshold2, threshold3))
+        {
+            switch (traits.BitsPerSample)
+            {
+                case 8:
+                    return QuantizationLutLossless8.Value;
+
+                case 10:
+                    return QuantizationLutLossless10.Value;
+
+                case 12:
+                    return QuantizationLutLossless12.Value;
+
+                case 16:
+                    return QuantizationLutLossless16.Value;
+            }
+        }
 
         // Initialize the quantization lookup table dynamic.
         var quantizationLut = new sbyte[traits.QuantizationRange * 2];
         for (int i = 0; i < quantizationLut.Length; ++i)
         {
-            quantizationLut[i] = Algorithm.QuantizeGradientOrg(-traits.QuantizationRange + i, threshold1, threshold2,
+            quantizationLut[i] = QuantizeGradientOrg(-traits.QuantizationRange + i, threshold1, threshold2,
                 threshold3, traits.NearLossless);
+        }
+        return quantizationLut;
+    }
+
+    private static bool IsCachedQuantizationLutAvailable(Traits traits, int threshold1, int threshold2, int threshold3)
+    {
+        if (traits.NearLossless != 0 || traits.MaximumSampleValue != (1 << traits.BitsPerSample) - 1)
+            return false;
+
+        var codingParameters = JpegLSPresetCodingParameters.ComputeDefault(traits.MaximumSampleValue, traits.NearLossless);
+        return codingParameters.Threshold1 == threshold1 && codingParameters.Threshold2 == threshold2 && codingParameters.Threshold3 == threshold3;
+    }
+
+    private static sbyte[] CreateQuantizeLutLossless(int bitCount)
+    {
+        var codingParameters = JpegLSPresetCodingParameters.ComputeDefault(CalculateMaximumSampleValue(bitCount), 0);
+        int range = codingParameters.MaximumSampleValue + 1;
+
+        sbyte[] quantizationLut = new sbyte[range * 2];
+        for (int i = 0; i != quantizationLut.Length; ++i)
+        {
+            quantizationLut[i] = QuantizeGradientOrg(-range + i, codingParameters.Threshold1, codingParameters.Threshold2, codingParameters.Threshold3);
         }
 
         return quantizationLut;
     }
-
 }

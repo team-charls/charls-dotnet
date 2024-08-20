@@ -10,6 +10,7 @@ namespace CharLS.Managed;
 
 internal struct ScanEncoder
 {
+    private readonly int _mask;
     private ScanCodec _scanCodec;
     private Memory<byte> _destination;
     private uint _bitBuffer;
@@ -18,39 +19,31 @@ internal struct ScanEncoder
     private int _compressedLength;
     private bool _isFFWritten;
     private int _bytesWritten;
-
-    private Traits _traits;
-    private sbyte[] _quantizationLut;
     private int _stride;
-    private int _mask;
-
     private CopyToLineBuffer.Method? _copyToLineBuffer;
 
     private readonly int PixelStride => _scanCodec.FrameInfo.Width + 2;
-
     private readonly FrameInfo FrameInfo => _scanCodec.FrameInfo;
-
     private readonly CodingParameters CodingParameters => _scanCodec.CodingParameters;
+    private readonly Traits Traits => _scanCodec.Traits;
 
     private int RunIndex
-    { readonly get => _scanCodec.RunIndex;
-
+    {
+        readonly get => _scanCodec.RunIndex;
         set => _scanCodec.RunIndex = value;
     }
+
 
     internal ScanEncoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
         CodingParameters codingParameters)
     {
-        _scanCodec = new ScanCodec(frameInfo, presetCodingParameters, codingParameters);
-
         int maximumSampleValue = CalculateMaximumSampleValue(frameInfo.BitsPerSample);
-        _traits = new Traits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue);
+        var traits = new Traits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue);
+        _scanCodec = new ScanCodec(traits, frameInfo, presetCodingParameters, codingParameters);
+
         _mask = (1 << frameInfo.BitsPerSample) - 1;
 
-        _quantizationLut = _scanCodec.InitializeQuantizationLut(_traits, presetCodingParameters.Threshold1,
-            presetCodingParameters.Threshold2, presetCodingParameters.Threshold3);
-
-        _scanCodec.InitializeParameters(_traits.Range);
+        _scanCodec.InitializeParameters(traits.Range);
     }
     
     internal int EncodeScan(ReadOnlyMemory<byte> source, Memory<byte> destination, int stride)
@@ -726,14 +719,14 @@ internal struct ScanEncoder
         int sign = BitWiseSign(qs);
         ref var context = ref _scanCodec.RegularModeContext[ApplySign(qs, sign)];
         int k = context.ComputeGolombCodingParameter();
-        int predictedValue = _traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
-        int errorValue = _traits.ComputeErrorValue(ApplySign(x - predictedValue, sign));
+        int predictedValue = Traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
+        int errorValue = Traits.ComputeErrorValue(ApplySign(x - predictedValue, sign));
 
-        EncodeMappedValue(k, MapErrorValue(context.GetErrorCorrection(k | _traits.NearLossless) ^ errorValue), _traits.Limit);
-        context.UpdateVariablesAndBias(errorValue, _traits.NearLossless, _traits.ResetThreshold);
+        EncodeMappedValue(k, MapErrorValue(context.GetErrorCorrection(k | Traits.NearLossless) ^ errorValue), Traits.Limit);
+        context.UpdateVariablesAndBias(errorValue, Traits.NearLossless, Traits.ResetThreshold);
 
-        Debug.Assert(_traits.IsNear(_traits.ComputeReconstructedSample(predictedValue, ApplySign(errorValue, sign)), x));
-        return _traits.ComputeReconstructedSample(predictedValue, ApplySign(errorValue, sign));
+        Debug.Assert(Traits.IsNear(Traits.ComputeReconstructedSample(predictedValue, ApplySign(errorValue, sign)), x));
+        return Traits.ComputeReconstructedSample(predictedValue, ApplySign(errorValue, sign));
     }
 
     private int EncodeRunMode(int startIndex, Span<byte> previousLine, Span<byte> currentLine)
@@ -744,7 +737,7 @@ internal struct ScanEncoder
         var ra = currentLine[startIndex - 1];
 
         int runLength = 0;
-        while (_traits.IsNear(typeCurX[runLength], ra))
+        while (Traits.IsNear(typeCurX[runLength], ra))
         {
             typeCurX[runLength] = ra;
             ++runLength;
@@ -771,7 +764,7 @@ internal struct ScanEncoder
         var ra = currentLine[startIndex - 1];
 
         int runLength = 0;
-        while (_traits.IsNear(typeCurX[runLength], ra))
+        while (Traits.IsNear(typeCurX[runLength], ra))
         {
             typeCurX[runLength] = ra;
             ++runLength;
@@ -798,7 +791,7 @@ internal struct ScanEncoder
         var ra = currentLine[startIndex - 1];
 
         int runLength = 0;
-        while (_traits.IsNear(typeCurX[runLength], ra))
+        while (Traits.IsNear(typeCurX[runLength], ra))
         {
             typeCurX[runLength] = ra;
             ++runLength;
@@ -825,7 +818,7 @@ internal struct ScanEncoder
         var ra = currentLine[startIndex - 1];
 
         int runLength = 0;
-        while (_traits.IsNear(typeCurX[runLength], ra))
+        while (Traits.IsNear(typeCurX[runLength], ra))
         {
             typeCurX[runLength] = ra;
             ++runLength;
@@ -852,7 +845,7 @@ internal struct ScanEncoder
         var ra = currentLine[startIndex - 1];
 
         int runLength = 0;
-        while (_traits.IsNear(typeCurX[runLength], ra))
+        while (Traits.IsNear(typeCurX[runLength], ra))
         {
             typeCurX[runLength] = ra;
             ++runLength;
@@ -879,7 +872,7 @@ internal struct ScanEncoder
         var ra = currentLine[startIndex - 1];
 
         int runLength = 0;
-        while (_traits.IsNear(typeCurX[runLength], ra))
+        while (Traits.IsNear(typeCurX[runLength], ra))
         {
             typeCurX[runLength] = ra;
             ++runLength;
@@ -900,94 +893,94 @@ internal struct ScanEncoder
 
     private int EncodeRunInterruptionPixel(int x, int ra, int rb)
     {
-        if (Math.Abs(ra - rb) <= _traits.NearLossless)
+        if (Math.Abs(ra - rb) <= Traits.NearLossless)
         {
-            int errorValue = _traits.ComputeErrorValue(x - ra);
+            int errorValue = Traits.ComputeErrorValue(x - ra);
             EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[1], errorValue);
-            return _traits.ComputeReconstructedSample(ra, errorValue);
+            return Traits.ComputeReconstructedSample(ra, errorValue);
         }
         else
         {
-            int errorValue = _traits.ComputeErrorValue((x - rb) * Sign(rb - ra));
+            int errorValue = Traits.ComputeErrorValue((x - rb) * Sign(rb - ra));
             EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue);
-            return _traits.ComputeReconstructedSample(rb, errorValue * Sign(rb - ra));
+            return Traits.ComputeReconstructedSample(rb, errorValue * Sign(rb - ra));
         }
     }
 
     private Triplet<byte> EncodeRunInterruptionPixel(Triplet<byte> x, Triplet<byte> ra, Triplet<byte> rb)
     {
-        int errorValue1 = _traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        int errorValue1 = Traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue1);
 
-        int errorValue2 = _traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        int errorValue2 = Traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue2);
 
-        int errorValue3 = _traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
+        int errorValue3 = Traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue3);
 
         return new Triplet<byte>(
-            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
-            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
-            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
+            (byte)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (byte)Traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
     }
 
     private Triplet<ushort> EncodeRunInterruptionPixel(Triplet<ushort> x, Triplet<ushort> ra, Triplet<ushort> rb)
     {
-        int errorValue1 = _traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        int errorValue1 = Traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue1);
 
-        int errorValue2 = _traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        int errorValue2 = Traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue2);
 
-        int errorValue3 = _traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
+        int errorValue3 = Traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue3);
 
         return new Triplet<ushort>(
-            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
+            (ushort)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
     }
 
     private Quad<byte> EncodeRunInterruptionPixel(Quad<byte> x, Quad<byte> ra, Quad<byte> rb)
     {
-        int errorValue1 = _traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        int errorValue1 = Traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue1);
 
-        int errorValue2 = _traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        int errorValue2 = Traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue2);
 
-        int errorValue3 = _traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
+        int errorValue3 = Traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue3);
 
-        int errorValue4 = _traits.ComputeErrorValue(Sign(rb.V4 - ra.V4) * (x.V4 - rb.V4));
+        int errorValue4 = Traits.ComputeErrorValue(Sign(rb.V4 - ra.V4) * (x.V4 - rb.V4));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue4);
 
         return new Quad<byte>(
-            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
-            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
-            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
-            (byte)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
+            (byte)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (byte)Traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
+            (byte)Traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
     }
 
     private Quad<ushort> EncodeRunInterruptionPixel(Quad<ushort> x, Quad<ushort> ra, Quad<ushort> rb)
     {
-        int errorValue1 = _traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        int errorValue1 = Traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue1);
 
-        int errorValue2 = _traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        int errorValue2 = Traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue2);
 
-        int errorValue3 = _traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
+        int errorValue3 = Traits.ComputeErrorValue(Sign(rb.V3 - ra.V3) * (x.V3 - rb.V3));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue3);
 
-        int errorValue4 = _traits.ComputeErrorValue(Sign(rb.V4 - ra.V4) * (x.V4 - rb.V4));
+        int errorValue4 = Traits.ComputeErrorValue(Sign(rb.V4 - ra.V4) * (x.V4 - rb.V4));
         EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue4);
 
         return new Quad<ushort>(
-            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
+            (ushort)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
     }
 
     private void EncodeRunInterruptionError(ref RunModeContext context, int errorValue)
@@ -996,14 +989,14 @@ internal struct ScanEncoder
         int map = context.ComputeMap(errorValue, k) ? 1 : 0;
         int eMappedErrorValue = (2 * Math.Abs(errorValue)) - context.RunInterruptionType - map;
         Debug.Assert(errorValue == context.ComputeErrorValue(eMappedErrorValue + context.RunInterruptionType, k));
-        EncodeMappedValue(k, eMappedErrorValue, _traits.Limit - ScanCodec.J[RunIndex] - 1);
+        EncodeMappedValue(k, eMappedErrorValue, Traits.Limit - ScanCodec.J[RunIndex] - 1);
         context.UpdateVariables(errorValue, eMappedErrorValue, (byte)_scanCodec.PresetCodingParameters.ResetValue);
     }
 
     private void EncodeMappedValue(int k, int mappedError, int limit)
     {
         int highBits = mappedError >> k;
-        if (highBits < limit - _traits.QuantizedBitsPerSample - 1)
+        if (highBits < limit - Traits.QuantizedBitsPerSample - 1)
         {
             if (highBits + 1 > 31)
             {
@@ -1015,22 +1008,22 @@ internal struct ScanEncoder
             return;
         }
 
-        if (limit - _traits.QuantizedBitsPerSample > 31)
+        if (limit - Traits.QuantizedBitsPerSample > 31)
         {
             AppendToBitStream(0, 31);
-            AppendToBitStream(1, limit - _traits.QuantizedBitsPerSample - 31);
+            AppendToBitStream(1, limit - Traits.QuantizedBitsPerSample - 31);
         }
         else
         {
-            AppendToBitStream(1, limit - _traits.QuantizedBitsPerSample);
+            AppendToBitStream(1, limit - Traits.QuantizedBitsPerSample);
         }
-        AppendToBitStream((uint)((mappedError - 1) & ((1 << _traits.QuantizedBitsPerSample) - 1)), _traits.QuantizedBitsPerSample);
+        AppendToBitStream((uint)((mappedError - 1) & ((1 << Traits.QuantizedBitsPerSample) - 1)), Traits.QuantizedBitsPerSample);
     }
 
     private readonly int QuantizeGradient(int di)
     {
-        Debug.Assert(_scanCodec.QuantizeGradientOrg(di, _traits.NearLossless) == _quantizationLut[(_quantizationLut.Length / 2) + di]);
-        return _quantizationLut[(_quantizationLut.Length / 2) + di];
+        Debug.Assert(_scanCodec.QuantizeGradient(di, Traits.NearLossless) == _scanCodec.QuantizationLut[(_scanCodec.QuantizationLut.Length / 2) + di]);
+        return _scanCodec.QuantizationLut[(_scanCodec.QuantizationLut.Length / 2) + di];
     }
 
     private readonly void CopySourceToLineBufferInterleaveModeNone(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
