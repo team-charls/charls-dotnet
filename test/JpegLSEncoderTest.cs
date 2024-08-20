@@ -1008,6 +1008,17 @@ public class JpegLSEncoderTest
     }
 
     [Fact]
+    public void UseColorTransformationIncompatibleWithFrameInfoThrows()
+    {
+        JpegLSEncoder encoder = new(new FrameInfo(1, 1, 8, 1)) { ColorTransformation = ColorTransformation.HP1 };
+
+        byte[] source = [0, 1, 2, 3, 4, 5];
+
+        var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source));
+        Assert.Equal(ErrorCode.InvalidArgumentColorTransformation, exception.GetErrorCode());
+    }
+
+    [Fact]
     public void SetMappingTableId()
     {
         byte[] source = [0, 1, 2, 3, 4, 5];

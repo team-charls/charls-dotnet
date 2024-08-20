@@ -554,8 +554,7 @@ public sealed class JpegLSEncoder
         if (ColorTransformation == ColorTransformation.None)
             return;
 
-        if (!ColorTransformations.IsPossible(FrameInfo!))
-            throw new ArgumentException("TODO");
+        ThrowHelper.ThrowArgumentExceptionIfFalse(ColorTransformations.IsPossible(FrameInfo!), null, ErrorCode.InvalidArgumentColorTransformation);
 
         _writer.WriteColorTransformSegment(ColorTransformation);
     }

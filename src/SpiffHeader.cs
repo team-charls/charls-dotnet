@@ -108,10 +108,10 @@ public sealed record SpiffHeader
         if (ProfileId != SpiffProfileId.None)
             return false;
 
-        if (!IsValidResolutionUnits(ResolutionUnit))
+        if (!HasValidResolutionUnit(ResolutionUnit))
             return false;
 
-        if (HorizontalResolution == 0 || VerticalResolution == 0)
+        if (HorizontalResolution <= 0 || VerticalResolution <= 0)
             return false;
 
         if (ComponentCount != frameInfo.ComponentCount)
@@ -129,7 +129,7 @@ public sealed record SpiffHeader
         return Width == frameInfo.Width;
     }
 
-    private static bool IsValidResolutionUnits(SpiffResolutionUnit resolutionUnits)
+    private static bool HasValidResolutionUnit(SpiffResolutionUnit resolutionUnits)
     {
         return resolutionUnits switch
         {
