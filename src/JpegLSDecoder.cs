@@ -174,10 +174,7 @@ public sealed class JpegLSDecoder
     /// <value>
     /// The color transformation that was used to encode the image.
     /// </value>
-    public ColorTransformation ColorTransformation
-    {
-        get => _reader.ColorTransformation;
-    }
+    public ColorTransformation ColorTransformation => _reader.ColorTransformation;
 
     /// <summary>
     /// Gets the required size of the destination buffer.
@@ -220,7 +217,7 @@ public sealed class JpegLSDecoder
     public int GetMappingTableId(int componentIndex)
     {
         CheckStateCompleted();
-        ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount, componentIndex);
+        ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount - 1, componentIndex);
         return _reader.GetMappingTableId(componentIndex);
     }
 
@@ -236,6 +233,22 @@ public sealed class JpegLSDecoder
         CheckStateCompleted();
         ThrowHelper.ThrowIfOutsideRange(Constants.MinimumMappingTableId, Constants.MaximumMappingTableId, mappingTableId);
         return _reader.FindMappingTableIndex(mappingTableId);
+    }
+
+    /// <summary>
+    /// Returns the count of mapping tables present in the JPEG-LS stream.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    /// <value>The number of mapping tables present in the JPEG-LS stream.</value>
+    public int MappingTableCount
+    {
+        get
+        {
+            CheckStateCompleted();
+            return _reader.MappingTableCount;
+        }
     }
 
     /// <summary>
@@ -285,18 +298,6 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
-    /// Validates a SPIFF header with the FrameInfo.
-    /// </summary>
-    /// <param name="spiffHeader">Reference to a SPIFF header that will be validated.</param>
-    /// <exception cref="InvalidDataException">Thrown when the SPIFF header is not valid.</exception>
-    public void ValidateSpiffHeader(SpiffHeader spiffHeader)
-    {
-        ThrowHelper.ThrowInvalidOperationIfFalse(_state >= State.HeaderRead);
-        if (!spiffHeader.IsValid(FrameInfo))
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidSpiffHeader);
-    }
-
-    /// <summary>
     /// Reads the header of the JPEG-LS stream.
     /// After calling this method, the informational properties can be obtained.
     /// </summary>
@@ -318,7 +319,7 @@ public sealed class JpegLSDecoder
             }
         }
 
-        _state = State.HeaderRead;
+        _state = _reader.EndOfImage ? State.Completed : State.HeaderRead;
     }
 
     /// <summary>
@@ -397,7 +398,7 @@ public sealed class JpegLSDecoder
 
     private void CheckMappingTableIndex(int mappingTableIndex)
     {
-        ThrowHelper.ThrowIfOutsideRange(0, _reader.MappingTableCount -1, mappingTableIndex);
+        ThrowHelper.ThrowIfOutsideRange(0, MappingTableCount - 1, mappingTableIndex);
     }
 
     private int CalculateMinimumStride()

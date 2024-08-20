@@ -29,7 +29,7 @@ internal sealed class GolombCodeTable
 
     internal static GolombCodeTable Create(int k)
     {
-        GolombCodeTable table = new GolombCodeTable();
+        GolombCodeTable table = new();
 
         for (short errorValue = 0;; ++errorValue)
         {

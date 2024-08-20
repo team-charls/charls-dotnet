@@ -1,8 +1,6 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using System.Diagnostics;
-
 namespace CharLS.Managed.Test;
 
 internal sealed class JpegTestStreamWriter
@@ -57,6 +55,27 @@ internal sealed class JpegTestStreamWriter
     public void WriteStartOfImage()
     {
         WriteMarker(JpegMarkerCode.StartOfImage);
+    }
+
+    public void WriteSpiffHeaderSegment(SpiffHeader header)
+    {
+        Span<byte> spiffMagicId = [(byte)'S', (byte)'P', (byte)'I', (byte)'F', (byte)'F', (byte)'\0'];
+
+        // Create a JPEG APP8 segment in Still Picture Interchange File Format (SPIFF), v2.0
+        WriteSegmentStart(JpegMarkerCode.ApplicationData8, 30);
+        WriteBytes(spiffMagicId);
+        WriteByte(Constants.SpiffMajorRevisionNumber);
+        WriteByte(Constants.SpiffMinorRevisionNumber);
+        WriteByte((byte)header.ProfileId);
+        WriteByte((byte)header.ComponentCount);
+        WriteUint32((uint)header.Height);
+        WriteUint32((uint)header.Width);
+        WriteByte((byte)header.ColorSpace);
+        WriteByte((byte)header.BitsPerSample);
+        WriteByte((byte)header.CompressionType);
+        WriteByte((byte)header.ResolutionUnit);
+        WriteUint32((uint)header.VerticalResolution);
+        WriteUint32((uint)header.HorizontalResolution);
     }
 
     public void WriteSpiffEndOfDirectoryEntry()
@@ -127,7 +146,7 @@ internal sealed class JpegTestStreamWriter
         WriteUint16(presetCodingParameters.ResetValue);
     }
 
-    internal void WriteJpegLSPresetParametersSegment(byte tableId, byte entrySize, ReadOnlySpan<byte> tableData, bool continuation = false)
+    internal void WriteJpegLSPresetParametersSegment(byte tableId, byte entrySize, ReadOnlySpan<byte> tableData, bool continuation)
     {
         // Format is defined in ISO/IEC 14495-1, C.2.4.1.2 and C.2.4.1.3
         WriteSegmentStart(JpegMarkerCode.JpegLSPresetParameters, 3 + tableData.Length);
@@ -136,6 +155,45 @@ internal sealed class JpegTestStreamWriter
         WriteByte(tableId);
         WriteByte(entrySize);
         WriteBytes(tableData);
+    }
+
+    internal void WriteOversizeImageDimension(int numberOfBytes, uint width, uint height, bool extraByte = false)
+    {
+        // Format is defined in ISO/IEC 14495-1, C.2.4.1.4
+        int dataSize = 2 + (numberOfBytes * 2);
+        if (extraByte)
+        {
+            ++dataSize;
+        }
+
+        WriteSegmentStart(JpegMarkerCode.JpegLSPresetParameters, dataSize);
+
+        WriteByte((byte)JpegLSPresetParametersType.OversizeImageDimension);
+        WriteByte((byte)numberOfBytes);
+
+        switch (numberOfBytes)
+        {
+            case 2:
+                WriteUint16((ushort)height);
+                WriteUint16((ushort)width);
+                break;
+
+            case 3:
+                WriteUint24(height);
+                WriteUint24(width);
+                break;
+
+            default:
+                WriteUint32(height);
+                WriteUint32(width);
+                break;
+        }
+
+        if (extraByte)
+        {
+            // This will make the segment non-conforming.
+            WriteByte(0);
+        }
     }
 
     internal void WriteDefineRestartInterval(uint restartInterval, int size)
@@ -155,10 +213,6 @@ internal sealed class JpegTestStreamWriter
             case 4:
                 WriteUint32(restartInterval);
                 break;
-
-            default:
-                Debug.Fail("unreachable");
-                break;
         }
     }
 
@@ -167,17 +221,17 @@ internal sealed class JpegTestStreamWriter
         WriteMarker((JpegMarkerCode)(Constants.JpegRestartMarkerBase + intervalIndex));
     }
 
-    public ReadOnlyMemory<byte> GetBuffer()
+    internal ReadOnlyMemory<byte> GetBuffer()
     {
         return _buffer.ToArray();
     }
 
-    public List<byte> GetModifiableBuffer()
+    internal List<byte> GetModifiableBuffer()
     {
         return _buffer;
     }
 
-    private void WriteMarker(JpegMarkerCode markerCode)
+    internal void WriteMarker(JpegMarkerCode markerCode)
     {
         WriteByte(0xFF);
         WriteByte((byte)markerCode);

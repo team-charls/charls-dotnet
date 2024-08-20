@@ -625,7 +625,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfImage();
         var tableData = new byte[2];
         tableData[0] = 2;
-        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData);
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, false);
         writer.WriteStartOfFrameSegment(1, 1, 2, 1);
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
 

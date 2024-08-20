@@ -176,7 +176,7 @@ public class ComplianceTest
             0xFF, 0xD9 // End of image (EOI) marker
         ];
 
-        JpegLSDecoder decoder = new JpegLSDecoder { Source = palettisedData };
+        JpegLSDecoder decoder = new() { Source = palettisedData };
         decoder.ReadHeader();
 
         var destination = new byte[decoder.GetDestinationSize()];

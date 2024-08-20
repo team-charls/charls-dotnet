@@ -29,7 +29,8 @@ internal struct JpegStreamReader
         SpiffHeaderSection,
         FrameSection,
         ScanSection,
-        BitStreamSection
+        BitStreamSection,
+        AfterEndOfImage
     }
 
     private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0 - D7)
@@ -51,15 +52,19 @@ internal struct JpegStreamReader
     public event EventHandler<CommentEventArgs>? Comment;
     public event EventHandler<ApplicationDataEventArgs>? ApplicationData;
 
+    internal readonly int ComponentCount => _scanInfos.Count;
+
+    internal readonly bool EndOfImage => _state == State.AfterEndOfImage;
+
+    internal readonly FrameInfo FrameInfo => new(_width, _height, _bitsPerSample, _componentCount);
+
     internal ReadOnlyMemory<byte> Source { get; set; }
 
     internal int Position { get; private set; }
 
-    public JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
+    internal JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
 
-    public readonly FrameInfo FrameInfo => new(_width, _height, _bitsPerSample, _componentCount);
-
-    public SpiffHeader? SpiffHeader { get; private set; }
+    internal SpiffHeader? SpiffHeader { get; private set; }
 
     internal InterleaveMode InterleaveMode { get; private set; }
 
@@ -68,8 +73,6 @@ internal struct JpegStreamReader
     internal readonly int MappingTableCount => _mappingTables.Count;
 
     internal int RestartInterval { get; private set; }
-
-    internal readonly int ComponentCount => _scanInfos.Count;
 
     private readonly int SegmentBytesToRead => _segmentStartPosition + _segmentDataSize - Position;
 
@@ -116,7 +119,7 @@ internal struct JpegStreamReader
     {
         JpegLSPresetCodingParameters ??= new JpegLSPresetCodingParameters();
 
-        if (!JpegLSPresetCodingParameters.IsValid(CalculateMaximumSampleValue(FrameInfo!.BitsPerSample), _nearLossless, out var validatedCodingParameters))
+        if (!JpegLSPresetCodingParameters.IsValid(CalculateMaximumSampleValue(FrameInfo.BitsPerSample), _nearLossless, out var validatedCodingParameters))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterJpegLSPresetParameters);
 
         return validatedCodingParameters;
@@ -148,7 +151,7 @@ internal struct JpegStreamReader
                 return (uint)JpegLSPresetCodingParameters.MaximumSampleValue;
             }
 
-            return (uint)CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
+            return (uint)CalculateMaximumSampleValue(FrameInfo.BitsPerSample);
         }
     }
 
@@ -167,6 +170,17 @@ internal struct JpegStreamReader
         for (; ; )
         {
             var markerCode = ReadNextMarkerCode();
+            if (markerCode == JpegMarkerCode.EndOfImage)
+            {
+                if (IsAbbreviatedFormatForTableSpecificationData())
+                {
+                    _state = State.AfterEndOfImage;
+                    return;
+                }
+
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.UnexpectedEndOfImageMarker);
+            }
+
             ValidateMarkerCode(markerCode);
 
             ReadSegmentSize();
@@ -657,9 +671,7 @@ internal struct JpegStreamReader
         if (markerCode != JpegMarkerCode.EndOfImage)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.EndOfImageMarkerNotFound);
 
-        ////#ifdef DEBUG
-        //        state_ = state::after_end_of_image;
-        ////#endif
+        _state = State.AfterEndOfImage;
     }
 
     private void ReadApplicationData8Segment(bool readSpiffHeader)
@@ -733,7 +745,7 @@ internal struct JpegStreamReader
             CompressionType = (SpiffCompressionType)ReadByte(),
             ResolutionUnit = (SpiffResolutionUnit)ReadByte(),
             VerticalResolution = ReadUint32(),
-            HorizontalResolution = ReadUint32(),
+            HorizontalResolution = ReadUint32()
         };
     }
 
@@ -807,6 +819,21 @@ internal struct JpegStreamReader
     {
         if (!mode.IsValid() || (FrameInfo.ComponentCount == 1 && mode != InterleaveMode.None))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterInterleaveMode);
+    }
+
+    /// <summary>
+    /// ISO/IEC 14495-1, Annex C defines 3 data formats.
+    /// Annex C.4 defines the format that only contains mapping tables.
+    /// </summary>
+    private readonly bool IsAbbreviatedFormatForTableSpecificationData() 
+    {
+        if (MappingTableCount == 0)
+            return false;
+
+        if (_state == State.FrameSection)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.AbbreviatedFormatAndSpiffHeaderMismatch);
+
+        return _state == State.HeaderSection;
     }
 
     private readonly struct MappingTableEntry

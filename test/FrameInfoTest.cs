@@ -23,7 +23,7 @@ public class FrameInfoTest
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentWidth, exception.GetErrorCode());
 
-        exception = Assert.Throws<ArgumentOutOfRangeException>(() => new FrameInfo() { Width = 0});
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => new FrameInfo { Width = 0});
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentWidth, exception.GetErrorCode());
     }
@@ -35,7 +35,7 @@ public class FrameInfoTest
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentHeight, exception.GetErrorCode());
 
-        exception = Assert.Throws<ArgumentOutOfRangeException>(() => new FrameInfo() { Height = 0 });
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => new FrameInfo { Height = 0 });
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentHeight, exception.GetErrorCode());
     }
@@ -47,7 +47,7 @@ public class FrameInfoTest
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentBitsPerSample, exception.GetErrorCode());
 
-        exception = Assert.Throws<ArgumentOutOfRangeException>(() => new FrameInfo() { BitsPerSample = 0 });
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => new FrameInfo { BitsPerSample = 0 });
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentBitsPerSample, exception.GetErrorCode());
     }
@@ -59,7 +59,7 @@ public class FrameInfoTest
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentComponentCount, exception.GetErrorCode());
 
-        exception = Assert.Throws<ArgumentOutOfRangeException>(() => new FrameInfo() { ComponentCount = 0 });
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => new FrameInfo { ComponentCount = 0 });
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentComponentCount, exception.GetErrorCode());
     }

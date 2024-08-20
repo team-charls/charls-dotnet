@@ -100,7 +100,15 @@ public sealed record SpiffHeader
     /// </value>
     public int HorizontalResolution { get; init; }
 
-    internal bool IsValid(FrameInfo frameInfo)
+    /// <summary>
+    /// Validates a SPIFF header. It is validated against the ISO/IEC 10918-3, Annex F and if the
+    /// values match with the frame info argument.
+    /// </summary>
+    /// <remarks>
+    /// ISO/IEC 10918-3 (SPIFF) and ISO/IEC 14495-1 (JPEG-LS) use different allowed ranges for
+    /// bits per sample: (1, 2, 4, 8, 12, 16) vs [2..16]. The JPEG-LS range is used for validation.
+    /// </remarks>
+    public bool IsValid(FrameInfo frameInfo)
     {
         if (CompressionType != SpiffCompressionType.JpegLS)
             return false;

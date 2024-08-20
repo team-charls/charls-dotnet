@@ -91,12 +91,12 @@ public class ScanDecoderTest
         byte peekByte1 = scanDecoder.TestPeekByte();
         for (int i = 0; i < 1 * 8; i++)
         {
-            var actual = scanDecoder.TestReadBit();
+            _ = scanDecoder.TestReadBit();
         }
         byte peekByte2 = scanDecoder.TestPeekByte();
         for (int i = 0; i < 1 * 8; i++)
         {
-            var actual = scanDecoder.TestReadBit();
+            _ = scanDecoder.TestReadBit();
         }
         scanDecoder.TestEndScan();
 

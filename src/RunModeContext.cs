@@ -77,14 +77,6 @@ internal struct RunModeContext
         if (errorValue < 0 && 2 * _nn >= _n)
             return true;
 
-        if (errorValue < 0 && k != 0)
-            return true;
-
-        return false;
-    }
-
-    internal readonly bool ComputeMapNegativeE(int k)
-    {
-        return k != 0 || 2 * _nn >= _n;
+        return errorValue < 0 && k != 0;
     }
 }

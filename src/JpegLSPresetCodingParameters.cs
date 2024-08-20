@@ -59,9 +59,7 @@ public sealed record JpegLSPresetCodingParameters
 
     internal bool IsDefault(int maximumSampleValue, int nearLossless)
     {
-        if (MaximumSampleValue == 0 && Threshold1 == 0 &&
-            Threshold2 == 0 && Threshold3 == 0 &&
-            ResetValue == 0)
+        if (MaximumSampleValue == 0 && Threshold1 == 0 && Threshold2 == 0 && Threshold3 == 0 && ResetValue == 0)
             return true;
 
         var defaultParameters = ComputeDefault(maximumSampleValue, nearLossless);
