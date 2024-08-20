@@ -3,17 +3,14 @@
 
 namespace CharLS.Managed;
 
-internal struct GolombCode
+internal readonly struct GolombCode
 {
-    private int _value;
-    private int _length;
-
     internal GolombCode(int value, int length)
     {
-        _value = value;
-        _length = length;
+        Value = value;
+        Length = length;
     }
 
-    internal readonly int Value => _value;
-    internal readonly int Length => _length;
+    internal int Value { get; }
+    internal int Length { get; }
 }

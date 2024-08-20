@@ -22,7 +22,7 @@ internal struct ScanDecoder
     private int _endPosition;
     private int _positionFF;
     private int _validBits;
-    private ulong _readCache; // TODO: change for 32-bit build
+    private ulong _readCache;
     private int _restartIntervalCounter;
 
     private int _restartInterval;
@@ -1073,7 +1073,7 @@ internal struct ScanDecoder
         if (endIndex - 1 == FrameInfo.Width)
             return endIndex - startIndex;
 
-        // run interruption
+        // Run interruption
         var rb = previousLine[endIndex];
         currentLine[endIndex] = DecodeRunInterruptionPixel(ra, rb);
         _scanCodec.DecrementRunIndex();
@@ -1087,7 +1087,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1100,7 +1100,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1122,7 +1122,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1135,7 +1135,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1157,7 +1157,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1170,7 +1170,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1192,7 +1192,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1205,7 +1205,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1227,7 +1227,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1240,7 +1240,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1262,7 +1262,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1275,7 +1275,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 

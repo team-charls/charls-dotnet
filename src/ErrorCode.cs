@@ -41,7 +41,8 @@ public enum ErrorCode
     EncodingNotSupported = 6,
 
     /// <summary>
-    /// The parameter value not supported.
+    /// The parameter value not supported. Will be used for parameters not supported by this implementation
+    /// and values larger than int.MaxValue.
     /// </summary>
     ParameterValueNotSupported = 7,
 
@@ -139,7 +140,7 @@ public enum ErrorCode
     /// <summary>
     /// This error is returned for stream with only mapping tables and a spiff header.
     /// </summary>
-    AbbreviatedFormatAndSpiffHeader = 26,
+    AbbreviatedFormatAndSpiffHeaderMismatch = 26,
 
     /// <summary>
     /// This error is returned when the width parameter is defined more than once in an incompatible way.

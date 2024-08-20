@@ -16,8 +16,7 @@ internal struct JpegStreamWriter
 
     internal Memory<byte> Destination { get; set; }
 
-    // ReSharper disable once ConvertToAutoPropertyWithPrivateSetter
-    internal readonly int BytesWritten => _position;
+    internal readonly int BytesWritten => _position - 0;
 
     internal void WriteStartOfImage()
     {

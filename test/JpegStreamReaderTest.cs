@@ -442,7 +442,7 @@ public class JpegStreamReaderTest
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(512, 512, 8, 3);
-        const uint expectedRestartInterval = ushort.MaxValue - 5;
+        const int expectedRestartInterval = ushort.MaxValue - 5;
         writer.WriteDefineRestartInterval(expectedRestartInterval, 2);
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
@@ -458,7 +458,7 @@ public class JpegStreamReaderTest
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(512, 512, 8, 3);
-        const uint expectedRestartInterval = ushort.MaxValue + 5;
+        const int expectedRestartInterval = ushort.MaxValue + 5;
         writer.WriteDefineRestartInterval(expectedRestartInterval, 3);
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
@@ -474,7 +474,7 @@ public class JpegStreamReaderTest
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(512, 512, 8, 3);
-        const uint expectedRestartInterval = uint.MaxValue - 7;
+        const int expectedRestartInterval = int.MaxValue - 7;
         writer.WriteDefineRestartInterval(expectedRestartInterval, 4);
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
@@ -485,11 +485,11 @@ public class JpegStreamReaderTest
     }
 
     [Fact]
-    public void ReadHeaderWith2DefineRestartIntervals()
+    public void ReadHeaderWith2DefineRestartIntervalsLastIsUsed()
     {
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
-        writer.WriteDefineRestartInterval(uint.MaxValue, 4);
+        writer.WriteDefineRestartInterval(int.MaxValue, 4);
         writer.WriteStartOfFrameSegment(512, 512, 8, 3);
         writer.WriteDefineRestartInterval(0, 3);
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
@@ -497,7 +497,23 @@ public class JpegStreamReaderTest
 
         reader.ReadHeader(false);
 
-        Assert.Equal(0U, reader.RestartInterval);
+        Assert.Equal(0, reader.RestartInterval);
+    }
+
+    [Fact]
+    public void ReadHeaderWithDefineRestartIntervalLargerThanInt32Throws()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteDefineRestartInterval(uint.MaxValue, 4);
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.ParameterValueNotSupported, exception.GetErrorCode());
     }
 
     [Fact]

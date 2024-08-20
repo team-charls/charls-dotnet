@@ -230,6 +230,6 @@ public class EncodeTest
         Assert.Equal(expectedSize, encoder.BytesWritten);
 
         encodedData = encodedData[..encoder.BytesWritten];
-        Util.TestByDecoding(encodedData, frameInfo, source.Span, interleaveMode /*, color_transformation*/);
+        Util.TestByDecoding(encodedData, frameInfo, source.Span, interleaveMode, colorTransformation);
     }
 }

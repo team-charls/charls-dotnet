@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 
+using static CharLS.Managed.Algorithm;
+
 namespace CharLS.Managed;
 
 /// <summary>
@@ -216,7 +218,7 @@ public sealed class JpegLSEncoder
             checked
             {
                 return (FrameInfo!.Width * FrameInfo.Height * FrameInfo.ComponentCount *
-                           Algorithm.BitToByteCount(FrameInfo.BitsPerSample)) + 1024 + Constants.SpiffHeaderSizeInBytes;
+                           BitToByteCount(FrameInfo.BitsPerSample)) + 1024 + Constants.SpiffHeaderSizeInBytes;
             }
         }
     }
@@ -285,26 +287,16 @@ public sealed class JpegLSEncoder
     /// </summary>
     /// <param name="source">The memory region that is the source input to the encoding process.</param>
     /// <param name="stride">The stride of the image pixel of the source input.</param>
-    public void Encode(ReadOnlyMemory<byte> source, int stride = 0)
+    public void Encode(ReadOnlyMemory<byte> source, int stride = Constants.AutoCalculateStride)
     {
-        if (source.IsEmpty)
-            throw new ArgumentException("", nameof(source));
         ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured() && _state != State.Initial);
         CheckInterleaveModeAgainstComponentCount();
+        stride = CheckStrideAndSource(source.Length, stride);
 
-        int maximumSampleValue = Algorithm.CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
+        int maximumSampleValue = CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
         ThrowHelper.ThrowArgumentExceptionIfFalse(
             _userPresetCodingParameters!.IsValid(maximumSampleValue, NearLossless, out var presetCodingParameters),
             null, ErrorCode.InvalidArgumentPresetCodingParameters);
-
-        if (stride == Constants.AutoCalculateStride)
-        {
-            stride = CalculateStride();
-        }
-        else
-        {
-            CheckStride(stride, source.Length);
-        }
 
         TransitionToTablesAndMiscellaneousState();
         WriteColorTransformSegment();
@@ -463,7 +455,7 @@ public sealed class JpegLSEncoder
     /// <param name="comment">Application specific value, usually human-readable UTF-8 string.</param>
     public void WriteComment(string comment)
     {
-        WriteComment(ToUtf8(comment).Span);
+        WriteComment(ToUtf8(comment));
     }
 
     /// <summary>
@@ -592,37 +584,38 @@ public sealed class JpegLSEncoder
             ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentInterleaveMode);
     }
 
-    private int CalculateStride()
+    private int CheckStrideAndSource(int sourceLength, int stride)
     {
-        int stride = FrameInfo!.Width * Algorithm.BitToByteCount(FrameInfo.BitsPerSample);
+        int minimumStride = CalculateMinimumStride();
+
+        if (stride == Constants.AutoCalculateStride)
+        {
+            stride = minimumStride;
+        }
+        else
+        {
+            if (stride < minimumStride)
+                ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
+        }
+
+        int notUsedBytesAtEnd = stride - minimumStride;
+        int minimumSourceLength = InterleaveMode == InterleaveMode.None
+            ? (stride * FrameInfo!.ComponentCount * FrameInfo.Height) - notUsedBytesAtEnd
+            : (stride * FrameInfo!.Height) - notUsedBytesAtEnd;
+
+        if (sourceLength < minimumSourceLength)
+            ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentSize);
+
+        return stride;
+    }
+
+    private int CalculateMinimumStride()
+    {
+        int stride = FrameInfo!.Width * BitToByteCount(FrameInfo.BitsPerSample);
         if (_interleaveMode == InterleaveMode.None)
             return stride;
 
         return stride * FrameInfo.ComponentCount;
-    }
-
-    private void CheckStride(int stride, int sourceSize)
-    {
-        int minimumStride = CalculateStride();
-        if (stride < minimumStride)
-            ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
-
-        // Simple check to verify user input, and prevent out-of-bound read access.
-        // Stride parameter defines the number of bytes on a scan line.
-        if (InterleaveMode == InterleaveMode.None)
-        {
-            int minimumSourceSize =
-                (stride * FrameInfo!.ComponentCount * FrameInfo.Height) - (stride - minimumStride);
-
-            if (sourceSize < minimumSourceSize)
-                ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
-        }
-        else
-        {
-            int minimumSourceSize = (stride * FrameInfo!.Height) - (stride - minimumStride);
-            if (sourceSize < minimumSourceSize)
-                ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
-        }
     }
 
     private bool IsFrameInfoConfigured()
@@ -630,15 +623,15 @@ public sealed class JpegLSEncoder
         return FrameInfo != null;
     }
 
-    private static ReadOnlyMemory<byte> ToUtf8(string text)
+    private static ReadOnlySpan<byte> ToUtf8(string text)
     {
         if (string.IsNullOrEmpty(text))
-            return new ReadOnlyMemory<byte>(); // TODO -> change to readonly span?
+            return new ReadOnlySpan<byte>();
 
         var utf8Encoded = new byte[Encoding.UTF8.GetMaxByteCount(text.Length) + 1];
         int bytesWritten = Encoding.UTF8.GetBytes(text, 0, text.Length, utf8Encoded, 0);
         utf8Encoded[bytesWritten] = 0;
 
-        return new ReadOnlyMemory<byte>(utf8Encoded, 0, bytesWritten + 1);
+        return new ReadOnlySpan<byte>(utf8Encoded, 0, bytesWritten + 1);
     }
 }

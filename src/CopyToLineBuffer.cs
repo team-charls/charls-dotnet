@@ -112,6 +112,7 @@ internal class CopyToLineBuffer
                 {
                     case ColorTransformation.None:
                     default:
+                        Debug.Assert(colorTransformation == ColorTransformation.None);
                         return GetMethodCopySamples16Bit(bitsPerSample);
                     case ColorTransformation.HP1:
                         return CopyPixels16BitHP1;
