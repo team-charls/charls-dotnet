@@ -59,9 +59,7 @@ public sealed record JpegLSPresetCodingParameters
 
     internal bool IsDefault(int maximumSampleValue, int nearLossless)
     {
-        if (MaximumSampleValue == 0 && Threshold1 == 0 &&
-            Threshold2 == 0 && Threshold3 == 0 &&
-            ResetValue == 0)
+        if (MaximumSampleValue == 0 && Threshold1 == 0 && Threshold2 == 0 && Threshold3 == 0 && ResetValue == 0)
             return true;
 
         var defaultParameters = ComputeDefault(maximumSampleValue, nearLossless);
@@ -129,7 +127,7 @@ public sealed record JpegLSPresetCodingParameters
     }
 
     /// <summary>Default coding threshold values as defined by ISO/IEC 14495-1, C.2.4.1.1.1</summary>
-    private static JpegLSPresetCodingParameters ComputeDefault(int maximumSampleValue, int nearLossless)
+    internal static JpegLSPresetCodingParameters ComputeDefault(int maximumSampleValue, int nearLossless)
     {
         //ASSERT(maximum_sample_value <= std::numeric_limits < uint16_t >::max());
         //ASSERT(near_lossless >= 0 && near_lossless <= compute_maximum_near_lossless(maximum_sample_value));

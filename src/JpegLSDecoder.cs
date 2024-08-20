@@ -3,6 +3,8 @@
 
 using System.Diagnostics;
 
+using static CharLS.Managed.Algorithm;
+
 namespace CharLS.Managed;
 
 /// <summary>
@@ -172,10 +174,7 @@ public sealed class JpegLSDecoder
     /// <value>
     /// The color transformation that was used to encode the image.
     /// </value>
-    public ColorTransformation ColorTransformation
-    {
-        get => _reader.ColorTransformation;
-    }
+    public ColorTransformation ColorTransformation => _reader.ColorTransformation;
 
     /// <summary>
     /// Gets the required size of the destination buffer.
@@ -191,8 +190,7 @@ public sealed class JpegLSDecoder
 
         if (stride == 0)
         {
-            return FrameInfo.ComponentCount * FrameInfo.Height * FrameInfo.Width *
-                   Algorithm.BitToByteCount(FrameInfo.BitsPerSample);
+            return FrameInfo.ComponentCount * FrameInfo.Height * FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
         }
 
         switch (InterleaveMode)
@@ -219,7 +217,7 @@ public sealed class JpegLSDecoder
     public int GetMappingTableId(int componentIndex)
     {
         CheckStateCompleted();
-        ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount, componentIndex);
+        ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount - 1, componentIndex);
         return _reader.GetMappingTableId(componentIndex);
     }
 
@@ -235,6 +233,22 @@ public sealed class JpegLSDecoder
         CheckStateCompleted();
         ThrowHelper.ThrowIfOutsideRange(Constants.MinimumMappingTableId, Constants.MaximumMappingTableId, mappingTableId);
         return _reader.FindMappingTableIndex(mappingTableId);
+    }
+
+    /// <summary>
+    /// Returns the count of mapping tables present in the JPEG-LS stream.
+    /// </summary>
+    /// <remarks>
+    /// Function should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    /// <value>The number of mapping tables present in the JPEG-LS stream.</value>
+    public int MappingTableCount
+    {
+        get
+        {
+            CheckStateCompleted();
+            return _reader.MappingTableCount;
+        }
     }
 
     /// <summary>
@@ -284,18 +298,6 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
-    /// Validates a SPIFF header with the FrameInfo.
-    /// </summary>
-    /// <param name="spiffHeader">Reference to a SPIFF header that will be validated.</param>
-    /// <exception cref="InvalidDataException">Thrown when the SPIFF header is not valid.</exception>
-    public void ValidateSpiffHeader(SpiffHeader spiffHeader)
-    {
-        ThrowHelper.ThrowInvalidOperationIfFalse(_state >= State.HeaderRead);
-        if (!spiffHeader.IsValid(FrameInfo))
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidSpiffHeader);
-    }
-
-    /// <summary>
     /// Reads the header of the JPEG-LS stream.
     /// After calling this method, the informational properties can be obtained.
     /// </summary>
@@ -317,7 +319,7 @@ public sealed class JpegLSDecoder
             }
         }
 
-        _state = State.HeaderRead;
+        _state = _reader.EndOfImage ? State.Completed : State.HeaderRead;
     }
 
     /// <summary>
@@ -359,7 +361,7 @@ public sealed class JpegLSDecoder
         }
 
         // Compute the layout of the destination buffer.
-        int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * Algorithm.BitToByteCount(FrameInfo.BitsPerSample);
+        int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * BitToByteCount(FrameInfo.BitsPerSample);
         int planeCount = _reader.InterleaveMode == InterleaveMode.None ? FrameInfo.ComponentCount : 1;
         int minimumDestinationSize = (bytesPerPlane * planeCount) - (stride - minimumStride);
 
@@ -396,7 +398,7 @@ public sealed class JpegLSDecoder
 
     private void CheckMappingTableIndex(int mappingTableIndex)
     {
-        ThrowHelper.ThrowIfOutsideRange(0, _reader.MappingTableCount -1, mappingTableIndex);
+        ThrowHelper.ThrowIfOutsideRange(0, MappingTableCount - 1, mappingTableIndex);
     }
 
     private int CalculateMinimumStride()
@@ -405,6 +407,6 @@ public sealed class JpegLSDecoder
             _reader.InterleaveMode == InterleaveMode.None
             ? 1
             : FrameInfo.ComponentCount;
-        return componentsInPlaneCount * FrameInfo.Width * Algorithm.BitToByteCount(FrameInfo.BitsPerSample);
+        return componentsInPlaneCount * FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
     }
 }

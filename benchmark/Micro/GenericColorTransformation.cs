@@ -166,8 +166,8 @@ public class ColorTransformation
     {
         fixed (byte* bptr = _source, pd = _destination)
         {
-            Triplet<byte>* sourcePTr = (Triplet<byte>*)bptr;
-            Triplet<byte>* destinationPtr = (Triplet<byte>*)pd;
+            var sourcePTr = (Triplet<byte>*)bptr;
+            var destinationPtr = (Triplet<byte>*)pd;
             Triplet<byte>* endPtr = sourcePTr + PixelCount;
 
             for (; sourcePTr != endPtr; sourcePTr++, destinationPtr++)

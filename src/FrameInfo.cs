@@ -74,8 +74,7 @@ public sealed record FrameInfo
         get => _bitsPerSample;
         init
         {
-            ArgumentOutOfRangeException.ThrowIfLessThan(value, Constants.MinimumBitsPerSample);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(value, Constants.MaximumBitsPerSample);
+            ThrowHelper.ThrowIfOutsideRange(Constants.MinimumBitsPerSample, Constants.MaximumBitsPerSample, value, ErrorCode.InvalidArgumentBitsPerSample);
             _bitsPerSample = value;
         }
     }
@@ -88,8 +87,7 @@ public sealed record FrameInfo
         get => _componentCount;
         init
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(value, Constants.MaximumComponentCount);
+            ThrowHelper.ThrowIfOutsideRange(Constants.MinimumComponentCount, Constants.MaximumComponentCount, value, ErrorCode.InvalidArgumentComponentCount);
             _componentCount = value;
         }
     }

@@ -1008,6 +1008,17 @@ public class JpegLSEncoderTest
     }
 
     [Fact]
+    public void UseColorTransformationIncompatibleWithFrameInfoThrows()
+    {
+        JpegLSEncoder encoder = new(new FrameInfo(1, 1, 8, 1)) { ColorTransformation = ColorTransformation.HP1 };
+
+        byte[] source = [0, 1, 2, 3, 4, 5];
+
+        var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source));
+        Assert.Equal(ErrorCode.InvalidArgumentColorTransformation, exception.GetErrorCode());
+    }
+
+    [Fact]
     public void SetMappingTableId()
     {
         byte[] source = [0, 1, 2, 3, 4, 5];
@@ -1110,7 +1121,7 @@ public class JpegLSEncoderTest
         encoder.ColorTransformation = ColorTransformation.HP1;
         encoder.Encode(source);
 
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, source, InterleaveMode.None);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, source, InterleaveMode.None, ColorTransformation.HP1);
     }
 
     [Fact]
@@ -1215,7 +1226,7 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new(2, 2, 8, 3) { InterleaveMode = InterleaveMode.None };
 
         var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source, 4));
-        Assert.Equal(ErrorCode.InvalidArgumentStride, exception.GetErrorCode());
+        Assert.Equal(ErrorCode.InvalidArgumentSize, exception.GetErrorCode());
     }
 
     [Fact]
@@ -1413,8 +1424,7 @@ public class JpegLSEncoderTest
     public void Rewind()
     {
         byte[] source = [0, 1, 2, 3, 4, 5];
-        JpegLSEncoder
-            encoder = new(3, 1, 16, 1); // TODO: passing 3 components causes a crash: improve source size checking.
+        JpegLSEncoder encoder = new(3, 1, 16, 1);
         encoder.Encode(source);
         Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, source, InterleaveMode.None);
         byte[] destinationBackup = new byte[encoder.BytesWritten];

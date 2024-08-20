@@ -84,4 +84,4 @@ public enum SpiffEntryTag
     /// This entry contains a 96-bit reference number intended to relate images stored in separate files.
     /// </summary>
     SetReference = 16
-};
+}

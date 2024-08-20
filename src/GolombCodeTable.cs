@@ -1,6 +1,8 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using static CharLS.Managed.Algorithm;
+
 namespace CharLS.Managed;
 
 internal sealed class GolombCodeTable
@@ -27,12 +29,12 @@ internal sealed class GolombCodeTable
 
     internal static GolombCodeTable Create(int k)
     {
-        GolombCodeTable table = new GolombCodeTable();
+        GolombCodeTable table = new();
 
         for (short errorValue = 0;; ++errorValue)
         {
             // Q is not used when k != 0
-            int mappedErrorValue = Algorithm.MapErrorValue(errorValue);
+            int mappedErrorValue = MapErrorValue(errorValue);
             (int codeLength, int tableValue) = CreateEncodedValue(k, mappedErrorValue);
             if (codeLength > ByteBitCount)
                 break;
@@ -44,7 +46,7 @@ internal sealed class GolombCodeTable
         for (short errorValue = -1; ; --errorValue)
         {
             // Q is not used when k != 0
-            int mappedErrorValue = Algorithm.MapErrorValue(errorValue);
+            int mappedErrorValue = MapErrorValue(errorValue);
             (int codeLength, int tableValue) = CreateEncodedValue(k, mappedErrorValue);
             if (codeLength > ByteBitCount)
                 break;

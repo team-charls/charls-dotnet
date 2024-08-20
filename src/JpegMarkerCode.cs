@@ -87,5 +87,5 @@ internal enum JpegMarkerCode
     StartOfFrameJpegLS = 0xF7,
 
     /// <summary>LSE: Marks the start of a JPEG-LS preset parameters segment.</summary>
-    JpegLSPresetParameters = 0xF8,
+    JpegLSPresetParameters = 0xF8
 }

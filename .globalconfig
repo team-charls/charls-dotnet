@@ -41,7 +41,7 @@ dotnet_diagnostic.CA1812.severity = none
 # Rational: Formatting rule is incompatible with StyleCop
 dotnet_diagnostic.IDE0055.severity = none
 
-# IDE0130: Namespace "CharLS.Native" does not match folder structure, expected "CharLS.Native."
+# IDE0130: Namespace "CharLS.Managed" does not match folder structure, expected "CharLS.Managed."
 # Rational: False warning
 dotnet_diagnostic.IDE0130.severity = none
 

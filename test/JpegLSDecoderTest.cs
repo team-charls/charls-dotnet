@@ -396,7 +396,7 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
-    public void ReadCommentThrowException()
+    public void CommentHandlerThatThrowsExceptionReturnsCallbackFailedError()
     {
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
@@ -448,6 +448,393 @@ public class JpegLSDecoderTest
         {
             applicationData2 = e.Data.ToArray();
         }
+    }
+
+    [Fact]
+    public void OversizeImageDimensionBeforeStartOfFrame()
+    {
+        const int width = 99;
+        const int height = ushort.MaxValue + 1;
+
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteOversizeImageDimension(3, width, height);
+        writer.WriteStartOfFrameSegment(0, 0, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer());
+
+        Assert.Equal(height, decoder.FrameInfo.Height);
+        Assert.Equal(width, decoder.FrameInfo.Width);
+    }
+
+    [Fact]
+    public void OversizeImageDimensionZeroBeforeStartOfFrame()
+    {
+        const int width = 99;
+        const int height = ushort.MaxValue;
+
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteOversizeImageDimension(2, 0, 0);
+        writer.WriteStartOfFrameSegment(width, height, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer());
+
+        Assert.Equal(height, decoder.FrameInfo.Height);
+        Assert.Equal(width, decoder.FrameInfo.Width);
+    }
+
+    [Fact]
+    public void OversizeImageDimensionWithInvalidNumberOfBytesThrows() // NOLINT
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteOversizeImageDimension(1, 1, 1);
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterJpegLSPresetParameters, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void OversizeImageDimensionChangeWidthAfterStartOfFrameThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(99, ushort.MaxValue, 8, 3);
+        writer.WriteOversizeImageDimension(2, 10, 0);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterWidth, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void StartOfFrameChangesHeightThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteOversizeImageDimension(2, 0, 10);
+        writer.WriteStartOfFrameSegment(0, ushort.MaxValue, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterHeight, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void TestOversizeImageDimensionBadSegmentSizeThrows()
+    {
+        OversizeImageDimensionBadSegmentSizeThrows(2);
+        OversizeImageDimensionBadSegmentSizeThrows(3);
+        OversizeImageDimensionBadSegmentSizeThrows(4);
+    }
+
+    [Fact]
+    public void OversizeImageDimensionThatCausesOverflowThrows()
+    {
+        const uint width = uint.MaxValue;
+        const uint height = uint.MaxValue;
+
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteOversizeImageDimension(4, width, height);
+        writer.WriteStartOfFrameSegment(0, 0, 8, 2);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.ParameterValueNotSupported, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void AbbreviatedFormatMappingTableCountAfterReadHeader()
+    {
+        byte[] tableData = new byte[255];
+
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, false);
+        writer.WriteMarker(JpegMarkerCode.EndOfImage);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer());
+        int count = decoder.MappingTableCount;
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public void AbbreviatedFormatWithSpiffHeaderThrows()
+    {
+        byte[] tableData = new byte[255];
+
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+
+        SpiffHeader header = new()
+        {
+            BitsPerSample = 8,
+            ColorSpace = SpiffColorSpace.Rgb,
+            ComponentCount = 3,
+            Height = 1,
+            Width = 1
+        };
+
+        writer.WriteSpiffHeaderSegment(header);
+        writer.WriteSpiffEndOfDirectoryEntry();
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, false);
+        writer.WriteMarker(JpegMarkerCode.EndOfImage);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+        _ = decoder.TryReadSpiffHeader(out _);
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.AbbreviatedFormatAndSpiffHeaderMismatch, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void MappingTableCountAfterDecodeTableAfterFirstScan()
+    {
+        byte[] dataH10 =
+        [
+                 0xFF,  0xD8, // Start of image (SOI) marker
+                 0xFF,  0xF7, // Start of JPEG-LS frame (SOF 55) marker - marker segment follows
+                 0x00,  0x0E, // Length of marker segment = 14 bytes including the length field
+                 0x02,             // P = Precision = 2 bits per sample
+                 0x00,  0x04, // Y = Number of lines = 4
+                 0x00,  0x03, // X = Number of columns = 3
+                 0x02,             // Nf = Number of components in the frame = 2
+                 0x01,             // C1  = Component ID = 1 (first and only component)
+                 0x11,             // Sub-sampling: H1 = 1, V1 = 1
+                 0x00,             // Tq1 = 0 (this field is always 0)
+                 0x02,             // C2  = Component ID = 2 (first and only component)
+                 0x11,             // Sub-sampling: H1 = 1, V1 = 1
+                 0x00,             // Tq1 = 0 (this field is always 0)
+
+                 0xFF,  0xF8,             // LSE - JPEG-LS preset parameters marker
+                 0x00,  0x11,             // Length of marker segment = 17 bytes including the length field
+                 0x02,                         // ID = 2, mapping table
+                 0x05,                         // TID = 5 Table identifier (arbitrary)
+                 0x03,                         // Wt = 3 Width of table entry
+                 0xFF,  0xFF,  0xFF, // Entry for index 0
+                 0xFF,  0x00,  0x00, // Entry for index 1
+                 0x00,  0xFF,  0x00, // Entry for index 2
+                 0x00,  0x00,  0xFF, // Entry for index 3
+
+                 0xFF,  0xDA,             // Start of scan (SOS) marker
+                 0x00,  0x08,             // Length of marker segment = 8 bytes including the length field
+                 0x01,                         // Ns = Number of components for this scan = 1
+                 0x01,                         // C1 = Component ID = 1
+                 0x05,                         // Tm 1  = Mapping table identifier = 5
+                 0x00,                         // NEAR = 0 (near-lossless max error)
+                 0x00,                         // ILV = 0 (interleave mode = non-interleaved)
+                 0x00,                         // Al = 0, Ah = 0 (no point transform)
+                 0xDB,  0x95,  0xF0, // 3 bytes of compressed image data
+
+                 0xFF,  0xF8,             // LSE - JPEG-LS preset parameters marker
+                 0x00,  0x11,             // Length of marker segment = 17 bytes including the length field
+                 0x02,                         // ID = 2, mapping table
+                 0x06,                         // TID = 6 Table identifier (arbitrary)
+                 0x03,                         // Wt = 3 Width of table entry
+                 0xFF,  0xFF,  0xFF, // Entry for index 0
+                 0xFF,  0x00,  0x00, // Entry for index 1
+                 0x00,  0xFF,  0x00, // Entry for index 2
+                 0x00,  0x00,  0xFF, // Entry for index 3
+
+                 0xFF,  0xDA,             // Start of scan (SOS) marker
+                 0x00,  0x08,             // Length of marker segment = 8 bytes including the length field
+                 0x01,                         // Ns = Number of components for this scan = 1
+                 0x02,                         // C1 = Component ID = 2
+                 0x06,                         // Tm 1  = Mapping table identifier = 6
+                 0x00,                         // NEAR = 0 (near-lossless max error)
+                 0x00,                         // ILV = 0 (interleave mode = non-interleaved)
+                 0x00,                         // Al = 0, Ah = 0 (no point transform)
+                 0xDB,  0x95,  0xF0, // 3 bytes of compressed image data
+
+                 0xFF,  0xD9 // End of image (EOI) marker
+        ];
+
+        JpegLSDecoder decoder = new(dataH10);
+        var destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        int count = decoder.MappingTableCount;
+        Assert.Equal(2, count);
+
+        Assert.Equal(5, decoder.GetMappingTableId(0));
+        Assert.Equal(6, decoder.GetMappingTableId(1));
+    }
+
+    [Fact]
+    public void InvalidTableIdThrows()
+    {
+        byte[] tableData = new byte[255];
+
+        JpegTestStreamWriter writer = new();
+
+        writer.WriteStartOfImage();
+        writer.WriteJpegLSPresetParametersSegment(0, 1, tableData, false);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterMappingTableId, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void DuplicateTableIdThrows()
+    {
+        byte[] tableData = new byte[255];
+
+        JpegTestStreamWriter writer = new();
+
+        writer.WriteStartOfImage();
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, false);
+        writer.WriteStartOfFrameSegment(1, 1, 8, 3);
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, false);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterMappingTableId, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void MappingTableIdReturnsZero()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        Assert.Equal(0, decoder.GetMappingTableId(0));
+        Assert.Equal(0, decoder.GetMappingTableId(1));
+        Assert.Equal(0, decoder.GetMappingTableId(2));
+    }
+
+    [Fact]
+    public void MappingTableIdForInvalidComponentThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => decoder.GetMappingTableId(3));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void MappingTableIdBeforeDecodeThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetMappingTableId(0));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void MappingTableIndexBeforeDecodeThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.FindMappingTableIndex(3));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void MappingTableIndexInvalidIndexThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => decoder.FindMappingTableIndex(0));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+
+        exception = Assert.Throws<ArgumentOutOfRangeException>(() => decoder.FindMappingTableIndex(256));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void MappingTableCountBeforeDecodeThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.MappingTableCount);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void MappingTableInfoBeforeDecodeThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetMappingTableInfo(0));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void MappingTableBeforeDecodeThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetMappingTableData(0));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void MappingTableInvalidIndexThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => decoder.GetMappingTableData(0));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+    }
+
+    private static void OversizeImageDimensionBadSegmentSizeThrows(int numberOfBytes)
+    {
+        const int width = 0;
+        const int height = ushort.MaxValue;
+
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteOversizeImageDimension(numberOfBytes, width, 10, true);
+        writer.WriteStartOfFrameSegment(width, height, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }
 
     private static byte[] ReadAllBytes(string path, int bytesToSkip = 0)

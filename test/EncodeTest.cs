@@ -84,6 +84,13 @@ public class EncodeTest
     }
 
     [Fact]
+    public void EncodeMonochrome16BitInterleaveNone()
+    {
+        byte[] data = [0, 10, 0, 20, 0, 30, 0, 40];
+        Encode(new FrameInfo(2, 2, 16, 1), data, 36, InterleaveMode.None);
+    }
+
+    [Fact]
     public void EncodeColor16BitInterleaveNone()
     {
         byte[] data = [10, 20, 30, 40, 50, 60];
@@ -223,6 +230,6 @@ public class EncodeTest
         Assert.Equal(expectedSize, encoder.BytesWritten);
 
         encodedData = encodedData[..encoder.BytesWritten];
-        Util.TestByDecoding(encodedData, frameInfo, source.Span, interleaveMode /*, color_transformation*/);
+        Util.TestByDecoding(encodedData, frameInfo, source.Span, interleaveMode, colorTransformation);
     }
 }

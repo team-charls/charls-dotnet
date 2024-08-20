@@ -31,8 +31,8 @@
 
     <!-- Static Analysis -->
     <AnalysisLevel>latest-All</AnalysisLevel>
-    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
-    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild> <!--TODO: Enable when development is far enough -->
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors> <!--TODO: Enable when development is far enough -->
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 </Project>

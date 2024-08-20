@@ -8,7 +8,7 @@ public class JpegStreamWriterTest
     [Fact]
     public void RemainingDestinationWillBeZeroAfterCreateWithDefault()
     {
-        JpegStreamWriter writer = new JpegStreamWriter();
+        JpegStreamWriter writer = new();
 
         Assert.Equal(0, writer.GetRemainingDestination().Length);
     }
@@ -17,7 +17,7 @@ public class JpegStreamWriterTest
     public void WriteStartOfImage()
     {
         var buffer = new byte[2];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         writer.WriteStartOfImage();
 
@@ -30,7 +30,7 @@ public class JpegStreamWriterTest
     public void WriteStartOfImageInTooSmallBufferThrows()
     {
         var buffer = new byte[1];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(writer.WriteStartOfImage);
         Assert.False(string.IsNullOrEmpty(exception.Message));
@@ -41,7 +41,7 @@ public class JpegStreamWriterTest
     public void WriteEndOfImage()
     {
         var buffer = new byte[2];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         writer.WriteEndOfImage(false);
 
@@ -54,7 +54,7 @@ public class JpegStreamWriterTest
     public void WriteEndOfImageEvenNoExtraByteNeeded()
     {
         var buffer = new byte[2];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         writer.WriteEndOfImage(true);
 
@@ -67,7 +67,7 @@ public class JpegStreamWriterTest
     public void WriteEndOfImageEvenExtraByteNeeded()
     {
         var buffer = new byte[5 + 3];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         // writer.
         byte[] comment = [99];
@@ -89,7 +89,7 @@ public class JpegStreamWriterTest
     public void WriteEndOfImageEvenExtraByteNeededNotEnabled()
     {
         var buffer = new byte[5 + 2];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         // writer.
         byte[] comment = [99];
@@ -110,7 +110,7 @@ public class JpegStreamWriterTest
     public void WriteEndOfImageInTooSmallBufferThrows()
     {
         var buffer = new byte[1];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => writer.WriteEndOfImage(false));
         Assert.False(string.IsNullOrEmpty(exception.Message));
@@ -121,7 +121,7 @@ public class JpegStreamWriterTest
     public void WriteSpiffSegment()
     {
         var buffer = new byte[34];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         var header = new SpiffHeader
         {
@@ -196,7 +196,7 @@ public class JpegStreamWriterTest
     public void WriteSpiffSegmentInTooSmallBufferThrows()
     {
         var buffer = new byte[33];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         var header = new SpiffHeader
         {
@@ -221,7 +221,7 @@ public class JpegStreamWriterTest
     public void WriteSpiffEndOfDirectorySegment()
     {
         var buffer = new byte[10];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         writer.WriteSpiffEndOfDirectoryEntry();
 
@@ -250,7 +250,7 @@ public class JpegStreamWriterTest
     public void WriteSpiffDirectoryEntry()
     {
         var buffer = new byte[10];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         Span<byte> data = [0x77, 0x66];
 
@@ -282,7 +282,7 @@ public class JpegStreamWriterTest
         const int componentCount = 3;
 
         var buffer = new byte[19];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         bool oversizedImage =
             writer.WriteStartOfFrameSegment(new FrameInfo(100, ushort.MaxValue, bitsPerSample, componentCount));
@@ -321,7 +321,7 @@ public class JpegStreamWriterTest
         const int componentCount = 3;
 
         var buffer = new byte[19];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         bool oversizedImage =
             writer.WriteStartOfFrameSegment(new FrameInfo(ushort.MaxValue + 1, 100 , bitsPerSample, componentCount));
@@ -360,7 +360,7 @@ public class JpegStreamWriterTest
         const int componentCount = 3;
 
         var buffer = new byte[19];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         bool oversizedImage =
             writer.WriteStartOfFrameSegment(new FrameInfo(100, ushort.MaxValue + 1, bitsPerSample, componentCount));
@@ -398,7 +398,7 @@ public class JpegStreamWriterTest
         const int bitsPerSample = 2;
         const int componentCount = 1;
         var buffer = new byte[13];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         _ = writer.WriteStartOfFrameSegment(new FrameInfo(1, 1, bitsPerSample, componentCount));
 
@@ -411,7 +411,7 @@ public class JpegStreamWriterTest
     public void WriteStartOfFrameMarkerSegmentWithHighBoundaryValuesAndSerialize()
     {
         var buffer = new byte[775];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         _ = writer.WriteStartOfFrameSegment(new FrameInfo(ushort.MaxValue, ushort.MaxValue, 16, byte.MaxValue));
 
@@ -426,7 +426,7 @@ public class JpegStreamWriterTest
     {
         const ColorTransformation transformation = ColorTransformation.HP1;
         var buffer = new byte[9];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         writer.WriteColorTransformSegment(transformation);
         Assert.Equal(buffer.Length, writer.BytesWritten);
@@ -445,7 +445,7 @@ public class JpegStreamWriterTest
     {
         var parameters = new JpegLSPresetCodingParameters(2, 1, 2, 3, 7);
         var buffer = new byte[15];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         writer.WriteJpegLSPresetParametersSegment(parameters);
 
@@ -479,7 +479,7 @@ public class JpegStreamWriterTest
     public void WriteJpegLSPresetParametersSegmentForOversizedImageDimensions()
     {
         var buffer = new byte[14];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         writer.WriteJpegLSPresetParametersSegment(100, int.MaxValue);
         Assert.Equal(buffer.Length, writer.BytesWritten);
@@ -507,7 +507,7 @@ public class JpegStreamWriterTest
     public void WriteStartOfScanSegment()
     {
         var buffer = new byte[10];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         writer.WriteStartOfScanSegment(1, 2, InterleaveMode.None);
 
@@ -524,7 +524,7 @@ public class JpegStreamWriterTest
     public void WriteStartOfScanSegmentWithTableId()
     {
         var buffer = new byte[10];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
         writer.SetTableId(0, 77);
 
         writer.WriteStartOfScanSegment(1, 2, InterleaveMode.None);
@@ -542,7 +542,7 @@ public class JpegStreamWriterTest
     public void WriteStartOfScanSegmentWithTableIdAfterRewind()
     {
         var buffer = new byte[10];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
         writer.SetTableId(0, 77);
         writer.Rewind();
 
@@ -561,7 +561,7 @@ public class JpegStreamWriterTest
     public void AdvancePosition()
     {
         var buffer = new byte[2];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         writer.AdvancePosition(2);
         Assert.Equal(2, writer.BytesWritten);
@@ -571,7 +571,7 @@ public class JpegStreamWriterTest
     public void Rewind()
     {
         var buffer = new byte[10];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
         writer.WriteStartOfScanSegment(1, 2, InterleaveMode.None);
 
         writer.Rewind();
@@ -587,7 +587,7 @@ public class JpegStreamWriterTest
     public void WriteMinimalTable()
     {
         var buffer = new byte[8];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         byte[] tableData = [77];
         writer.WriteJpegLSPresetParametersSegment(100, 1, tableData);
@@ -607,7 +607,7 @@ public class JpegStreamWriterTest
     public void WriteTableMaxEntrySize()
     {
         var buffer = new byte[7 + 255];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         var tableData = new byte[255];
         writer.WriteJpegLSPresetParametersSegment(255, 255, tableData);
@@ -627,7 +627,7 @@ public class JpegStreamWriterTest
     public void WriteTableFitsInSingleSegment()
     {
         var buffer = new byte[2 + ushort.MaxValue];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         var tableData = new byte[ushort.MaxValue - 5];
         writer.WriteJpegLSPresetParametersSegment(255, 1, tableData);
@@ -647,7 +647,7 @@ public class JpegStreamWriterTest
     public void WriteTableThatRequiresTwoSegment()
     {
         var buffer = new byte[2 + ushort.MaxValue + 8];
-        JpegStreamWriter writer = new JpegStreamWriter { Destination = buffer };
+        JpegStreamWriter writer = new() { Destination = buffer };
 
         var tableData = new byte[ushort.MaxValue - 5 + 1];
         writer.WriteJpegLSPresetParametersSegment(255, 1, tableData);

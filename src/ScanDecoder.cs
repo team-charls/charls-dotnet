@@ -14,6 +14,7 @@ internal struct ScanDecoder
     private const int CacheBitCount = sizeof(ulong) * 8;
     private const int MaxReadableCacheBits = CacheBitCount - 8;
 
+    private readonly CopyFromLineBuffer.Method _copyFromLineBuffer;
     private ScanCodec _scanCodec;
 
     private ReadOnlyMemory<byte> _source;
@@ -21,17 +22,14 @@ internal struct ScanDecoder
     private int _endPosition;
     private int _positionFF;
     private int _validBits;
-    private ulong _readCache; // TODO: change for 32-bit build
+    private ulong _readCache;
     private int _restartIntervalCounter;
 
     private int _restartInterval;
-    private readonly Traits _traits;
-    private readonly sbyte[] _quantizationLut;
-    private readonly CopyFromLineBuffer.Method _copyFromLineBuffer;
 
     private readonly FrameInfo FrameInfo => _scanCodec.FrameInfo;
-
     private readonly CodingParameters CodingParameters => _scanCodec.CodingParameters;
+    private readonly Traits Traits => _scanCodec.Traits;
 
     private int RunIndex
     {
@@ -50,17 +48,13 @@ internal struct ScanDecoder
 
     internal ScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
-        _scanCodec = new ScanCodec(frameInfo, presetCodingParameters, codingParameters);
+        var traits = Traits.Create(frameInfo, codingParameters.NearLossless, presetCodingParameters.ResetValue);
+        _scanCodec = new ScanCodec(traits, frameInfo, presetCodingParameters, codingParameters);
 
         _copyFromLineBuffer = CopyFromLineBuffer.GetMethod(FrameInfo.BitsPerSample, FrameInfo.ComponentCount,
             CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
 
-        _traits = Traits.Create(frameInfo, codingParameters.NearLossless, presetCodingParameters.ResetValue);
-
-        _quantizationLut = _scanCodec.InitializeQuantizationLut(_traits, presetCodingParameters.Threshold1,
-            presetCodingParameters.Threshold2, presetCodingParameters.Threshold3);
-
-        _scanCodec.InitializeParameters(_traits.Range);
+        _scanCodec.InitializeParameters(traits.Range);
     }
 
     internal int DecodeScan(ReadOnlyMemory<byte> source, Span<byte> destination, int stride)
@@ -427,7 +421,7 @@ internal struct ScanDecoder
 
             // After a restart marker it is required to reset the decoder.
             lineBuffer.Clear();
-            _scanCodec.InitializeParameters(_traits.Range);
+            _scanCodec.InitializeParameters(Traits.Range);
         }
     }
 
@@ -483,7 +477,7 @@ internal struct ScanDecoder
             // After a restart marker it is required to reset the decoder.
             lineBuffer.Clear();
             runIndex.Clear();
-            _scanCodec.InitializeParameters(_traits.Range);
+            _scanCodec.InitializeParameters(Traits.Range);
         }
     }
 
@@ -539,7 +533,7 @@ internal struct ScanDecoder
             // After a restart marker it is required to reset the decoder.
             lineBuffer.Clear();
             runIndex.Clear();
-            _scanCodec.InitializeParameters(_traits.Range);
+            _scanCodec.InitializeParameters(Traits.Range);
         }
     }
 
@@ -581,7 +575,7 @@ internal struct ScanDecoder
 
             // After a restart marker it is required to reset the decoder.
             lineBuffer.Clear();
-            _scanCodec.InitializeParameters(_traits.Range);
+            _scanCodec.InitializeParameters(Traits.Range);
         }
     }
 
@@ -623,7 +617,7 @@ internal struct ScanDecoder
 
             // After a restart marker it is required to reset the decoder.
             lineBuffer.Clear();
-            _scanCodec.InitializeParameters(_traits.Range);
+            _scanCodec.InitializeParameters(Traits.Range);
         }
     }
 
@@ -665,7 +659,7 @@ internal struct ScanDecoder
 
             // After a restart marker it is required to reset the decoder.
             lineBuffer.Clear();
-            _scanCodec.InitializeParameters(_traits.Range);
+            _scanCodec.InitializeParameters(Traits.Range);
         }
     }
 
@@ -707,7 +701,7 @@ internal struct ScanDecoder
 
             // After a restart marker it is required to reset the decoder.
             lineBuffer.Clear();
-            _scanCodec.InitializeParameters(_traits.Range);
+            _scanCodec.InitializeParameters(Traits.Range);
         }
     }
 
@@ -752,14 +746,14 @@ internal struct ScanDecoder
 
             // After a restart marker it is required to reset the decoder.
             lineBuffer.Clear();
-            _scanCodec.InitializeParameters(_traits.Range);
+            _scanCodec.InitializeParameters(Traits.Range);
         }
     }
 
     private readonly int QuantizeGradient(int di)
     {
-        Debug.Assert(_scanCodec.QuantizeGradientOrg(di, _traits.NearLossless) == _quantizationLut[(_quantizationLut.Length / 2) + di]);
-        return _quantizationLut[(_quantizationLut.Length / 2) + di];
+        Debug.Assert(_scanCodec.QuantizeGradient(di, Traits.NearLossless) == _scanCodec.QuantizationLut[(_scanCodec.QuantizationLut.Length / 2) + di]);
+        return _scanCodec.QuantizationLut[(_scanCodec.QuantizationLut.Length / 2) + di];
     }
 
     private void DecodeSampleLine(Span<byte> previousLine, Span<byte> currentLine)
@@ -957,7 +951,7 @@ internal struct ScanDecoder
         int sign = BitWiseSign(qs);
         ref var context = ref _scanCodec.RegularModeContext[ApplySign(qs, sign)];
         int k = context.ComputeGolombCodingParameter();
-        int predictedValue = _traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
+        int predictedValue = Traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
 
         int errorValue;
         var code = ColombCodeTable[k].Get(PeekByte());
@@ -969,19 +963,19 @@ internal struct ScanDecoder
         }
         else
         {
-            errorValue = UnmapErrorValue(DecodeValue(k, _traits.Limit, _traits.QuantizedBitsPerSample));
+            errorValue = UnmapErrorValue(DecodeValue(k, Traits.Limit, Traits.QuantizedBitsPerSample));
             if (Math.Abs(errorValue) > 65535)
                 ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
         }
 
         if (k == 0)
         {
-            errorValue ^= context.GetErrorCorrection(_traits.NearLossless);
+            errorValue ^= context.GetErrorCorrection(Traits.NearLossless);
         }
 
-        context.UpdateVariablesAndBias(errorValue, _traits.NearLossless, _traits.ResetThreshold);
+        context.UpdateVariablesAndBias(errorValue, Traits.NearLossless, Traits.ResetThreshold);
         errorValue = ApplySign(errorValue, sign);
-        return _traits.ComputeReconstructedSample(predictedValue, errorValue);
+        return Traits.ComputeReconstructedSample(predictedValue, errorValue);
     }
 
     private int DecodeRunMode(int startIndex, Span<byte> previousLine, Span<byte> currentLine)
@@ -1079,7 +1073,7 @@ internal struct ScanDecoder
         if (endIndex - 1 == FrameInfo.Width)
             return endIndex - startIndex;
 
-        // run interruption
+        // Run interruption
         var rb = previousLine[endIndex];
         currentLine[endIndex] = DecodeRunInterruptionPixel(ra, rb);
         _scanCodec.DecrementRunIndex();
@@ -1093,7 +1087,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1106,7 +1100,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1128,7 +1122,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1141,7 +1135,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1163,7 +1157,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1176,7 +1170,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1198,7 +1192,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1211,7 +1205,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1233,7 +1227,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1246,7 +1240,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1268,7 +1262,7 @@ internal struct ScanDecoder
         {
             int count = Math.Min(1 << ScanCodec.J[RunIndex], pixelCount - index);
             index += count;
-            ////ASSERT(index <= pixel_count);
+            Debug.Assert(index <= pixelCount);
 
             if (count == (1 << ScanCodec.J[RunIndex]))
             {
@@ -1281,7 +1275,7 @@ internal struct ScanDecoder
 
         if (index != pixelCount)
         {
-            // incomplete run.
+            // Incomplete run.
             index += (ScanCodec.J[RunIndex] > 0) ? ReadValue(ScanCodec.J[RunIndex]) : 0;
         }
 
@@ -1298,15 +1292,15 @@ internal struct ScanDecoder
 
     private int DecodeRunInterruptionPixel(int ra, int rb)
     {
-        if (Math.Abs(ra - rb) <= _traits.NearLossless)
+        if (Math.Abs(ra - rb) <= Traits.NearLossless)
         {
             int errorValue = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[1]);
-            return _traits.ComputeReconstructedSample(ra, errorValue);
+            return Traits.ComputeReconstructedSample(ra, errorValue);
         }
         else
         {
             int errorValue = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
-            return _traits.ComputeReconstructedSample(rb, errorValue * Sign(rb - ra));
+            return Traits.ComputeReconstructedSample(rb, errorValue * Sign(rb - ra));
         }
     }
 
@@ -1317,9 +1311,9 @@ internal struct ScanDecoder
         int errorValue3 = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
 
         return new Triplet<byte>(
-            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
-            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
-            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
+            (byte)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (byte)Traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
     }
 
     private Triplet<ushort> DecodeRunInterruptionPixel(Triplet<ushort> ra, Triplet<ushort> rb)
@@ -1329,9 +1323,9 @@ internal struct ScanDecoder
         int errorValue3 = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
 
         return new Triplet<ushort>(
-            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
+            (ushort)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)));
     }
 
     private Quad<byte> DecodeRunInterruptionPixel(Quad<byte> ra, Quad<byte> rb)
@@ -1342,10 +1336,10 @@ internal struct ScanDecoder
         int errorValue4 = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
 
         return new Quad<byte>(
-            (byte)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
-            (byte)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
-            (byte)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
-            (byte)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
+            (byte)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (byte)Traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
+            (byte)Traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
     }
 
     private Quad<ushort> DecodeRunInterruptionPixel(Quad<ushort> ra, Quad<ushort> rb)
@@ -1356,16 +1350,16 @@ internal struct ScanDecoder
         int errorValue4 = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
 
         return new Quad<ushort>(
-            (ushort)_traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
-            (ushort)_traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
+            (ushort)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V3, errorValue3 * Sign(rb.V3 - ra.V3)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V4, errorValue4 * Sign(rb.V4 - ra.V4)));
     }
 
     private int DecodeRunInterruptionError(ref RunModeContext context)
     {
         int k = context.GetGolombCode();
-        int eMappedErrorValue = DecodeValue(k, _traits.Limit - ScanCodec.J[RunIndex] - 1, _traits.QuantizedBitsPerSample);
+        int eMappedErrorValue = DecodeValue(k, Traits.Limit - ScanCodec.J[RunIndex] - 1, Traits.QuantizedBitsPerSample);
         int errorValue = context.ComputeErrorValue(eMappedErrorValue + context.RunInterruptionType, k);
         context.UpdateVariables(errorValue, eMappedErrorValue, (byte)_scanCodec.PresetCodingParameters.ResetValue);
         return errorValue;

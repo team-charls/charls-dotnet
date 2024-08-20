@@ -1,6 +1,8 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Diagnostics;
+
 namespace CharLS.Managed;
 
 /// <summary>
@@ -10,6 +12,8 @@ public sealed class ApplicationDataEventArgs : EventArgs
 {
     internal ApplicationDataEventArgs(int applicationDataId, ReadOnlyMemory<byte> data)
     {
+        Debug.Assert(applicationDataId is >= Constants.MinimumApplicationDataId and <= Constants.MaximumApplicationDataId);
+
         Id = applicationDataId;
         Data = data;
     }

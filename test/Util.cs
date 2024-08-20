@@ -17,7 +17,6 @@ internal sealed class Util
         }
     }
 
-
     internal static byte[] ReadFile(string path, int bytesToSkip = 0)
     {
         var fullPath = Path.Join(DataFileDirectory, path);
@@ -55,80 +54,6 @@ internal sealed class Util
         }
         return referenceFile;
     }
-
-    // TODO
-    //internal byte[] CreateTestSpiffHeader(int highVersion, int lowVersion, bool end_of_directory, int component_count)
-    //{
-    //    List<byte> buffer = new();
-
-    //    buffer.Add(0xFF);
-    //    buffer.Add(0xD8);  // SOI.
-
-    //    buffer.Add(0xFF);
-    //    buffer.Add(0xE8); // ApplicationData8
-    //    buffer.Add(0);
-    //    buffer.Add(32);
-
-    //    //// SPIFF identifier string.
-    //    //buffer.push_back(byte{ 'S'});
-    //    //buffer.push_back(byte{ 'P'});
-    //    //buffer.push_back(byte{ 'I'});
-    //    //buffer.push_back(byte{ 'F'});
-    //    //buffer.push_back(byte{ 'F'});
-    //    //buffer.push_back({ });
-
-    //    // Version
-    //    buffer.Add((byte)highVersion);
-    //    buffer.Add((byte)lowVersion);
-
-    //    //buffer.push_back({ }); // profile id
-    //    //buffer.push_back(byte{ component_count});
-
-    //    //// Height
-    //    //buffer.push_back({ });
-    //    //buffer.push_back({ });
-    //    //buffer.push_back(byte{ 0x3});
-    //    //buffer.push_back(byte{ 0x20});
-
-    //    //// Width
-    //    //buffer.push_back({ });
-    //    //buffer.push_back({ });
-    //    //buffer.push_back(byte{ 0x2});
-    //    //buffer.push_back(byte{ 0x58});
-
-    //    //buffer.push_back(byte{ 10}); // color space
-    //    //buffer.push_back(byte{ 8});  // bits per sample
-    //    //buffer.push_back(byte{ 6});  // compression type, 6 = JPEG-LS
-    //    //buffer.push_back(byte{ 1});  // resolution units
-
-    //    //// vertical_resolution
-    //    //buffer.push_back({ });
-    //    //buffer.push_back({ });
-    //    //buffer.push_back({ });
-    //    //buffer.push_back(byte{ 96});
-
-    //    //// header.horizontal_resolution = 1024
-    //    //buffer.push_back({ });
-    //    //buffer.push_back({ });
-    //    //buffer.push_back(byte{ 4});
-    //    //buffer.push_back({ });
-
-    //    //const size_t spiff_header_size{buffer.size()};
-    //    //buffer.resize(buffer.size() + 100);
-    //    //jpeg_stream_writer writer;
-    //    //writer.destination({ buffer.data() + spiff_header_size, buffer.size() - spiff_header_size});
-
-    //    //if (end_of_directory)
-    //    //{
-    //    //    writer.write_spiff_end_of_directory_entry();
-    //    //}
-
-    //    //writer.write_start_of_frame_segment({ 600, 800, 8, 3});
-    //    //writer.write_start_of_scan_segment(1, 0, interleave_mode::none);
-
-    //    return buffer.ToArray();
-    //}
-
 
     internal static void TestCompliance(byte[] encodedSource, byte[] uncompressedSource, bool checkEncode)
     {
@@ -198,7 +123,7 @@ internal sealed class Util
         Assert.Equal(sourceFrameInfo.BitsPerSample, frameInfo.BitsPerSample);
         Assert.Equal(sourceFrameInfo.ComponentCount, frameInfo.ComponentCount);
         Assert.Equal(interleaveMode, decoder.InterleaveMode);
-        ////Assert.True(color_transformation == decoder.color_transformation());
+        Assert.Equal(colorTransformation, decoder.ColorTransformation);
 
         var destination = new byte[decoder.GetDestinationSize()];
         decoder.Decode(destination);
@@ -304,7 +229,7 @@ internal sealed class Util
     {
         JpegLSDecoder decoder = new(encodedSource);
 
-        byte[] ourEncodedBytes = new byte[encodedSource.Length + 16]; // TODO: get rid of 16.
+        byte[] ourEncodedBytes = new byte[encodedSource.Length + 16];
 
         JpegLSEncoder encoder = new()
         {

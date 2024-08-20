@@ -29,7 +29,8 @@ internal struct JpegStreamReader
         SpiffHeaderSection,
         FrameSection,
         ScanSection,
-        BitStreamSection
+        BitStreamSection,
+        AfterEndOfImage
     }
 
     private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0 - D7)
@@ -51,15 +52,19 @@ internal struct JpegStreamReader
     public event EventHandler<CommentEventArgs>? Comment;
     public event EventHandler<ApplicationDataEventArgs>? ApplicationData;
 
+    internal readonly int ComponentCount => _scanInfos.Count;
+
+    internal readonly bool EndOfImage => _state == State.AfterEndOfImage;
+
+    internal readonly FrameInfo FrameInfo => new(_width, _height, _bitsPerSample, _componentCount);
+
     internal ReadOnlyMemory<byte> Source { get; set; }
 
     internal int Position { get; private set; }
 
-    public JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
+    internal JpegLSPresetCodingParameters? JpegLSPresetCodingParameters { get; private set; }
 
-    public readonly FrameInfo FrameInfo => new(_width, _height, _bitsPerSample, _componentCount);
-
-    public SpiffHeader? SpiffHeader { get; private set; }
+    internal SpiffHeader? SpiffHeader { get; private set; }
 
     internal InterleaveMode InterleaveMode { get; private set; }
 
@@ -67,9 +72,7 @@ internal struct JpegStreamReader
 
     internal readonly int MappingTableCount => _mappingTables.Count;
 
-    internal uint RestartInterval { get; private set; }
-
-    internal readonly int ComponentCount => _scanInfos.Count;
+    internal int RestartInterval { get; private set; }
 
     private readonly int SegmentBytesToRead => _segmentStartPosition + _segmentDataSize - Position;
 
@@ -116,7 +119,7 @@ internal struct JpegStreamReader
     {
         JpegLSPresetCodingParameters ??= new JpegLSPresetCodingParameters();
 
-        if (!JpegLSPresetCodingParameters.IsValid(CalculateMaximumSampleValue(FrameInfo!.BitsPerSample), _nearLossless, out var validatedCodingParameters))
+        if (!JpegLSPresetCodingParameters.IsValid(CalculateMaximumSampleValue(FrameInfo.BitsPerSample), _nearLossless, out var validatedCodingParameters))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterJpegLSPresetParameters);
 
         return validatedCodingParameters;
@@ -128,7 +131,7 @@ internal struct JpegStreamReader
         {
             NearLossless = _nearLossless,
             InterleaveMode = InterleaveMode,
-            RestartInterval = (int)RestartInterval,
+            RestartInterval = RestartInterval,
             ColorTransformation = ColorTransformation
         };
     }
@@ -148,7 +151,7 @@ internal struct JpegStreamReader
                 return (uint)JpegLSPresetCodingParameters.MaximumSampleValue;
             }
 
-            return (uint)CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
+            return (uint)CalculateMaximumSampleValue(FrameInfo.BitsPerSample);
         }
     }
 
@@ -167,6 +170,17 @@ internal struct JpegStreamReader
         for (; ; )
         {
             var markerCode = ReadNextMarkerCode();
+            if (markerCode == JpegMarkerCode.EndOfImage)
+            {
+                if (IsAbbreviatedFormatForTableSpecificationData())
+                {
+                    _state = State.AfterEndOfImage;
+                    return;
+                }
+
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.UnexpectedEndOfImageMarker);
+            }
+
             ValidateMarkerCode(markerCode);
 
             ReadSegmentSize();
@@ -237,17 +251,21 @@ internal struct JpegStreamReader
         return value + ReadByte();
     }
 
-    private uint ReadUint24()
+    private int ReadUint24()
     {
         uint value = (uint)ReadByte() << 16;
-        return value + (uint)ReadUint16();
+        return (int)(value + (uint)ReadUint16());
     }
 
-    private uint ReadUint32()
+    private int ReadUint32()
     {
         uint value = BinaryPrimitives.ReadUInt32BigEndian(Source[Position..].Span);
         Position += 4;
-        return value;
+
+        if (value > int.MaxValue)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
+
+        return (int)value;
     }
 
     private JpegMarkerCode ReadNextMarkerCode()
@@ -403,7 +421,7 @@ internal struct JpegStreamReader
             ThrowHelper.ThrowInvalidDataException(ErrorCode.MissingEndOfSpiffDirectory);
 
         CheckMinimalSegmentSize(4);
-        uint spiffDirectoryType = ReadUint32();
+        int spiffDirectoryType = ReadUint32();
         if (spiffDirectoryType == Constants.SpiffEndOfDirectoryEntryType)
         {
             CheckSegmentSize(6); // 4 + 2 for dummy SOI.
@@ -563,14 +581,14 @@ internal struct JpegStreamReader
 
             case 3:
                 CheckSegmentSize(pcAndDimensionBytes + ((sizeof(ushort) + 1) * 2));
-                height = (int)ReadUint24();
-                width = (int)ReadUint24();
+                height = ReadUint24();
+                width = ReadUint24();
                 break;
 
             case 4:
                 CheckSegmentSize(pcAndDimensionBytes + (sizeof(uint) * 2));
-                height = (int)ReadUint32(); // TODO
-                width = (int)ReadUint32(); // TODO
+                height = ReadUint32();
+                width = ReadUint32();
                 break;
 
             default:
@@ -607,7 +625,7 @@ internal struct JpegStreamReader
         //       The original JPEG standard only supports 2 bytes (16 bit big endian).
         RestartInterval = _segmentDataSize switch
         {
-            2 => (uint)ReadUint16(),
+            2 => ReadUint16(),
             3 => ReadUint24(),
             4 => ReadUint32(),
             _ => throw ThrowHelper.CreateInvalidDataException(ErrorCode.InvalidMarkerSegmentSize)
@@ -619,7 +637,7 @@ internal struct JpegStreamReader
         CheckMinimalSegmentSize(1);
 
         int componentCountInScan = ReadByte();
-        if (componentCountInScan != 1 && componentCountInScan != FrameInfo!.ComponentCount)
+        if (componentCountInScan != 1 && componentCountInScan != FrameInfo.ComponentCount)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
 
         CheckSegmentSize(4 + (2 * componentCountInScan));
@@ -653,9 +671,7 @@ internal struct JpegStreamReader
         if (markerCode != JpegMarkerCode.EndOfImage)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.EndOfImageMarkerNotFound);
 
-        ////#ifdef DEBUG
-        //        state_ = state::after_end_of_image;
-        ////#endif
+        _state = State.AfterEndOfImage;
     }
 
     private void ReadApplicationData8Segment(bool readSpiffHeader)
@@ -678,13 +694,12 @@ internal struct JpegStreamReader
     {
         Debug.Assert(SegmentBytesToRead == 5);
 
-        var segmentData = ReadBytes(5);
-
-        byte[] mrfxTag = [(byte)'m', (byte)'r', (byte)'f', (byte)'x'];
-        if (!segmentData[..4].Span.SequenceEqual(mrfxTag))
+        Span<byte> mrfxTag = [(byte)'m', (byte)'r', (byte)'f', (byte)'x'];
+        var tagBytes = ReadBytes(mrfxTag.Length);
+        if (!mrfxTag.SequenceEqual(tagBytes.Span))
             return;
 
-        byte transformation = segmentData.Span[4];
+        byte transformation = ReadByte();
         switch (transformation)
         {
             case (byte)ColorTransformation.None:
@@ -709,13 +724,9 @@ internal struct JpegStreamReader
     {
         Debug.Assert(_segmentDataSize >= 30);
 
-        byte[] spiffTag =
-        [
-            (byte)'S', (byte)'P', (byte)'I', (byte)'F', (byte)'F', 0
-        ];
-
-        var beginBytes = ReadBytes(spiffTag.Length);
-        if (beginBytes.Equals(spiffTag))
+        Span<byte> spiffTag = [(byte)'S', (byte)'P', (byte)'I', (byte)'F', (byte)'F', 0];
+        var tagBytes = ReadBytes(spiffTag.Length);
+        if (!spiffTag.SequenceEqual(tagBytes.Span))
             return;
 
         byte highVersion = ReadByte();
@@ -727,14 +738,14 @@ internal struct JpegStreamReader
         {
             ProfileId = (SpiffProfileId)ReadByte(),
             ComponentCount = ReadByte(),
-            Height = (int)ReadUint32(), // TODO
-            Width = (int)ReadUint32(), // TODO
+            Height = ReadUint32(),
+            Width = ReadUint32(),
             ColorSpace = (SpiffColorSpace)ReadByte(),
             BitsPerSample = ReadByte(),
             CompressionType = (SpiffCompressionType)ReadByte(),
             ResolutionUnit = (SpiffResolutionUnit)ReadByte(),
-            VerticalResolution = (int)ReadUint32(), // TODO
-            HorizontalResolution = (int)ReadUint32(), // TODO
+            VerticalResolution = ReadUint32(),
+            HorizontalResolution = ReadUint32()
         };
     }
 
@@ -806,8 +817,23 @@ internal struct JpegStreamReader
 
     private readonly void CheckInterleaveMode(InterleaveMode mode)
     {
-        if (!mode.IsValid() || (FrameInfo!.ComponentCount == 1 && mode != InterleaveMode.None))
+        if (!mode.IsValid() || (FrameInfo.ComponentCount == 1 && mode != InterleaveMode.None))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterInterleaveMode);
+    }
+
+    /// <summary>
+    /// ISO/IEC 14495-1, Annex C defines 3 data formats.
+    /// Annex C.4 defines the format that only contains mapping tables.
+    /// </summary>
+    private readonly bool IsAbbreviatedFormatForTableSpecificationData() 
+    {
+        if (MappingTableCount == 0)
+            return false;
+
+        if (_state == State.FrameSection)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.AbbreviatedFormatAndSpiffHeaderMismatch);
+
+        return _state == State.HeaderSection;
     }
 
     private readonly struct MappingTableEntry
@@ -855,22 +881,12 @@ internal struct JpegStreamReader
         const byte sofLosslessArithmetic = 0xCB;      // SOF_11: Lossless arithmetic encoded frame.
         const byte sofJpegLSExtended = 0xF9;          // SOF_57: JPEG-LS extended (ISO/IEC 14495-2) encoded frame.
 
-        switch ((byte)markerCode)
+        return (byte)markerCode switch
         {
-            case sofBaselineJpeg:
-            case sofExtendedSequential:
-            case sofProgressive:
-            case sofLossless:
-            case sofDifferentialSequential:
-            case sofDifferentialProgressive:
-            case sofDifferentialLossless:
-            case sofExtendedArithmetic:
-            case sofProgressiveArithmetic:
-            case sofLosslessArithmetic:
-            case sofJpegLSExtended:
-                return true;
-            default:
-                return false;
-        }
+            sofBaselineJpeg or sofExtendedSequential or sofProgressive or sofLossless or sofDifferentialSequential
+                or sofDifferentialProgressive or sofDifferentialLossless or sofExtendedArithmetic
+                or sofProgressiveArithmetic or sofLosslessArithmetic or sofJpegLSExtended => true,
+            _ => false
+        };
     }
 }

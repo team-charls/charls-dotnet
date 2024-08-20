@@ -11,7 +11,7 @@ internal struct Thresholds
     internal int T2;
     internal int T3;
     internal int Reset;
-};
+}
 
 
 internal sealed class JpegLSPresetCodingParametersTest
@@ -19,7 +19,7 @@ internal sealed class JpegLSPresetCodingParametersTest
     // Threshold function of JPEG-LS reference implementation.
     internal static Thresholds ComputeDefaultsUsingReferenceImplementation(int maxValue, ushort near)
     {
-        Thresholds result = new Thresholds { MaxValue = maxValue, Reset = 64 };
+        Thresholds result = new() { MaxValue = maxValue, Reset = 64 };
 
         if (result.MaxValue >= 128)
         {
