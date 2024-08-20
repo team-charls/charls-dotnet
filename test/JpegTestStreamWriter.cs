@@ -216,6 +216,12 @@ internal sealed class JpegTestStreamWriter
         }
     }
 
+    internal void WriteColorTransformSegment(ColorTransformation colorTransformation)
+    {
+        Span<byte> segment = [(byte)'m', (byte)'r', (byte)'f', (byte)'x', (byte)colorTransformation];
+        WriteSegment(JpegMarkerCode.ApplicationData8, segment);
+    }
+
     internal void WriteRestartMarker(byte intervalIndex)
     {
         WriteMarker((JpegMarkerCode)(Constants.JpegRestartMarkerBase + intervalIndex));

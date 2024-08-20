@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Buffers.Binary;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 using static CharLS.Managed.Algorithm;
@@ -316,7 +315,7 @@ internal struct ScanDecoder
 
     private void FillReadCache()
     {
-        // ASSERT(valid_bits_ <= max_readable_cache_bits);
+        Debug.Assert(_validBits <= MaxReadableCacheBits);
 
         if (FillReadCacheOptimistic())
             return;
@@ -959,7 +958,7 @@ internal struct ScanDecoder
         {
             SkipBits(code.Length);
             errorValue = code.Value;
-            //ASSERT(std::abs(error_value) < 65535);
+            Debug.Assert(Math.Abs(errorValue) < 65535);
         }
         else
         {

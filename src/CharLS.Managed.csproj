@@ -59,6 +59,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="System.Diagnostics" />
     <Using Remove="System.Net.Http" />
   </ItemGroup>
 

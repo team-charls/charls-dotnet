@@ -129,8 +129,8 @@ public sealed record JpegLSPresetCodingParameters
     /// <summary>Default coding threshold values as defined by ISO/IEC 14495-1, C.2.4.1.1.1</summary>
     internal static JpegLSPresetCodingParameters ComputeDefault(int maximumSampleValue, int nearLossless)
     {
-        //ASSERT(maximum_sample_value <= std::numeric_limits < uint16_t >::max());
-        //ASSERT(near_lossless >= 0 && near_lossless <= compute_maximum_near_lossless(maximum_sample_value));
+        Debug.Assert(maximumSampleValue <= ushort.MaxValue);
+        Debug.Assert(nearLossless >= 0 && nearLossless <= Algorithm.ComputeMaximumNearLossless(maximumSampleValue));
 
         if (maximumSampleValue >= 128)
         {

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Buffers.Binary;
-using System.Diagnostics;
 
 using static CharLS.Managed.Algorithm;
 
@@ -100,7 +99,7 @@ internal struct JpegStreamReader
     internal readonly MappingTableInfo GetMappingTableInfo(int mappingTableIndex)
     {
         var entry = _mappingTables[mappingTableIndex];
-        return new MappingTableInfo { EntrySize = entry.EntrySize, TableId = entry.MappingTableId };
+        return new MappingTableInfo { EntrySize = entry.EntrySize, TableId = entry.MappingTableId, DataSize = entry.DataSize };
     }
 
     internal readonly ReadOnlyMemory<byte> GetMappingTableData(int mappingTableIndex)
@@ -111,7 +110,8 @@ internal struct JpegStreamReader
 
     internal void AdvancePosition(int count)
     {
-        //Debug.Assert(Position + count <= /*end_position_*/ );
+        Debug.Assert(count >= 0);
+        Debug.Assert(Position + count <= Source.Length);
         Position += count;
     }
 
@@ -138,7 +138,7 @@ internal struct JpegStreamReader
 
     internal readonly ReadOnlyMemory<byte> RemainingSource()
     {
-        //ASSERT(state_ == state::bit_stream_section);
+        Debug.Assert(_state == State.BitStreamSection);
         return Source[Position..];
     }
 
@@ -196,7 +196,7 @@ internal struct JpegStreamReader
                     break;
             }
 
-            //Debug.Assert(_segmentData.Length);
+            Debug.Assert(SegmentBytesToRead == 0);
 
             if (_state == State.HeaderSection && SpiffHeader != null)
             {
@@ -206,8 +206,7 @@ internal struct JpegStreamReader
 
             if (_state == State.BitStreamSection)
             {
-                //check_frame_info();
-                //check_coding_parameters();
+                CheckCodingParameters();
                 return;
             }
         }
@@ -303,6 +302,7 @@ internal struct JpegStreamReader
                 break;
 
             case JpegMarkerCode.StartOfScan:
+                CheckHeightAndWidth();
                 ReadStartOfScanSegment();
                 break;
 
@@ -467,6 +467,12 @@ internal struct JpegStreamReader
 
     private void ReadApplicationDataSegment(JpegMarkerCode markerCode)
     {
+        RaiseApplicationDataEvent(markerCode);
+        SkipRemainingSegmentData();
+    }
+
+    private void RaiseApplicationDataEvent(JpegMarkerCode markerCode)
+    {
         try
         {
             ApplicationData?.Invoke(_eventSender,
@@ -477,8 +483,6 @@ internal struct JpegStreamReader
         {
             throw ThrowHelper.CreateInvalidDataException(ErrorCode.CallbackFailed, e);
         }
-
-        SkipRemainingSegmentData();
     }
 
     private void ReadCommentSegment()
@@ -676,7 +680,7 @@ internal struct JpegStreamReader
 
     private void ReadApplicationData8Segment(bool readSpiffHeader)
     {
-        ////call_application_data_callback(jpeg_marker_code::application_data8);
+        RaiseApplicationDataEvent(JpegMarkerCode.ApplicationData8);
 
         if (_segmentDataSize == 5)
         {
@@ -781,6 +785,21 @@ internal struct JpegStreamReader
         _scanInfos.Add(new ScanInfo(componentId));
     }
 
+    private readonly void CheckHeightAndWidth()
+    {
+        if (_height < 1)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterHeight);
+    
+        if (_width < 1)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterWidth);
+    }
+
+    private readonly void CheckCodingParameters()
+    {
+        if (ColorTransformation != ColorTransformation.None && !ColorTransformations.IsPossible(FrameInfo))
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterColorTransformation);
+    }
+
     private void SetWidth(int value)
     {
         if (value == 0)
@@ -836,6 +855,30 @@ internal struct JpegStreamReader
         return _state == State.HeaderSection;
     }
 
+    private static bool IsKnownJpegSofMarker(JpegMarkerCode markerCode)
+    {
+        // The following start of frame (SOF) markers are defined in ISO/IEC 10918-1 | ITU T.81 (general JPEG standard).
+        const byte sofBaselineJpeg = 0xC0;            // SOF_0: Baseline jpeg encoded frame.
+        const byte sofExtendedSequential = 0xC1;      // SOF_1: Extended sequential Huffman encoded frame.
+        const byte sofProgressive = 0xC2;             // SOF_2: Progressive Huffman encoded frame.
+        const byte sofLossless = 0xC3;                // SOF_3: Lossless Huffman encoded frame.
+        const byte sofDifferentialSequential = 0xC5;  // SOF_5: Differential sequential Huffman encoded frame.
+        const byte sofDifferentialProgressive = 0xC6; // SOF_6: Differential progressive Huffman encoded frame.
+        const byte sofDifferentialLossless = 0xC7;    // SOF_7: Differential lossless Huffman encoded frame.
+        const byte sofExtendedArithmetic = 0xC9;      // SOF_9: Extended sequential arithmetic encoded frame.
+        const byte sofProgressiveArithmetic = 0xCA;   // SOF_10: Progressive arithmetic encoded frame.
+        const byte sofLosslessArithmetic = 0xCB;      // SOF_11: Lossless arithmetic encoded frame.
+        const byte sofJpegLSExtended = 0xF9;          // SOF_57: JPEG-LS extended (ISO/IEC 14495-2) encoded frame.
+
+        return (byte)markerCode switch
+        {
+            sofBaselineJpeg or sofExtendedSequential or sofProgressive or sofLossless or sofDifferentialSequential
+                or sofDifferentialProgressive or sofDifferentialLossless or sofExtendedArithmetic
+                or sofProgressiveArithmetic or sofLosslessArithmetic or sofJpegLSExtended => true,
+            _ => false
+        };
+    }
+
     private readonly struct MappingTableEntry
     {
         private readonly List<ReadOnlyMemory<byte>> _dataFragments = [];
@@ -859,34 +902,22 @@ internal struct JpegStreamReader
                 return _dataFragments[0];
             }
 
-            throw new NotImplementedException();
+            byte[] buffer = new byte[DataSize];
+            CopyFragmentsIntoBuffer(buffer);
+            return buffer;
         }
 
         internal byte MappingTableId { get; }
         internal byte EntrySize { get; }
-    }
+        internal int DataSize => _dataFragments.Sum(fragment => fragment.Length);
 
-    private static bool IsKnownJpegSofMarker(JpegMarkerCode markerCode)
-    {
-        // The following start of frame (SOF) markers are defined in ISO/IEC 10918-1 | ITU T.81 (general JPEG standard).
-        const byte sofBaselineJpeg = 0xC0;            // SOF_0: Baseline jpeg encoded frame.
-        const byte sofExtendedSequential = 0xC1;      // SOF_1: Extended sequential Huffman encoded frame.
-        const byte sofProgressive = 0xC2;             // SOF_2: Progressive Huffman encoded frame.
-        const byte sofLossless = 0xC3;                // SOF_3: Lossless Huffman encoded frame.
-        const byte sofDifferentialSequential = 0xC5;  // SOF_5: Differential sequential Huffman encoded frame.
-        const byte sofDifferentialProgressive = 0xC6; // SOF_6: Differential progressive Huffman encoded frame.
-        const byte sofDifferentialLossless = 0xC7;    // SOF_7: Differential lossless Huffman encoded frame.
-        const byte sofExtendedArithmetic = 0xC9;      // SOF_9: Extended sequential arithmetic encoded frame.
-        const byte sofProgressiveArithmetic = 0xCA;   // SOF_10: Progressive arithmetic encoded frame.
-        const byte sofLosslessArithmetic = 0xCB;      // SOF_11: Lossless arithmetic encoded frame.
-        const byte sofJpegLSExtended = 0xF9;          // SOF_57: JPEG-LS extended (ISO/IEC 14495-2) encoded frame.
-
-        return (byte)markerCode switch
+        private void CopyFragmentsIntoBuffer(Span<byte> buffer)
         {
-            sofBaselineJpeg or sofExtendedSequential or sofProgressive or sofLossless or sofDifferentialSequential
-                or sofDifferentialProgressive or sofDifferentialLossless or sofExtendedArithmetic
-                or sofProgressiveArithmetic or sofLosslessArithmetic or sofJpegLSExtended => true,
-            _ => false
-        };
+            foreach (var fragment in _dataFragments)
+            {
+                fragment.Span.CopyTo(buffer);
+                buffer = buffer[fragment.Length..];
+            }
+        }
     }
 }
