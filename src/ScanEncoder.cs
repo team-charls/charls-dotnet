@@ -1,6 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Buffers;
 using System.Runtime.InteropServices;
 
 using static CharLS.Managed.Algorithm;
@@ -44,7 +45,7 @@ internal struct ScanEncoder
 
         _scanCodec.InitializeParameters(traits.Range);
     }
-    
+
     internal int EncodeScan(ReadOnlyMemory<byte> source, Memory<byte> destination, int stride)
     {
         _stride = stride;
@@ -236,33 +237,84 @@ internal struct ScanEncoder
     private void EncodeLines8BitInterleaveModeNone(ReadOnlyMemory<byte> source)
     {
         int pixelStride = PixelStride;
-        Span<byte> lineBuffer = new byte[pixelStride * 2];
+        var rentedArray = RentLineBuffer<byte>(pixelStride * 2);
 
-        for (int line = 0; ;)
+        try
         {
-            var previousLine = lineBuffer;
-            var currentLine = lineBuffer[pixelStride..];
-            bool oddLine = (line & 1) == 1;
-            if (oddLine)
+            Span<byte> lineBuffer = rentedArray;
+
+            for (int line = 0; ;)
             {
-                var temp = previousLine;
-                previousLine = currentLine;
-                currentLine = temp;
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[pixelStride..];
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                CopySourceToLineBufferInterleaveModeNone(source.Span, currentLine[1..], FrameInfo.Width);
+
+                // Initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                EncodeLine(previousLine, currentLine);
+
+                ++line;
+                if (line == FrameInfo.Height)
+                    break;
+
+                source = source[_stride..];
             }
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
+        }
+    }
 
-            CopySourceToLineBufferInterleaveModeNone(source.Span, currentLine[1..], FrameInfo.Width);
+    private void EncodeLines16BitInterleaveModeNone(ReadOnlyMemory<byte> source)
+    {
+        int pixelStride = PixelStride;
+        var rentedArray = RentLineBuffer<ushort>(pixelStride * 2);
 
-            // initialize edge pixels used for prediction
-            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-            currentLine[0] = previousLine[1];
+        try
+        {
+            Span<ushort> lineBuffer = rentedArray;
 
-            EncodeLine(previousLine, currentLine);
+            for (int line = 0; ;)
+            {
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[pixelStride..];
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
 
-            ++line;
-            if (line == FrameInfo.Height)
-                break;
+                CopySourceToLineBufferInterleaveModeNone(source.Span, currentLine[1..], FrameInfo.Width);
 
-            source = source[_stride..];
+                // Initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                EncodeLine(previousLine, currentLine);
+
+                ++line;
+                if (line == FrameInfo.Height)
+                    break;
+
+                source = source[_stride..];
+            }
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
@@ -270,44 +322,52 @@ internal struct ScanEncoder
     {
         int pixelStride = PixelStride;
         int componentCount = FrameInfo.ComponentCount;
+        var rentedArray = RentLineBuffer<byte>(componentCount * pixelStride * 2);
 
-        Span<int> runIndex = stackalloc int[componentCount];
-        Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            var previousLine = lineBuffer;
-            var currentLine = lineBuffer[(componentCount * pixelStride)..];
-            bool oddLine = (line & 1) == 1;
-            if (oddLine)
+            Span<int> runIndex = stackalloc int[componentCount];
+            Span<byte> lineBuffer = rentedArray;
+
+            for (int line = 0; ;)
             {
-                var temp = previousLine;
-                previousLine = currentLine;
-                currentLine = temp;
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[(componentCount * pixelStride)..];
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                CopySourceToLineBufferInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width);
+
+                for (int component = 0; component < componentCount; ++component)
+                {
+                    RunIndex = runIndex[component];
+
+                    // Initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    EncodeLine(previousLine, currentLine);
+
+                    runIndex[component] = RunIndex;
+                    currentLine = currentLine[pixelStride..];
+                    previousLine = previousLine[pixelStride..];
+                }
+
+                ++line;
+                if (line == FrameInfo.Height)
+                    break;
+
+                source = source[_stride..];
             }
-
-            CopySourceToLineBufferInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width);
-
-            for (int component = 0; component < componentCount; ++component)
-            {
-                RunIndex = runIndex[component];
-
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
-
-                EncodeLine(previousLine, currentLine);
-
-                runIndex[component] = RunIndex;
-                currentLine = currentLine[pixelStride..];
-                previousLine = previousLine[pixelStride..];
-            }
-
-            ++line;
-            if (line == FrameInfo.Height)
-                break;
-
-            source = source[_stride..];
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
@@ -315,214 +375,220 @@ internal struct ScanEncoder
     {
         int pixelStride = PixelStride;
         int componentCount = FrameInfo.ComponentCount;
+        var rentedArray = RentLineBuffer<ushort>(componentCount * pixelStride * 2);
 
-        Span<int> runIndex = stackalloc int[componentCount];
-        Span<ushort> lineBuffer = new ushort[componentCount * pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            var previousLine = lineBuffer;
-            var currentLine = lineBuffer[(componentCount * pixelStride)..];
-            bool oddLine = (line & 1) == 1;
-            if (oddLine)
+            Span<int> runIndex = stackalloc int[componentCount];
+            Span<ushort> lineBuffer = rentedArray;
+
+            for (int line = 0; ;)
             {
-                var temp = previousLine;
-                previousLine = currentLine;
-                currentLine = temp;
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[(componentCount * pixelStride)..];
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                CopySourceToLineBufferInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width);
+
+                for (int component = 0; component < componentCount; ++component)
+                {
+                    _scanCodec.RunIndex = runIndex[component];
+
+                    // Initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    EncodeLine(previousLine, currentLine);
+
+                    runIndex[component] = RunIndex;
+                    currentLine = currentLine[pixelStride..];
+                    previousLine = previousLine[pixelStride..];
+                }
+
+                ++line;
+                if (line == FrameInfo.Height)
+                    break;
+
+                source = source[_stride..];
             }
-
-            CopySourceToLineBufferInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width);
-
-            for (int component = 0; component < componentCount; ++component)
-            {
-                _scanCodec.RunIndex = runIndex[component];
-
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
-
-                EncodeLine(previousLine, currentLine);
-
-                runIndex[component] = RunIndex;
-                currentLine = currentLine[pixelStride..];
-                previousLine = previousLine[pixelStride..];
-            }
-
-            ++line;
-            if (line == FrameInfo.Height)
-                break;
-
-            source = source[_stride..];
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
     private void EncodeLines8Bit3ComponentsInterleaveModeSample(ReadOnlyMemory<byte> source)
     {
         int pixelStride = PixelStride;
+        var rentedArray = RentLineBuffer<Triplet<byte>>(pixelStride * 2);
 
-        Span<Triplet<byte>> lineBuffer = new Triplet<byte>[pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            var previousLine = lineBuffer;
-            var currentLine = lineBuffer[pixelStride..];
-            bool oddLine = (line & 1) == 1;
-            if (oddLine)
+            Span<Triplet<byte>> lineBuffer = rentedArray;
+
+            for (int line = 0; ;)
             {
-                var temp = previousLine;
-                previousLine = currentLine;
-                currentLine = temp;
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[pixelStride..];
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+
+                // Initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                EncodeLine(previousLine, currentLine);
+
+                ++line;
+                if (line == FrameInfo.Height)
+                    break;
+
+                source = source[_stride..];
             }
-
-            CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
-
-            // initialize edge pixels used for prediction
-            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-            currentLine[0] = previousLine[1];
-
-            EncodeLine(previousLine, currentLine);
-
-            ++line;
-            if (line == FrameInfo.Height)
-                break;
-
-            source = source[_stride..];
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
     private void EncodeLines16Bit3ComponentsInterleaveModeSample(ReadOnlyMemory<byte> source)
     {
         int pixelStride = PixelStride;
+        var rentedArray = RentLineBuffer<Triplet<ushort>>(pixelStride * 2);
 
-        Span<Triplet<ushort>> lineBuffer = new Triplet<ushort>[pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            var previousLine = lineBuffer;
-            var currentLine = lineBuffer[pixelStride..];
-            bool oddLine = (line & 1) == 1;
-            if (oddLine)
+            Span<Triplet<ushort>> lineBuffer = rentedArray;
+
+            for (int line = 0; ;)
             {
-                var temp = previousLine;
-                previousLine = currentLine;
-                currentLine = temp;
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[pixelStride..];
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+
+                // Initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                EncodeLine(previousLine, currentLine);
+
+                ++line;
+                if (line == FrameInfo.Height)
+                    break;
+
+                source = source[_stride..];
             }
-
-            CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
-
-            // initialize edge pixels used for prediction
-            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-            currentLine[0] = previousLine[1];
-
-            EncodeLine(previousLine, currentLine);
-
-            ++line;
-            if (line == FrameInfo.Height)
-                break;
-
-            source = source[_stride..];
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
     private void EncodeLines8Bit4ComponentsInterleaveModeSample(ReadOnlyMemory<byte> source)
     {
         int pixelStride = PixelStride;
+        var rentedArray = RentLineBuffer<Quad<byte>>(pixelStride * 2);
 
-        Span<Quad<byte>> lineBuffer = new Quad<byte>[pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            var previousLine = lineBuffer;
-            var currentLine = lineBuffer[pixelStride..];
-            bool oddLine = (line & 1) == 1;
-            if (oddLine)
+            Span<Quad<byte>> lineBuffer = rentedArray;
+
+            for (int line = 0; ;)
             {
-                var temp = previousLine;
-                previousLine = currentLine;
-                currentLine = temp;
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[pixelStride..];
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+
+                // Initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                EncodeLine(previousLine, currentLine);
+
+                ++line;
+                if (line == FrameInfo.Height)
+                    break;
+
+                source = source[_stride..];
             }
-
-            CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
-
-            // initialize edge pixels used for prediction
-            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-            currentLine[0] = previousLine[1];
-
-            EncodeLine(previousLine, currentLine);
-
-            ++line;
-            if (line == FrameInfo.Height)
-                break;
-
-            source = source[_stride..];
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
     private void EncodeLines16Bit4ComponentsInterleaveModeSample(ReadOnlyMemory<byte> source)
     {
         int pixelStride = PixelStride;
+        var rentedArray = RentLineBuffer<Quad<ushort>>(pixelStride * 2);
 
-        Span<Quad<ushort>> lineBuffer = new Quad<ushort>[pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            var previousLine = lineBuffer;
-            var currentLine = lineBuffer[pixelStride..];
-            bool oddLine = (line & 1) == 1;
-            if (oddLine)
+            Span<Quad<ushort>> lineBuffer = rentedArray;
+
+            for (int line = 0; ;)
             {
-                var temp = previousLine;
-                previousLine = currentLine;
-                currentLine = temp;
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[pixelStride..];
+                bool oddLine = (line & 1) == 1;
+                if (oddLine)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+
+                // Initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                EncodeLine(previousLine, currentLine);
+
+                ++line;
+                if (line == FrameInfo.Height)
+                    break;
+
+                source = source[_stride..];
             }
-
-            CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
-
-            // initialize edge pixels used for prediction
-            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-            currentLine[0] = previousLine[1];
-
-            EncodeLine(previousLine, currentLine);
-
-            ++line;
-            if (line == FrameInfo.Height)
-                break;
-
-            source = source[_stride..];
         }
-    }
-
-    private void EncodeLines16BitInterleaveModeNone(ReadOnlyMemory<byte> source)
-    {
-        int pixelStride = PixelStride;
-
-        Span<ushort> lineBuffer = new ushort[pixelStride * 2];
-
-        for (int line = 0; ;)
+        finally
         {
-            var previousLine = lineBuffer;
-            var currentLine = lineBuffer[pixelStride..];
-            bool oddLine = (line & 1) == 1;
-            if (oddLine)
-            {
-                var temp = previousLine;
-                previousLine = currentLine;
-                currentLine = temp;
-            }
-
-            CopySourceToLineBufferInterleaveModeNone(source.Span, currentLine[1..], FrameInfo.Width);
-
-            // initialize edge pixels used for prediction
-            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-            currentLine[0] = previousLine[1];
-
-            EncodeLine(previousLine, currentLine);
-
-            ++line;
-            if (line == FrameInfo.Height)
-                break;
-
-            source = source[_stride..];
+            ReturnLineBuffer(rentedArray);
         }
     }
 
@@ -1069,5 +1135,17 @@ internal struct ScanEncoder
     {
         var destinationInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4, _mask);
+    }
+
+    private static T[] RentLineBuffer<T>(int length)
+    {
+        var array = ArrayPool<T>.Shared.Rent(length);
+        Array.Clear(array);
+        return array;
+    }
+
+    private static void ReturnLineBuffer<T>(T[] rentedArray)
+    {
+        ArrayPool<T>.Shared.Return(rentedArray);
     }
 }

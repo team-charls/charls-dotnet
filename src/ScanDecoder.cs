@@ -1,6 +1,7 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 
@@ -37,12 +38,12 @@ internal struct ScanDecoder
         set => _scanCodec.RunIndex = value;
     }
 
-    private static readonly GolombCodeTable[] ColombCodeTable =
+    private static readonly GolombCodeTable[] GolombCodeTable =
     [
-        GolombCodeTable.Create(0), GolombCodeTable.Create(1), GolombCodeTable.Create(2), GolombCodeTable.Create(3),
-        GolombCodeTable.Create(4), GolombCodeTable.Create(5), GolombCodeTable.Create(6), GolombCodeTable.Create(7),
-        GolombCodeTable.Create(8), GolombCodeTable.Create(9), GolombCodeTable.Create(10), GolombCodeTable.Create(11),
-        GolombCodeTable.Create(12), GolombCodeTable.Create(13), GolombCodeTable.Create(14), GolombCodeTable.Create(15)
+        Managed.GolombCodeTable.Create(0), Managed.GolombCodeTable.Create(1), Managed.GolombCodeTable.Create(2), Managed.GolombCodeTable.Create(3),
+        Managed.GolombCodeTable.Create(4), Managed.GolombCodeTable.Create(5), Managed.GolombCodeTable.Create(6), Managed.GolombCodeTable.Create(7),
+        Managed.GolombCodeTable.Create(8), Managed.GolombCodeTable.Create(9), Managed.GolombCodeTable.Create(10), Managed.GolombCodeTable.Create(11),
+        Managed.GolombCodeTable.Create(12), Managed.GolombCodeTable.Create(13), Managed.GolombCodeTable.Create(14), Managed.GolombCodeTable.Create(15)
     ];
 
     internal ScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
@@ -65,53 +66,11 @@ internal struct ScanDecoder
 
         if (FrameInfo.BitsPerSample <= 8)
         {
-            switch (CodingParameters.InterleaveMode)
-            {
-                case InterleaveMode.None:
-                    DecodeLines8BitInterleaveModeNone(destination);
-                    break;
-
-                case InterleaveMode.Line:
-                    DecodeLines8BitInterleaveModeLine(destination);
-                    break;
-
-                case InterleaveMode.Sample:
-                    switch (FrameInfo.ComponentCount)
-                    {
-                        case 3:
-                            DecodeLines8Bit3ComponentsInterleaveModeSample(destination);
-                            break;
-                        case 4:
-                            DecodeLines8Bit4ComponentsInterleaveModeSample(destination);
-                            break;
-                    }
-                    break;
-            }
+            DecodeLines8Bit(destination);
         }
         else
         {
-            switch (CodingParameters.InterleaveMode)
-            {
-                case InterleaveMode.None:
-                    DecodeLines16BitInterleaveModeNone(destination);
-                    break;
-
-                case InterleaveMode.Line:
-                    DecodeLines16BitInterleaveModeLine(destination);
-                    break;
-
-                case InterleaveMode.Sample:
-                    switch (FrameInfo.ComponentCount)
-                    {
-                        case 3:
-                            DecodeLines16Bit3ComponentsInterleaveModeSample(destination);
-                            break;
-                        case 4:
-                            DecodeLines16Bit4ComponentsInterleaveModeSample(destination);
-                            break;
-                    }
-                    break;
-            }
+            DecodeLines16Bit(destination);
         }
 
         EndScan();
@@ -379,48 +338,155 @@ internal struct ScanDecoder
         return true;
     }
 
-    // In ILV_SAMPLE mode, multiple components are handled in do_line
-    // In ILV_LINE mode, a call to do_line is made for every component
-    // In ILV_NONE mode, do_scan is called for each component
+    private void DecodeLines8Bit(Span<byte> destination)
+    {
+        switch (CodingParameters.InterleaveMode)
+        {
+            case InterleaveMode.None:
+                DecodeLines8BitInterleaveModeNone(destination);
+                break;
+
+            case InterleaveMode.Line:
+                DecodeLines8BitInterleaveModeLine(destination);
+                break;
+
+            case InterleaveMode.Sample:
+                switch (FrameInfo.ComponentCount)
+                {
+                    case 3:
+                        DecodeLines8Bit3ComponentsInterleaveModeSample(destination);
+                        break;
+                    case 4:
+                        DecodeLines8Bit4ComponentsInterleaveModeSample(destination);
+                        break;
+                }
+                break;
+        }
+    }
+
+    private void DecodeLines16Bit(Span<byte> destination)
+    {
+        switch (CodingParameters.InterleaveMode)
+        {
+            case InterleaveMode.None:
+                DecodeLines16BitInterleaveModeNone(destination);
+                break;
+
+            case InterleaveMode.Line:
+                DecodeLines16BitInterleaveModeLine(destination);
+                break;
+
+            case InterleaveMode.Sample:
+                switch (FrameInfo.ComponentCount)
+                {
+                    case 3:
+                        DecodeLines16Bit3ComponentsInterleaveModeSample(destination);
+                        break;
+                    case 4:
+                        DecodeLines16Bit4ComponentsInterleaveModeSample(destination);
+                        break;
+                }
+                break;
+        }
+    }
+
     private void DecodeLines8BitInterleaveModeNone(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
+        var rentedArray = RentLineBuffer<byte>(pixelStride * 2);
 
-        Span<byte> lineBuffer = new byte[pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+            Span<byte> lineBuffer = rentedArray;
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int line = 0; ;)
             {
-                var previousLine = lineBuffer;
-                var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+                for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
                 {
-                    var temp = previousLine;
-                    previousLine = currentLine;
-                    currentLine = temp;
+                    var previousLine = lineBuffer;
+                    var currentLine = lineBuffer[pixelStride..];
+                    if ((line & 1) == 1)
+                    {
+                        var temp = previousLine;
+                        previousLine = currentLine;
+                        currentLine = temp;
+                    }
+
+                    // Initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    DecodeSampleLine(previousLine, currentLine);
+
+                    int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    destination = destination[bytesWritten..];
                 }
 
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
+                if (line == FrameInfo.Height)
+                    break;
 
-                DecodeSampleLine(previousLine, currentLine);
+                ProcessRestartMarker();
 
-                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
-                destination = destination[bytesWritten..];
+                // After a restart marker it is required to reset the decoder.
+                lineBuffer.Clear();
+                _scanCodec.InitializeParameters(Traits.Range);
             }
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
+        }
+    }
 
-            if (line == FrameInfo.Height)
-                break;
+    private void DecodeLines16BitInterleaveModeNone(Span<byte> destination)
+    {
+        int pixelStride = FrameInfo.Width + 2;
+        var rentedArray = RentLineBuffer<ushort>(pixelStride * 2);
 
-            ProcessRestartMarker();
+        try
+        {
+            Span<ushort> lineBuffer = rentedArray;
 
-            // After a restart marker it is required to reset the decoder.
-            lineBuffer.Clear();
-            _scanCodec.InitializeParameters(Traits.Range);
+            for (int line = 0; ;)
+            {
+                int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+                for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+                {
+                    var previousLine = lineBuffer;
+                    var currentLine = lineBuffer[pixelStride..];
+                    if ((line & 1) == 1)
+                    {
+                        var temp = previousLine;
+                        previousLine = currentLine;
+                        currentLine = temp;
+                    }
+
+                    // Initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    DecodeSampleLine(previousLine, currentLine);
+
+                    int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    destination = destination[bytesWritten..];
+                }
+
+                if (line == FrameInfo.Height)
+                    break;
+
+                ProcessRestartMarker();
+
+                // After a restart marker it is required to reset the decoder.
+                lineBuffer.Clear();
+                _scanCodec.InitializeParameters(Traits.Range);
+            }
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
@@ -428,55 +494,64 @@ internal struct ScanDecoder
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = FrameInfo.ComponentCount;
+        var rentedArray = RentLineBuffer<byte>(componentCount * pixelStride * 2);
 
-        Span<int> runIndex = stackalloc int[componentCount];
-        Span<byte> lineBuffer = new byte[componentCount * pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+            Span<int> runIndex = stackalloc int[componentCount];
+            Span<byte> lineBuffer = rentedArray;
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int line = 0; ;)
             {
-                var previousLine = lineBuffer;
-                var currentLine = lineBuffer[(componentCount * pixelStride)..];
-                bool oddLine = (line & 1) == 1;
-                if (oddLine)
+                int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+                for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
                 {
-                    var temp = previousLine;
-                    previousLine = currentLine;
-                    currentLine = temp;
+                    var previousLine = lineBuffer;
+                    var currentLine = lineBuffer[(componentCount * pixelStride)..];
+                    bool oddLine = (line & 1) == 1;
+                    if (oddLine)
+                    {
+                        var temp = previousLine;
+                        previousLine = currentLine;
+                        currentLine = temp;
+                    }
+
+                    for (int component = 0; component < componentCount; ++component)
+                    {
+                        RunIndex = runIndex[component];
+
+                        // Initialize edge pixels used for prediction
+                        previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                        currentLine[0] = previousLine[1];
+
+                        DecodeSampleLine(previousLine, currentLine);
+
+                        runIndex[component] = RunIndex;
+                        currentLine = currentLine[pixelStride..];
+                        previousLine = previousLine[pixelStride..];
+                    }
+
+                    int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
+                    int bytesWritten = CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..],
+                        destination, FrameInfo.Width, pixelStride);
+                    destination = destination[bytesWritten..];
                 }
 
-                for (int component = 0; component < componentCount; ++component)
-                {
-                    RunIndex = runIndex[component];
+                if (line == FrameInfo.Height)
+                    break;
 
-                    // initialize edge pixels used for prediction
-                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                    currentLine[0] = previousLine[1];
+                ProcessRestartMarker();
 
-                    DecodeSampleLine(previousLine, currentLine);
-
-                    runIndex[component] = RunIndex;
-                    currentLine = currentLine[pixelStride..];
-                    previousLine = previousLine[pixelStride..];
-                }
-
-                int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
-                int bytesWritten = CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
-                destination = destination[bytesWritten..];
+                // After a restart marker it is required to reset the decoder.
+                lineBuffer.Clear();
+                runIndex.Clear();
+                _scanCodec.InitializeParameters(Traits.Range);
             }
-
-            if (line == FrameInfo.Height)
-                break;
-
-            ProcessRestartMarker();
-
-            // After a restart marker it is required to reset the decoder.
-            lineBuffer.Clear();
-            runIndex.Clear();
-            _scanCodec.InitializeParameters(Traits.Range);
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
@@ -484,268 +559,263 @@ internal struct ScanDecoder
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = FrameInfo.ComponentCount;
+        var rentedArray = RentLineBuffer<ushort>(componentCount * pixelStride * 2);
 
-        Span<int> runIndex = stackalloc int[componentCount];
-        Span<ushort> lineBuffer = new ushort[componentCount * pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+            Span<int> runIndex = stackalloc int[componentCount];
+            Span<ushort> lineBuffer = rentedArray;
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int line = 0; ;)
             {
-                var previousLine = lineBuffer;
-                var currentLine = lineBuffer[(componentCount * pixelStride)..];
-                bool oddLine = (line & 1) == 1;
-                if (oddLine)
+                int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+                for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
                 {
-                    var temp = previousLine;
-                    previousLine = currentLine;
-                    currentLine = temp;
+                    var previousLine = lineBuffer;
+                    var currentLine = lineBuffer[(componentCount * pixelStride)..];
+                    bool oddLine = (line & 1) == 1;
+                    if (oddLine)
+                    {
+                        var temp = previousLine;
+                        previousLine = currentLine;
+                        currentLine = temp;
+                    }
+
+                    for (int component = 0; component < componentCount; ++component)
+                    {
+                        RunIndex = runIndex[component];
+
+                        // Initialize edge pixels used for prediction
+                        previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                        currentLine[0] = previousLine[1];
+
+                        DecodeSampleLine(previousLine, currentLine);
+
+                        runIndex[component] = RunIndex;
+                        currentLine = currentLine[pixelStride..];
+                        previousLine = previousLine[pixelStride..];
+                    }
+
+                    int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
+                    int bytesWritten = CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
+                    destination = destination[bytesWritten..];
                 }
 
-                for (int component = 0; component < componentCount; ++component)
-                {
-                    RunIndex = runIndex[component];
+                if (line == FrameInfo.Height)
+                    break;
 
-                    // initialize edge pixels used for prediction
-                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                    currentLine[0] = previousLine[1];
+                ProcessRestartMarker();
 
-                    DecodeSampleLine(previousLine, currentLine);
-
-                    runIndex[component] = RunIndex;
-                    currentLine = currentLine[pixelStride..];
-                    previousLine = previousLine[pixelStride..];
-                }
-
-                int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
-                int bytesWritten = CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
-                destination = destination[bytesWritten..];
+                // After a restart marker it is required to reset the decoder.
+                lineBuffer.Clear();
+                runIndex.Clear();
+                _scanCodec.InitializeParameters(Traits.Range);
             }
-
-            if (line == FrameInfo.Height)
-                break;
-
-            ProcessRestartMarker();
-
-            // After a restart marker it is required to reset the decoder.
-            lineBuffer.Clear();
-            runIndex.Clear();
-            _scanCodec.InitializeParameters(Traits.Range);
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
     private void DecodeLines8Bit3ComponentsInterleaveModeSample(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
+        var rentedArray = RentLineBuffer<Triplet<byte>>(pixelStride * 2);
 
-        Span<Triplet<byte>> lineBuffer = new Triplet<byte>[pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+            Span<Triplet<byte>> lineBuffer = rentedArray;
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int line = 0; ;)
             {
-                var previousLine = lineBuffer;
-                var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+                for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
                 {
-                    var temp = previousLine;
-                    previousLine = currentLine;
-                    currentLine = temp;
+                    var previousLine = lineBuffer;
+                    var currentLine = lineBuffer[pixelStride..];
+                    if ((line & 1) == 1)
+                    {
+                        var temp = previousLine;
+                        previousLine = currentLine;
+                        currentLine = temp;
+                    }
+
+                    // Initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    DecodeTripletLine(previousLine, currentLine);
+
+                    int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    destination = destination[bytesWritten..];
                 }
 
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
+                if (line == FrameInfo.Height)
+                    break;
 
-                DecodeTripletLine(previousLine, currentLine);
+                ProcessRestartMarker();
 
-                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
-                destination = destination[bytesWritten..];
+                // After a restart marker it is required to reset the decoder.
+                lineBuffer.Clear();
+                _scanCodec.InitializeParameters(Traits.Range);
             }
-
-            if (line == FrameInfo.Height)
-                break;
-
-            ProcessRestartMarker();
-
-            // After a restart marker it is required to reset the decoder.
-            lineBuffer.Clear();
-            _scanCodec.InitializeParameters(Traits.Range);
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
     private void DecodeLines16Bit3ComponentsInterleaveModeSample(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
+        var rentedArray = RentLineBuffer<Triplet<ushort>>(pixelStride * 2);
 
-        Span<Triplet<ushort>> lineBuffer = new Triplet<ushort>[pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+            Span<Triplet<ushort>> lineBuffer = rentedArray;
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int line = 0; ;)
             {
-                var previousLine = lineBuffer;
-                var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+                for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
                 {
-                    var temp = previousLine;
-                    previousLine = currentLine;
-                    currentLine = temp;
+                    var previousLine = lineBuffer;
+                    var currentLine = lineBuffer[pixelStride..];
+                    if ((line & 1) == 1)
+                    {
+                        var temp = previousLine;
+                        previousLine = currentLine;
+                        currentLine = temp;
+                    }
+
+                    // Initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    DecodeTripletLine(previousLine, currentLine);
+
+                    int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    destination = destination[bytesWritten..];
                 }
 
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
+                if (line == FrameInfo.Height)
+                    break;
 
-                DecodeTripletLine(previousLine, currentLine);
+                ProcessRestartMarker();
 
-                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
-                destination = destination[bytesWritten..];
+                // After a restart marker it is required to reset the decoder.
+                lineBuffer.Clear();
+                _scanCodec.InitializeParameters(Traits.Range);
             }
-
-            if (line == FrameInfo.Height)
-                break;
-
-            ProcessRestartMarker();
-
-            // After a restart marker it is required to reset the decoder.
-            lineBuffer.Clear();
-            _scanCodec.InitializeParameters(Traits.Range);
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
     private void DecodeLines8Bit4ComponentsInterleaveModeSample(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
+        var rentedArray = RentLineBuffer<Quad<byte>>(pixelStride * 2);
 
-        Span<Quad<byte>> lineBuffer = new Quad<byte>[pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+            Span<Quad<byte>> lineBuffer = rentedArray;
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int line = 0; ;)
             {
-                var previousLine = lineBuffer;
-                var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+                for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
                 {
-                    var temp = previousLine;
-                    previousLine = currentLine;
-                    currentLine = temp;
+                    var previousLine = lineBuffer;
+                    var currentLine = lineBuffer[pixelStride..];
+                    if ((line & 1) == 1)
+                    {
+                        var temp = previousLine;
+                        previousLine = currentLine;
+                        currentLine = temp;
+                    }
+
+                    // Initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    DecodeQuadLine(previousLine, currentLine);
+
+                    int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    destination = destination[bytesWritten..];
                 }
 
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
+                if (line == FrameInfo.Height)
+                    break;
 
-                DecodeQuadLine(previousLine, currentLine);
+                ProcessRestartMarker();
 
-                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
-                destination = destination[bytesWritten..];
+                // After a restart marker it is required to reset the decoder.
+                lineBuffer.Clear();
+                _scanCodec.InitializeParameters(Traits.Range);
             }
-
-            if (line == FrameInfo.Height)
-                break;
-
-            ProcessRestartMarker();
-
-            // After a restart marker it is required to reset the decoder.
-            lineBuffer.Clear();
-            _scanCodec.InitializeParameters(Traits.Range);
+        }
+        finally
+        {
+            ReturnLineBuffer(rentedArray);
         }
     }
 
     private void DecodeLines16Bit4ComponentsInterleaveModeSample(Span<byte> destination)
     {
         int pixelStride = FrameInfo.Width + 2;
+        var rentedArray = RentLineBuffer<Quad<ushort>>(pixelStride * 2);
 
-        Span<Quad<ushort>> lineBuffer = new Quad<ushort>[pixelStride * 2];
-
-        for (int line = 0; ;)
+        try
         {
-            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+            Span<Quad<ushort>> lineBuffer = rentedArray;
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int line = 0; ;)
             {
-                var previousLine = lineBuffer;
-                var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+                for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
                 {
-                    var temp = previousLine;
-                    previousLine = currentLine;
-                    currentLine = temp;
+                    var previousLine = lineBuffer;
+                    var currentLine = lineBuffer[pixelStride..];
+                    if ((line & 1) == 1)
+                    {
+                        var temp = previousLine;
+                        previousLine = currentLine;
+                        currentLine = temp;
+                    }
+
+                    // Initialize edge pixels used for prediction
+                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    currentLine[0] = previousLine[1];
+
+                    DecodeQuadLine(previousLine, currentLine);
+
+                    int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    destination = destination[bytesWritten..];
                 }
 
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
+                if (line == FrameInfo.Height)
+                    break;
 
-                DecodeQuadLine(previousLine, currentLine);
+                ProcessRestartMarker();
 
-                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
-                destination = destination[bytesWritten..];
+                // After a restart marker it is required to reset the decoder.
+                lineBuffer.Clear();
+                _scanCodec.InitializeParameters(Traits.Range);
             }
-
-            if (line == FrameInfo.Height)
-                break;
-
-            ProcessRestartMarker();
-
-            // After a restart marker it is required to reset the decoder.
-            lineBuffer.Clear();
-            _scanCodec.InitializeParameters(Traits.Range);
         }
-    }
-
-    // In ILV_SAMPLE mode, multiple components are handled in do_line
-    // In ILV_LINE mode, a call to do_line is made for every component
-    // In ILV_NONE mode, do_scan is called for each component
-    private void DecodeLines16BitInterleaveModeNone(Span<byte> destination)
-    {
-        int pixelStride = FrameInfo.Width + 2;
-
-        Span<ushort> lineBuffer = new ushort[pixelStride * 2];
-
-        for (int line = 0; ;)
+        finally
         {
-            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
-
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
-            {
-                var previousLine = lineBuffer;
-                var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
-                {
-                    var temp = previousLine;
-                    previousLine = currentLine;
-                    currentLine = temp;
-                }
-
-                // initialize edge pixels used for prediction
-                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
-                currentLine[0] = previousLine[1];
-
-                DecodeSampleLine(previousLine, currentLine);
-
-                int bytesWritten = CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
-                destination = destination[bytesWritten..];
-            }
-
-            if (line == FrameInfo.Height)
-                break;
-
-            ProcessRestartMarker();
-
-            // After a restart marker it is required to reset the decoder.
-            lineBuffer.Clear();
-            _scanCodec.InitializeParameters(Traits.Range);
+            ReturnLineBuffer(rentedArray);
         }
     }
 
@@ -953,7 +1023,7 @@ internal struct ScanDecoder
         int predictedValue = Traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
 
         int errorValue;
-        var code = ColombCodeTable[k].Get(PeekByte());
+        var code = GolombCodeTable[k].Get(PeekByte());
         if (code.Length != 0)
         {
             SkipBits(code.Length);
@@ -987,7 +1057,7 @@ internal struct ScanDecoder
         if (endIndex - 1 == FrameInfo.Width)
             return endIndex - startIndex;
 
-        // run interruption
+        // Run interruption
         var rb = previousLine[endIndex];
         currentLine[endIndex] = (byte)DecodeRunInterruptionPixel(ra, rb);
         _scanCodec.DecrementRunIndex();
@@ -1004,7 +1074,7 @@ internal struct ScanDecoder
         if (endIndex - 1 == FrameInfo.Width)
             return endIndex - startIndex;
 
-        // run interruption
+        // Run interruption
         var rb = previousLine[endIndex];
         currentLine[endIndex] = (ushort)DecodeRunInterruptionPixel(ra, rb);
         _scanCodec.DecrementRunIndex();
@@ -1021,7 +1091,7 @@ internal struct ScanDecoder
         if (endIndex - 1 == FrameInfo.Width)
             return endIndex - startIndex;
 
-        // run interruption
+        // Run interruption
         var rb = previousLine[endIndex];
         currentLine[endIndex] = DecodeRunInterruptionPixel(ra, rb);
         _scanCodec.DecrementRunIndex();
@@ -1038,7 +1108,7 @@ internal struct ScanDecoder
         if (endIndex - 1 == FrameInfo.Width)
             return endIndex - startIndex;
 
-        // run interruption
+        // Run interruption
         var rb = previousLine[endIndex];
         currentLine[endIndex] = DecodeRunInterruptionPixel(ra, rb);
         _scanCodec.DecrementRunIndex();
@@ -1055,7 +1125,7 @@ internal struct ScanDecoder
         if (endIndex - 1 == FrameInfo.Width)
             return endIndex - startIndex;
 
-        // run interruption
+        // Run interruption
         var rb = previousLine[endIndex];
         currentLine[endIndex] = DecodeRunInterruptionPixel(ra, rb);
         _scanCodec.DecrementRunIndex();
@@ -1408,5 +1478,17 @@ internal struct ScanDecoder
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(source);
         return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
+    }
+
+    private static T[] RentLineBuffer<T>(int length)
+    {
+        var array = ArrayPool<T>.Shared.Rent(length);
+        Array.Clear(array);
+        return array;
+    }
+
+    private static void ReturnLineBuffer<T>(T[] rentedArray)
+    {
+        ArrayPool<T>.Shared.Return(rentedArray);
     }
 }

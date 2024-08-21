@@ -1,4 +1,4 @@
-﻿charls
+charls
 ﻿jpegls
 ﻿misc
 ﻿bugprone
@@ -13,3 +13,5 @@ Unmap
 mrfx
 palletised
 Anymap
+GolombCodeTable
+Golomb
