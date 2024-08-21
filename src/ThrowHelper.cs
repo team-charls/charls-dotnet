@@ -7,12 +7,18 @@ using System.Runtime.CompilerServices;
 
 namespace CharLS.Managed;
 
-internal class ThrowHelper
+internal static class ThrowHelper
 {
     [DoesNotReturn]
     internal static void ThrowArgumentOutOfRangeException(ErrorCode errorCode, string? paramName = null)
     {
         throw AddErrorCode(new ArgumentOutOfRangeException(paramName, GetErrorMessage(errorCode)), errorCode);
+    }
+
+    [DoesNotReturn]
+    internal static void ThrowArgumentException(ErrorCode errorCode, string? paramName = null)
+    {
+        throw AddErrorCode(new ArgumentException(GetErrorMessage(errorCode), paramName), errorCode);
     }
 
     internal static void ThrowArgumentOutOfRangeExceptionIfFalse(bool condition, ErrorCode errorCode, string? paramName = null)
@@ -23,24 +29,18 @@ internal class ThrowHelper
         ThrowArgumentOutOfRangeException(errorCode, paramName);
     }
 
-    [DoesNotReturn]
-    internal static void ThrowArgumentException(ErrorCode errorCode)
-    {
-        throw AddErrorCode(new ArgumentException(GetErrorMessage(errorCode)), errorCode);
-    }
-
     internal static void ThrowIfNegativeOrZero<T>(T value, ErrorCode errorCode, [CallerArgumentExpression(nameof(value))] string? paramName = null)
         where T : INumberBase<T>
     {
         if (T.IsNegative(value) || T.IsZero(value))
-            throw AddErrorCode(new ArgumentOutOfRangeException(paramName, GetErrorMessage(errorCode)), errorCode);
+            ThrowArgumentOutOfRangeException(errorCode, paramName);
     }
 
     internal static void ThrowIfOutsideRange<T>(T min, T max, T value, ErrorCode errorCode = ErrorCode.InvalidArgument, [CallerArgumentExpression(nameof(value))] string? paramName = null)
         where T : IBinaryInteger<T>
     {
         if (value < min || value > max)
-            throw AddErrorCode(new ArgumentOutOfRangeException(paramName, GetErrorMessage(errorCode)), errorCode);
+            ThrowArgumentOutOfRangeException(errorCode, paramName);
     }
 
     internal static void ThrowInvalidOperationIfFalse(bool condition)
@@ -48,8 +48,7 @@ internal class ThrowHelper
         if (condition)
             return;
 
-        const ErrorCode errorCode = ErrorCode.InvalidOperation;
-        throw AddErrorCode(new InvalidOperationException(GetErrorMessage(errorCode)), errorCode);
+        ThrowInvalidOperationException();
     }
 
     internal static void ThrowArgumentExceptionIfFalse(bool value, string? paramName = null, ErrorCode errorCode = ErrorCode.InvalidArgument)
@@ -57,7 +56,7 @@ internal class ThrowHelper
         if (value)
             return;
 
-        throw AddErrorCode(new ArgumentException(GetErrorMessage(errorCode), paramName), errorCode);
+        ThrowArgumentException(errorCode, paramName);
     }
 
     [DoesNotReturn]
@@ -74,6 +73,13 @@ internal class ThrowHelper
     internal static InvalidDataException CreateInvalidDataException(ErrorCode errorCode, Exception innerException)
     {
         return AddErrorCode(new InvalidDataException(GetErrorMessage(errorCode), innerException), errorCode);
+    }
+
+    [DoesNotReturn]
+    private static void ThrowInvalidOperationException()
+    {
+        const ErrorCode errorCode = ErrorCode.InvalidOperation;
+        throw AddErrorCode(new InvalidOperationException(GetErrorMessage(errorCode)), errorCode);
     }
 
     private static T AddErrorCode<T>(T exception, ErrorCode errorCode)
