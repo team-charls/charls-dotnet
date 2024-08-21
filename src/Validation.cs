@@ -24,8 +24,10 @@ internal static class Validation
 
     internal static bool IsValid(this EncodingOptions encodingOptions)
     {
+        const EncodingOptions all =
+            EncodingOptions.EvenDestinationSize | EncodingOptions.IncludeVersionNumber | EncodingOptions.IncludePCParametersJai;
+
         // More efficient than Enum.IsDefined as it doesn't use reflection.
-        return encodingOptions is >= EncodingOptions.None and <=
-            (EncodingOptions.EvenDestinationSize | EncodingOptions.IncludeVersionNumber | EncodingOptions.IncludePCParametersJai);
+        return encodingOptions is >= EncodingOptions.None and <= all;
     }
 }

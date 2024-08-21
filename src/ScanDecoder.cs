@@ -14,6 +14,14 @@ internal struct ScanDecoder
     private const int CacheBitCount = sizeof(ulong) * 8;
     private const int MaxReadableCacheBits = CacheBitCount - 8;
 
+    private static readonly GolombCodeTable[] GolombCodeTable =
+    [
+        Managed.GolombCodeTable.Create(0), Managed.GolombCodeTable.Create(1), Managed.GolombCodeTable.Create(2), Managed.GolombCodeTable.Create(3),
+        Managed.GolombCodeTable.Create(4), Managed.GolombCodeTable.Create(5), Managed.GolombCodeTable.Create(6), Managed.GolombCodeTable.Create(7),
+        Managed.GolombCodeTable.Create(8), Managed.GolombCodeTable.Create(9), Managed.GolombCodeTable.Create(10), Managed.GolombCodeTable.Create(11),
+        Managed.GolombCodeTable.Create(12), Managed.GolombCodeTable.Create(13), Managed.GolombCodeTable.Create(14), Managed.GolombCodeTable.Create(15)
+    ];
+
     private readonly CopyFromLineBuffer.Method _copyFromLineBuffer;
     private ScanCodec _scanCodec;
 
@@ -24,11 +32,23 @@ internal struct ScanDecoder
     private int _validBits;
     private ulong _readCache;
     private int _restartIntervalCounter;
-
     private int _restartInterval;
 
+    internal ScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
+    {
+        var traits = Traits.Create(frameInfo, codingParameters.NearLossless, presetCodingParameters.ResetValue);
+        _scanCodec = new ScanCodec(traits, frameInfo, presetCodingParameters, codingParameters);
+
+        _copyFromLineBuffer = CopyFromLineBuffer.GetMethod(
+            FrameInfo.BitsPerSample, FrameInfo.ComponentCount, CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
+
+        _scanCodec.InitializeParameters(traits.Range);
+    }
+
     private readonly FrameInfo FrameInfo => _scanCodec.FrameInfo;
+
     private readonly CodingParameters CodingParameters => _scanCodec.CodingParameters;
+
     private readonly Traits Traits => _scanCodec.Traits;
 
     private int RunIndex
@@ -36,25 +56,6 @@ internal struct ScanDecoder
         readonly get => _scanCodec.RunIndex;
 
         set => _scanCodec.RunIndex = value;
-    }
-
-    private static readonly GolombCodeTable[] GolombCodeTable =
-    [
-        Managed.GolombCodeTable.Create(0), Managed.GolombCodeTable.Create(1), Managed.GolombCodeTable.Create(2), Managed.GolombCodeTable.Create(3),
-        Managed.GolombCodeTable.Create(4), Managed.GolombCodeTable.Create(5), Managed.GolombCodeTable.Create(6), Managed.GolombCodeTable.Create(7),
-        Managed.GolombCodeTable.Create(8), Managed.GolombCodeTable.Create(9), Managed.GolombCodeTable.Create(10), Managed.GolombCodeTable.Create(11),
-        Managed.GolombCodeTable.Create(12), Managed.GolombCodeTable.Create(13), Managed.GolombCodeTable.Create(14), Managed.GolombCodeTable.Create(15)
-    ];
-
-    internal ScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
-    {
-        var traits = Traits.Create(frameInfo, codingParameters.NearLossless, presetCodingParameters.ResetValue);
-        _scanCodec = new ScanCodec(traits, frameInfo, presetCodingParameters, codingParameters);
-
-        _copyFromLineBuffer = CopyFromLineBuffer.GetMethod(FrameInfo.BitsPerSample, FrameInfo.ComponentCount,
-            CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
-
-        _scanCodec.InitializeParameters(traits.Range);
     }
 
     internal int DecodeScan(ReadOnlyMemory<byte> source, Span<byte> destination, int stride)
@@ -122,7 +123,7 @@ internal struct ScanDecoder
         int validBits = _validBits;
 
         var source = _source.Span;
-        for (;;)
+        for (; ; )
         {
             int lastBitsCount = source[_position - 1] == Constants.JpegMarkerStartByte ? 7 : 8;
 
@@ -201,6 +202,7 @@ internal struct ScanDecoder
 
             valueTest <<= 1;
         }
+
         return -1;
     }
 
@@ -251,7 +253,8 @@ internal struct ScanDecoder
         do
         {
             value = ReadByte();
-        } while (value == Constants.JpegMarkerStartByte);
+        }
+        while (value == Constants.JpegMarkerStartByte);
 
         if (value != expectedRestartMarkerId)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.RestartMarkerNotFound);
@@ -318,8 +321,8 @@ internal struct ScanDecoder
                 // The next bit after an 0xFF needs to be ignored, compensate for the next read (see ISO/IEC 14495-1,A.1)
                 --_validBits;
             }
-
-        } while (_validBits < MaxReadableCacheBits);
+        }
+        while (_validBits < MaxReadableCacheBits);
 
         FindJpegMarkerStartByte();
     }
@@ -360,6 +363,7 @@ internal struct ScanDecoder
                         DecodeLines8Bit4ComponentsInterleaveModeSample(destination);
                         break;
                 }
+
                 break;
         }
     }
@@ -386,6 +390,7 @@ internal struct ScanDecoder
                         DecodeLines16Bit4ComponentsInterleaveModeSample(destination);
                         break;
                 }
+
                 break;
         }
     }
@@ -533,8 +538,8 @@ internal struct ScanDecoder
                     }
 
                     int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
-                    int bytesWritten = CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..],
-                        destination, FrameInfo.Width, pixelStride);
+                    int bytesWritten = CopyLineBufferToDestinationInterleaveLine(
+                        lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
                     destination = destination[bytesWritten..];
                 }
 
@@ -838,18 +843,18 @@ internal struct ScanDecoder
             rb = rd;
             rd = previousLine[index + 1];
 
-            int qs = ComputeContextId(QuantizeGradient(rd - rb),
-                QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
-            if (qs != 0)
-            {
-                currentLine[index] = (byte)DecodeRegular(qs, ComputePredictedValue(ra, rb, rc));
-                ++index;
-            }
-            else
+            int qs = ComputeContextId(
+                QuantizeGradient(rd - rb), QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
+            if (qs == 0)
             {
                 index += DecodeRunMode(index, previousLine, currentLine);
                 rb = previousLine[index - 1];
                 rd = previousLine[index];
+            }
+            else
+            {
+                currentLine[index] = (byte)DecodeRegular(qs, ComputePredictedValue(ra, rb, rc));
+                ++index;
             }
         }
     }
@@ -867,18 +872,18 @@ internal struct ScanDecoder
             rb = rd;
             rd = previousLine[index + 1];
 
-            int qs = ComputeContextId(QuantizeGradient(rd - rb),
-                QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
-            if (qs != 0)
-            {
-                currentLine[index] = (ushort)DecodeRegular(qs, ComputePredictedValue(ra, rb, rc));
-                ++index;
-            }
-            else
+            int qs = ComputeContextId(
+                QuantizeGradient(rd - rb), QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
+            if (qs == 0)
             {
                 index += DecodeRunMode(index, previousLine, currentLine);
                 rb = previousLine[index - 1];
                 rd = previousLine[index];
+            }
+            else
+            {
+                currentLine[index] = (ushort)DecodeRegular(qs, ComputePredictedValue(ra, rb, rc));
+                ++index;
             }
         }
     }
@@ -893,12 +898,12 @@ internal struct ScanDecoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
-                        QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
-                        QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
-                        QuantizeGradient(rc.V3 - ra.V3));
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(
+                QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3), QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
             {
                 index += DecodeRunMode(index, previousLine, currentLine);
@@ -924,12 +929,12 @@ internal struct ScanDecoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
-                        QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
-                        QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
-                        QuantizeGradient(rc.V3 - ra.V3));
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(
+                QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3), QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
             {
                 index += DecodeRunMode(index, previousLine, currentLine);
@@ -955,14 +960,14 @@ internal struct ScanDecoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
-                        QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
-                        QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
-                        QuantizeGradient(rc.V3 - ra.V3));
-            int qs4 = ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
-                        QuantizeGradient(rc.V4 - ra.V4));
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(
+                QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3), QuantizeGradient(rc.V3 - ra.V3));
+            int qs4 = ComputeContextId(
+                QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4), QuantizeGradient(rc.V4 - ra.V4));
 
             if (qs1 == 0 && qs2 == 0 && qs3 == 0 && qs4 == 0)
             {
@@ -990,14 +995,14 @@ internal struct ScanDecoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
-                        QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
-                        QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
-                        QuantizeGradient(rc.V3 - ra.V3));
-            int qs4 = ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
-                        QuantizeGradient(rc.V4 - ra.V4));
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(
+                QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3), QuantizeGradient(rc.V3 - ra.V3));
+            int qs4 = ComputeContextId(
+                QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4), QuantizeGradient(rc.V4 - ra.V4));
 
             if (qs1 == 0 && qs2 == 0 && qs3 == 0 && qs4 == 0)
             {

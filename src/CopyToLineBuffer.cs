@@ -16,8 +16,7 @@ internal class CopyToLineBuffer
             GetMethod16Bit(bitsPerSample, componentCount, interleaveMode, colorTransformation);
     }
 
-    private static Method GetMethod8Bit(int bitsPerSample, int componentCount, InterleaveMode interleaveMode,
-        ColorTransformation colorTransformation)
+    private static Method GetMethod8Bit(int bitsPerSample, int componentCount, InterleaveMode interleaveMode, ColorTransformation colorTransformation)
     {
         switch (interleaveMode)
         {
@@ -69,7 +68,9 @@ internal class CopyToLineBuffer
         }
     }
 
-    private static Method GetMethod16Bit(int bitsPerSample, int componentCount,
+    private static Method GetMethod16Bit(
+        int bitsPerSample,
+        int componentCount,
         InterleaveMode interleaveMode,
         ColorTransformation colorTransformation)
     {

@@ -98,7 +98,7 @@ internal static class ThrowHelper
     {
         return errorCode switch
         {
-            ErrorCode.None => "",
+            ErrorCode.None => string.Empty,
             ErrorCode.CallbackFailed => "Callback function returned a failure",
             ErrorCode.DestinationTooSmall => "The destination buffer is too small to hold all the output",
             ErrorCode.NeedMoreData => "The source is too small, more input data was expected",
@@ -147,7 +147,7 @@ internal static class ThrowHelper
             ErrorCode.InvalidArgumentSize => "The passed size is outside the valid range",
             ErrorCode.InvalidArgumentStride => "The stride argument does not match with the frame info and buffer size",
             ErrorCode.InvalidArgumentEncodingOptions => "The encoding options argument has an invalid value",
-            _ => ""
+            _ => string.Empty
         };
     }
 }

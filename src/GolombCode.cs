@@ -12,5 +12,6 @@ internal readonly struct GolombCode
     }
 
     internal int Value { get; }
+
     internal int Length { get; }
 }

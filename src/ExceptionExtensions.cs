@@ -11,6 +11,7 @@ public static class ExceptionExtensions
     /// <summary>
     /// Retrieves the ErrorCode value from the Exception instance or None if no error value was present.
     /// </summary>
+    /// <param name="exception">The instance of the exception to retrieve the error code from.</param>
     public static ErrorCode GetErrorCode(this Exception exception)
     {
         var value = exception.Data[nameof(ErrorCode)];

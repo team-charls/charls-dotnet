@@ -32,18 +32,6 @@ internal struct ScanCodec
     private static readonly Lazy<sbyte[]> QuantizationLutLossless12 = new(CreateQuantizeLutLossless(12));
     private static readonly Lazy<sbyte[]> QuantizationLutLossless16 = new(CreateQuantizeLutLossless(16));
 
-    [InlineArray(2)]
-    internal struct RunModeContextArray
-    {
-        private RunModeContext _;
-    }
-
-    [InlineArray(365)]
-    internal struct RegularModeContextArray
-    {
-        private RegularModeContext _;
-    }
-
     internal ScanCodec(Traits traits, FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
         Traits = traits;
@@ -75,9 +63,8 @@ internal struct ScanCodec
 
     internal readonly sbyte QuantizeGradient(int di, int nearLossless)
     {
-        return QuantizeGradientOrg(di,
-            PresetCodingParameters.Threshold1, PresetCodingParameters.Threshold2, PresetCodingParameters.Threshold3,
-            nearLossless);
+        return QuantizeGradientOrg(
+            di, PresetCodingParameters.Threshold1, PresetCodingParameters.Threshold2, PresetCodingParameters.Threshold3, nearLossless);
     }
 
     internal void IncrementRunIndex()
@@ -90,7 +77,7 @@ internal struct ScanCodec
         RunIndex = Math.Max(0, RunIndex - 1);
     }
 
-    internal readonly sbyte[] GetQuantizationLut(Traits traits, int threshold1, int threshold2, int threshold3)
+    internal static sbyte[] GetQuantizationLut(Traits traits, int threshold1, int threshold2, int threshold3)
     {
         if (IsCachedQuantizationLutAvailable(traits, threshold1, threshold2, threshold3))
         {
@@ -114,9 +101,10 @@ internal struct ScanCodec
         var quantizationLut = new sbyte[traits.QuantizationRange * 2];
         for (int i = 0; i < quantizationLut.Length; ++i)
         {
-            quantizationLut[i] = QuantizeGradientOrg(-traits.QuantizationRange + i, threshold1, threshold2,
-                threshold3, traits.NearLossless);
+            quantizationLut[i] = QuantizeGradientOrg(
+                -traits.QuantizationRange + i, threshold1, threshold2, threshold3, traits.NearLossless);
         }
+
         return quantizationLut;
     }
 
@@ -141,5 +129,17 @@ internal struct ScanCodec
         }
 
         return quantizationLut;
+    }
+
+    [InlineArray(2)]
+    internal struct RunModeContextArray
+    {
+        private RunModeContext _;
+    }
+
+    [InlineArray(365)]
+    internal struct RegularModeContextArray
+    {
+        private RegularModeContext _;
     }
 }

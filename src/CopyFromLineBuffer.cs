@@ -9,7 +9,10 @@ internal class CopyFromLineBuffer
 {
     internal delegate int Method(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride);
 
-    internal static Method GetMethod(int bitsPerSample, int componentCount, InterleaveMode interleaveMode,
+    internal static Method GetMethod(
+        int bitsPerSample,
+        int componentCount,
+        InterleaveMode interleaveMode,
         ColorTransformation colorTransformation)
     {
         return bitsPerSample <= 8
@@ -61,6 +64,7 @@ internal class CopyFromLineBuffer
                                 Debug.Assert(componentCount == 4);
                                 return CopyPixels8BitQuad;
                         }
+
                     case ColorTransformation.HP1:
                         return CopyPixels8BitHP1;
                     case ColorTransformation.HP2:
@@ -115,6 +119,7 @@ internal class CopyFromLineBuffer
                                 Debug.Assert(componentCount == 4);
                                 return CopyPixels16BitQuad;
                         }
+
                     case ColorTransformation.HP1:
                         return CopyPixels16BitHP1;
                     case ColorTransformation.HP2:
@@ -150,9 +155,8 @@ internal class CopyFromLineBuffer
 
         for (int i = 0; i < pixelCount; ++i)
         {
-            destinationTriplet[i] =
-                ColorTransformations.ReverseTransformHP1(source[i], source[i + sourceStride],
-                    source[i + (2 * sourceStride)]);
+            destinationTriplet[i] = ColorTransformations.ReverseTransformHP1(
+                    source[i], source[i + sourceStride], source[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3;
@@ -164,9 +168,8 @@ internal class CopyFromLineBuffer
 
         for (int i = 0; i < pixelCount; ++i)
         {
-            destinationTriplet[i] =
-                ColorTransformations.ReverseTransformHP2(source[i], source[i + sourceStride],
-                    source[i + (2 * sourceStride)]);
+            destinationTriplet[i] = ColorTransformations.ReverseTransformHP2(
+                    source[i], source[i + sourceStride], source[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3;
@@ -178,9 +181,8 @@ internal class CopyFromLineBuffer
 
         for (int i = 0; i < pixelCount; ++i)
         {
-            destinationTriplet[i] =
-                ColorTransformations.ReverseTransformHP3(source[i], source[i + sourceStride],
-                    source[i + (2 * sourceStride)]);
+            destinationTriplet[i] = ColorTransformations.ReverseTransformHP3(
+                source[i], source[i + sourceStride], source[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3;
@@ -277,8 +279,8 @@ internal class CopyFromLineBuffer
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] =
-                ColorTransformations.ReverseTransformHP1(sourceUshort[i], sourceUshort[i + sourceStride],
-                    sourceUshort[i + (2 * sourceStride)]);
+                ColorTransformations.ReverseTransformHP1(
+                    sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3 * 2;
@@ -292,8 +294,8 @@ internal class CopyFromLineBuffer
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] =
-                ColorTransformations.ReverseTransformHP2(sourceUshort[i], sourceUshort[i + sourceStride],
-                    sourceUshort[i + (2 * sourceStride)]);
+                ColorTransformations.ReverseTransformHP2(
+                    sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3 * 2;
@@ -307,8 +309,8 @@ internal class CopyFromLineBuffer
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] =
-                ColorTransformations.ReverseTransformHP3(sourceUshort[i], sourceUshort[i + sourceStride],
-                    sourceUshort[i + (2 * sourceStride)]);
+                ColorTransformations.ReverseTransformHP3(
+                    sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)]);
         }
 
         return pixelCount * 3 * 2;
@@ -352,6 +354,7 @@ internal class CopyFromLineBuffer
             var pixel = sourceTriplet[i];
             destinationTriplet[i] = ColorTransformations.ReverseTransformHP2(pixel.V1, pixel.V2, pixel.V3);
         }
+
         return pixelCount * 3 * 2;
     }
 
@@ -365,6 +368,7 @@ internal class CopyFromLineBuffer
             var pixel = sourceTriplet[i];
             destinationTriplet[i] = ColorTransformations.ReverseTransformHP3(pixel.V1, pixel.V2, pixel.V3);
         }
+
         return pixelCount * 3 * 2;
     }
 
@@ -381,5 +385,4 @@ internal class CopyFromLineBuffer
         source[..bytesCount].CopyTo(destination);
         return bytesCount;
     }
-
 }

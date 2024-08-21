@@ -4,7 +4,7 @@
 namespace CharLS.Managed;
 
 /// <summary>
-/// Encapsulates event data for ApplicationData event
+/// Encapsulates event data for ApplicationData event.
 /// </summary>
 public sealed class ApplicationDataEventArgs : EventArgs
 {
@@ -17,7 +17,7 @@ public sealed class ApplicationDataEventArgs : EventArgs
     }
 
     /// <summary>
-    /// Identifies the type of application data, has the range [0,15]
+    /// Identifies the type of application data, has the range [0,15].
     /// </summary>
     public int Id { get; }
 

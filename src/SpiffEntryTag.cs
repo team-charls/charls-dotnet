@@ -4,7 +4,7 @@
 namespace CharLS.Managed;
 
 /// <summary>
-/// Official defined SPIFF tags defined in Table F.5 (ISO/IEC 10918-3)
+/// Official defined SPIFF tags defined in Table F.5 (ISO/IEC 10918-3).
 /// </summary>
 public enum SpiffEntryTag
 {

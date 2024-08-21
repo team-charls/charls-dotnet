@@ -42,6 +42,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AdditionalFiles Include="stylecop.json" Link="stylecop.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\docs\jpeg_ls_logo.png" Pack="true" PackagePath="\icon.png" />
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
@@ -55,6 +59,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <PackageReference Include="StyleCop.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Condition="'$(TargetFramework)'=='net48'" Include="System.Memory" />
   </ItemGroup>
 

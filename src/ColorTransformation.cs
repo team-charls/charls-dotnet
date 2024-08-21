@@ -20,7 +20,7 @@ public enum ColorTransformation
     /// Defines the reversible lossless color transformation:
     /// G = G
     /// R = R - G
-    /// B = B - G
+    /// B = B - G.
     /// </summary>
     HP1 = 1,
 
@@ -28,7 +28,7 @@ public enum ColorTransformation
     /// Defines the reversible lossless color transformation:
     /// G = G
     /// B = B - (R + G) / 2
-    /// R = R - G
+    /// R = R - G.
     /// </summary>
     HP2 = 2,
 
@@ -36,7 +36,7 @@ public enum ColorTransformation
     /// Defines the reversible lossless color transformation of Y-Cb-Cr:
     /// R = R - G
     /// B = B - G
-    /// G = G + (R + B) / 4
+    /// G = G + (R + B) / 4.
     /// </summary>
     HP3 = 3
 }

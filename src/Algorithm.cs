@@ -41,7 +41,7 @@ internal static class Algorithm
     // Computes the initial value for A. See ISO/IEC 14495-1, A.8, step 1.d and A.2.1
     internal static int InitializationValueForA(int range)
     {
-        Debug.Assert(range is >= 4 and <= (ushort.MaxValue + 1));
+        Debug.Assert(range is >= 4 and <= ushort.MaxValue + 1);
         return Math.Max(2, (range + 32) / 64);
     }
 
@@ -83,7 +83,7 @@ internal static class Algorithm
     }
 
     /// <summary>
-    /// Computes the parameter RANGE. When NEAR = 0, RANGE = MAXVAL + 1. (see ISO/IEC 14495-1, A.2.1)
+    /// Computes the parameter RANGE. When NEAR = 0, RANGE = MAXVAL + 1. (see ISO/IEC 14495-1, A.2.1).
     /// </summary>
     internal static int ComputeRangeParameter(int maximumSampleValue, int nearLossless)
     {
@@ -91,7 +91,7 @@ internal static class Algorithm
     }
 
     /// <summary>
-    /// Computes the parameter LIMIT. (see ISO/IEC 14495-1, A.2.1)
+    /// Computes the parameter LIMIT. (see ISO/IEC 14495-1, A.2.1).
     /// </summary>
     internal static int ComputeLimitParameter(int bitsPerSample)
     {
@@ -108,6 +108,7 @@ internal static class Algorithm
         {
             return rb;
         }
+
         if ((sign ^ (rb - rc)) < 0)
         {
             return ra;

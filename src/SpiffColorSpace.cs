@@ -61,7 +61,7 @@ public enum SpiffColorSpace
     Cmyk = 12,
 
     /// <summary>
-    /// Transformed CMYK type data (same as Adobe PostScript)
+    /// Transformed CMYK type data (same as Adobe PostScript).
     /// </summary>
     Ycck = 13,
 

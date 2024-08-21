@@ -7,21 +7,6 @@ namespace CharLS.Managed;
 
 internal class Traits
 {
-    internal static Traits Create(FrameInfo frameInfo, int nearLossless, int resetThreshold)
-    {
-        int maximumSampleValue = CalculateMaximumSampleValue(frameInfo.BitsPerSample);
-
-        if (nearLossless != 0)
-            return new Traits(maximumSampleValue, nearLossless, resetThreshold);
-
-        return frameInfo.BitsPerSample switch
-        {
-            8 => new LosslessTraits8(maximumSampleValue, nearLossless, resetThreshold),
-            16 => new LosslessTraits16(maximumSampleValue, nearLossless, resetThreshold),
-            _ => new LosslessTraits(maximumSampleValue, nearLossless, resetThreshold)
-        };
-    }
-
     internal Traits(int maximumSampleValue, int nearLossless, int resetThreshold = Constants.DefaultResetThreshold)
     {
         MaximumSampleValue = maximumSampleValue;
@@ -67,7 +52,7 @@ internal class Traits
     internal int QuantizationRange { get; }
 
     /// <summary>
-    /// ISO 14495-1 NEAR symbol: difference bound for near-lossless coding, 0 means lossless
+    /// ISO 14495-1 NEAR symbol: difference bound for near-lossless coding, 0 means lossless.
     /// </summary>
     internal int NearLossless { get; }
 
@@ -90,7 +75,7 @@ internal class Traits
     }
 
     /// <summary>
-    /// Returns the value of errorValue modulo RANGE. ITU.T.87, A.4.5 (code segment A.9)
+    /// Returns the value of errorValue modulo RANGE. ITU.T.87, A.4.5 (code segment A.9).
     /// </summary>
     internal virtual int ModuloRange(int errorValue)
     {
@@ -137,6 +122,21 @@ internal class Traits
     {
         return Math.Abs(lhs.V1 - rhs.V1) <= NearLossless && Math.Abs(lhs.V2 - rhs.V2) <= NearLossless &&
                Math.Abs(lhs.V3 - rhs.V3) <= NearLossless && Math.Abs(lhs.V4 - rhs.V4) <= NearLossless;
+    }
+
+    internal static Traits Create(FrameInfo frameInfo, int nearLossless, int resetThreshold)
+    {
+        int maximumSampleValue = CalculateMaximumSampleValue(frameInfo.BitsPerSample);
+
+        if (nearLossless != 0)
+            return new Traits(maximumSampleValue, nearLossless, resetThreshold);
+
+        return frameInfo.BitsPerSample switch
+        {
+            8 => new LosslessTraits8(maximumSampleValue, nearLossless, resetThreshold),
+            16 => new LosslessTraits16(maximumSampleValue, nearLossless, resetThreshold),
+            _ => new LosslessTraits(maximumSampleValue, nearLossless, resetThreshold)
+        };
     }
 
     private int FixReconstructedValue(int value)

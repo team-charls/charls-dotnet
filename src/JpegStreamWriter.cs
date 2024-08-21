@@ -11,11 +11,11 @@ internal struct JpegStreamWriter
     private int _componentIndex;
     private byte[]? _mappingTableIds;
 
-    private readonly byte MappingTableSelector => (byte)(_mappingTableIds == null ? 0 : _mappingTableIds[_componentIndex]);
-
     internal Memory<byte> Destination { get; set; }
 
     internal readonly int BytesWritten => _position - 0;
+
+    private readonly byte MappingTableSelector => (byte)(_mappingTableIds == null ? 0 : _mappingTableIds[_componentIndex]);
 
     internal void WriteStartOfImage()
     {
@@ -66,7 +66,7 @@ internal struct JpegStreamWriter
         [
             0, 0,
             0, Constants.SpiffEndOfDirectoryEntryType,
-            0xFF, (byte) JpegMarkerCode.StartOfImage
+            0xFF, (byte)JpegMarkerCode.StartOfImage
         ];
 
         WriteSegment(JpegMarkerCode.ApplicationData8, spiffEndOfDirectory);
@@ -100,24 +100,21 @@ internal struct JpegStreamWriter
         WriteUint16(presetCodingParameters.ResetValue);
     }
 
-    internal void WriteJpegLSPresetParametersSegment(int tableId, int entrySize,
-        ReadOnlySpan<byte> tableData)
+    internal void WriteJpegLSPresetParametersSegment(int tableId, int entrySize, ReadOnlySpan<byte> tableData)
     {
         // Write the first 65530 bytes as mapping table specification LSE segment.
         const int maxTableDataSize = Constants.SegmentMaxDataSize - 3;
 
         int tableSizeToWrite = Math.Min(tableData.Length, maxTableDataSize);
-        WriteJpegLSPresetParametersSegment(JpegLSPresetParametersType.MappingTableSpecification, tableId,
-            entrySize,
-            tableData[..tableSizeToWrite]);
+        WriteJpegLSPresetParametersSegment(
+            JpegLSPresetParametersType.MappingTableSpecification, tableId, entrySize, tableData[..tableSizeToWrite]);
 
         // Write the remaining bytes as mapping table continuation LSE segments.
         int tablePosition = tableSizeToWrite;
         while (tablePosition < tableData.Length)
         {
             tableSizeToWrite = Math.Min(tableData.Length - tablePosition, maxTableDataSize);
-            WriteJpegLSPresetParametersSegment(JpegLSPresetParametersType.MappingTableContinuation, tableId,
-                entrySize, tableData[tablePosition..]);
+            WriteJpegLSPresetParametersSegment(JpegLSPresetParametersType.MappingTableContinuation, tableId, entrySize, tableData[tablePosition..]);
             tablePosition += tableSizeToWrite;
         }
     }
@@ -221,8 +218,8 @@ internal struct JpegStreamWriter
         _mappingTableIds[componentIndex] = (byte)tableId;
     }
 
-    private void WriteJpegLSPresetParametersSegment(JpegLSPresetParametersType presetParametersType,
-    int tableId, int entrySize, ReadOnlySpan<byte> tableData)
+    private void WriteJpegLSPresetParametersSegment(
+        JpegLSPresetParametersType presetParametersType, int tableId, int entrySize, ReadOnlySpan<byte> tableData)
     {
         Debug.Assert(presetParametersType is JpegLSPresetParametersType.MappingTableSpecification or JpegLSPresetParametersType.MappingTableContinuation);
         Debug.Assert(tableId > 0);
