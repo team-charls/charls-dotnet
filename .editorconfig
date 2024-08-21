@@ -21,6 +21,7 @@ indent_size = 2
 
 [*.cs]
 indent_size = 4
+spelling_exclusion_path = .\exclusion.dic
 
 # New line preferences
 csharp_new_line_before_open_brace = all

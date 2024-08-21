@@ -3,17 +3,6 @@
 
 namespace CharLS.Managed.Test;
 
-
-internal struct Thresholds
-{
-    internal int MaxValue;
-    internal int T1;
-    internal int T2;
-    internal int T3;
-    internal int Reset;
-}
-
-
 internal sealed class JpegLSPresetCodingParametersTest
 {
     // Threshold function of JPEG-LS reference implementation.
@@ -58,5 +47,14 @@ internal sealed class JpegLSPresetCodingParametersTest
         }
 
         return result;
+    }
+
+    internal struct Thresholds
+    {
+        internal int MaxValue;
+        internal int T1;
+        internal int T2;
+        internal int T3;
+        internal int Reset;
     }
 }

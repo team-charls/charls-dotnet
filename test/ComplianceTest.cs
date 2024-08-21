@@ -6,88 +6,88 @@ namespace CharLS.Managed.Test;
 public class ComplianceTest
 {
     [Fact]
-    public void DecompressColor8BitInterleaveNoneLossless()
+    public void DecodeEncodeColor8BitInterleaveNoneLossless()
     {
         // ISO 14495-1: official test image 1 (T87_test-1-2-3-4-5-6.zip)
-        DecompressFile("conformance/t8c0e0.jls", "conformance/test8.ppm");
+        DecodeEncodeFile("conformance/t8c0e0.jls", "conformance/test8.ppm");
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveLineLossless()
+    public void DecodeEncodeColor8BitInterleaveLineLossless()
     {
         // ISO 14495-1: official test image 2 (T87_test-1-2-3-4-5-6.zip)
-        DecompressFile("conformance/t8c1e0.jls", "conformance/test8.ppm");
+        DecodeEncodeFile("conformance/t8c1e0.jls", "conformance/test8.ppm");
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveSampleLossless()
+    public void DecodeEncodeColor8BitInterleaveSampleLossless()
     {
         // ISO 14495-1: official test image 3 (T87_test-1-2-3-4-5-6.zip)
-        DecompressFile("conformance/t8c2e0.jls", "conformance/test8.ppm");
+        DecodeEncodeFile("conformance/t8c2e0.jls", "conformance/test8.ppm");
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveNoneNearLossless3()
+    public void DecodeEncodeColor8BitInterleaveNoneNearLossless3()
     {
         // ISO 14495-1: official test image 4 (T87_test-1-2-3-4-5-6.zip)
-        DecompressFile("conformance/t8c0e3.jls", "conformance/test8.ppm");
+        DecodeEncodeFile("conformance/t8c0e3.jls", "conformance/test8.ppm");
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveLineNearLossless3()
+    public void DecodeEncodeColor8BitInterleaveLineNearLossless3()
     {
         // ISO 14495-1: official test image 5 (T87_test-1-2-3-4-5-6.zip)
-        DecompressFile("conformance/t8c1e3.jls", "conformance/test8.ppm");
+        DecodeEncodeFile("conformance/t8c1e3.jls", "conformance/test8.ppm");
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveSampleNearLossless3()
+    public void DecodeEncodeColor8BitInterleaveSampleNearLossless3()
     {
         // ISO 14495-1: official test image 6 (T87_test-1-2-3-4-5-6.zip)
-        DecompressFile("conformance/t8c2e3.jls", "conformance/test8.ppm");
+        DecodeEncodeFile("conformance/t8c2e3.jls", "conformance/test8.ppm");
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveLineLosslessNonDefault()
+    public void DecodeEncodeColor8BitInterleaveLineLosslessNonDefault()
     {
         // ISO 14495-1: official test image 9 (T87_test-1-2-3-4-5-6.zip)
         // NON-DEFAULT parameters T1=T2=T3=9,RESET=31.
-        DecompressFile("conformance/t8nde0.jls", "conformance/test8bs2.pgm");
+        DecodeEncodeFile("conformance/t8nde0.jls", "conformance/test8bs2.pgm");
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveLineNearLossless3NonDefault()
+    public void DecodeEncodeColor8BitInterleaveLineNearLossless3NonDefault()
     {
         // ISO 14495-1: official test image 10 (T87_test-1-2-3-4-5-6.zip)
         // NON-DEFAULT parameters T1=T2=T3=9,RESET=31.
-        DecompressFile("conformance/t8nde3.jls", "conformance/test8bs2.pgm");
+        DecodeEncodeFile("conformance/t8nde3.jls", "conformance/test8bs2.pgm");
     }
 
     [Fact]
-    public void DecompressMonochrome16BitLossless()
+    public void DecodeEncodeMonochrome16BitLossless()
     {
         // ISO 14495-1: official test image 11 (T87_test-11-12.zip)
         // Note: test image is actually 12 bit.
-        DecompressFile("conformance/t16e0.jls", "conformance/test16.pgm");
+        DecodeEncodeFile("conformance/t16e0.jls", "conformance/test16.pgm");
     }
 
     [Fact]
-    public void DecompressMonochrome16BitNearLossless3()
+    public void DecodeMonochrome16BitNearLossless3()
     {
         // ISO 14495-1: official test image 12 (T87_test-11-12.zip)
         // Note: test image is actually 12 bit.
-        DecompressFile("conformance/t16e3.jls", "conformance/test16.pgm", false);
+        DecodeEncodeFile("conformance/t16e3.jls", "conformance/test16.pgm", false);
     }
 
     [Fact]
-    public void TulipsMonochrome8BitLosslessHp()
+    public void DecodeEncodeTulipsMonochrome8BitLosslessHp()
     {
         // Additional, Tulips encoded with HP 1.0BETA encoder.
-        DecompressFile("test-images/tulips-gray-8bit-512-512-hp-encoder.jls", "test-images/tulips-gray-8bit-512-512.pgm");
+        DecodeEncodeFile("test-images/tulips-gray-8bit-512-512-hp-encoder.jls", "test-images/tulips-gray-8bit-512-512.pgm");
     }
 
     [Fact]
-    public void TulipsMonochrome8BitLosslessHpForMeasurement()
+    public void DecodeEncodeTulipsMonochrome8BitLosslessHpForMeasurement()
     {
         var encodedSource = Util.ReadFile("test-images/tulips-gray-8bit-512-512-hp-encoder.jls");
 
@@ -103,45 +103,45 @@ public class ComplianceTest
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveNoneLosslessRestart7()
+    public void DecodeColor8BitInterleaveNoneLosslessRestart7()
     {
         // ISO 14495-1: official test image 1 but with restart markers.
-        DecompressFile("test-images/test8_ilv_none_rm_7.jls", "conformance/test8.ppm", false);
+        DecodeEncodeFile("test-images/test8_ilv_none_rm_7.jls", "conformance/test8.ppm", false);
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveLineLosslessRestart7()
+    public void DecodeColor8BitInterleaveLineLosslessRestart7()
     {
         // ISO 14495-1: official test image 2 but with restart markers.
-        DecompressFile("test-images/test8_ilv_line_rm_7.jls", "conformance/test8.ppm", false);
+        DecodeEncodeFile("test-images/test8_ilv_line_rm_7.jls", "conformance/test8.ppm", false);
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveSampleLosslessRestart7()
+    public void DecodeColor8BitInterleaveSampleLosslessRestart7()
     {
         // ISO 14495-1: official test image 3 but with restart markers.
-        DecompressFile("test-images/test8_ilv_sample_rm_7.jls", "conformance/test8.ppm", false);
+        DecodeEncodeFile("test-images/test8_ilv_sample_rm_7.jls", "conformance/test8.ppm", false);
     }
 
     [Fact]
-    public void DecompressColor8BitInterleaveSampleLosslessRestart300()
+    public void DecodeColor8BitInterleaveSampleLosslessRestart300()
     {
         // ISO 14495-1: official test image 3 but with restart markers and restart interval 300
-        DecompressFile("test-images/test8_ilv_sample_rm_300.jls", "conformance/test8.ppm", false);
+        DecodeEncodeFile("test-images/test8_ilv_sample_rm_300.jls", "conformance/test8.ppm", false);
     }
 
     [Fact]
-    public void DecompressMonochrome16BitRestart5()
+    public void DecodeMonochrome16BitRestart5()
     {
         // ISO 14495-1: official test image 12 but with restart markers and restart interval 5
-        DecompressFile("test-images/test16_rm_5.jls", "conformance/test16.pgm", false);
+        DecodeEncodeFile("test-images/test16_rm_5.jls", "conformance/test16.pgm", false);
     }
 
     [Fact]
-    public void DecompressMappingTableSampleAnnexH4Dot5()
+    public void DecodeMappingTableSampleAnnexH4Dot5()
     {
         // ISO 14495-1: Sample image from appendix H.4.5 "Example of a palletised image" / Figure H.10
-        byte[] palettisedData =
+        byte[] palletisedData =
         [
             0xFF, 0xD8, // Start of image (SOI) marker
             0xFF, 0xF7, // Start of JPEG-LS frame (SOF 55) marker - marker segment follows
@@ -176,7 +176,7 @@ public class ComplianceTest
             0xFF, 0xD9 // End of image (EOI) marker
         ];
 
-        JpegLSDecoder decoder = new() { Source = palettisedData };
+        JpegLSDecoder decoder = new() { Source = palletisedData };
         decoder.ReadHeader();
 
         var destination = new byte[decoder.GetDestinationSize()];
@@ -199,7 +199,7 @@ public class ComplianceTest
         Assert.True(mappingTableData.Span.SequenceEqual(expectedMappingTable));
     }
 
-    private static void DecompressFile(string encodedFilename, string rawFilename, bool checkEncode = true)
+    private static void DecodeEncodeFile(string encodedFilename, string rawFilename, bool checkEncode = true)
     {
         var encodedSource = Util.ReadFile(encodedFilename);
 

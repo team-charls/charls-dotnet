@@ -52,22 +52,22 @@ public class JpegStreamReaderTest
     [Fact]
     public void ReadHeaderWithApplicationData()
     {
-        ReadHeaderWithApplicationDataImpl(0);
-        ReadHeaderWithApplicationDataImpl(1);
-        ReadHeaderWithApplicationDataImpl(2);
-        ReadHeaderWithApplicationDataImpl(3);
-        ReadHeaderWithApplicationDataImpl(4);
-        ReadHeaderWithApplicationDataImpl(5);
-        ReadHeaderWithApplicationDataImpl(6);
-        ReadHeaderWithApplicationDataImpl(7);
-        ReadHeaderWithApplicationDataImpl(8);
-        ReadHeaderWithApplicationDataImpl(9);
-        ReadHeaderWithApplicationDataImpl(10);
-        ReadHeaderWithApplicationDataImpl(11);
-        ReadHeaderWithApplicationDataImpl(12);
-        ReadHeaderWithApplicationDataImpl(13);
-        ReadHeaderWithApplicationDataImpl(14);
-        ReadHeaderWithApplicationDataImpl(15);
+        TestReadHeaderWithApplicationData(0);
+        TestReadHeaderWithApplicationData(1);
+        TestReadHeaderWithApplicationData(2);
+        TestReadHeaderWithApplicationData(3);
+        TestReadHeaderWithApplicationData(4);
+        TestReadHeaderWithApplicationData(5);
+        TestReadHeaderWithApplicationData(6);
+        TestReadHeaderWithApplicationData(7);
+        TestReadHeaderWithApplicationData(8);
+        TestReadHeaderWithApplicationData(9);
+        TestReadHeaderWithApplicationData(10);
+        TestReadHeaderWithApplicationData(11);
+        TestReadHeaderWithApplicationData(12);
+        TestReadHeaderWithApplicationData(13);
+        TestReadHeaderWithApplicationData(14);
+        TestReadHeaderWithApplicationData(15);
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public class JpegStreamReaderTest
 
         foreach (var id in ids)
         {
-            ReadHeaderWithJpegLSPresetParameterWithExtendedIdShouldThrowImpl(id);
+            TestReadHeaderWithJpegLSPresetParameterWithExtendedIdShouldThrow(id);
         }
     }
 
@@ -401,13 +401,13 @@ public class JpegStreamReaderTest
     [Fact]
     public void ReadSpiffHeader()
     {
-        ReadSpiffHeaderImpl(0);
+        TestReadSpiffHeader(0);
     }
 
     [Fact]
     public void ReadSpiffHeaderLowVersionNewer()
     {
-        ReadSpiffHeaderImpl(1);
+        TestReadSpiffHeader(1);
     }
 
     [Fact]
@@ -758,7 +758,7 @@ public class JpegStreamReaderTest
         Assert.Equal(ErrorCode.InvalidParameterColorTransformation, exception.GetErrorCode());
     }
 
-    private static void ReadSpiffHeaderImpl(byte lowVersion)
+    private static void TestReadSpiffHeader(byte lowVersion)
     {
         var buffer = Util.CreateTestSpiffHeader(2, lowVersion);
         var reader = new JpegStreamReader { Source = buffer };
@@ -779,7 +779,7 @@ public class JpegStreamReaderTest
         Assert.Equal(1024, spiffHeader.HorizontalResolution);
     }
 
-    private static void ReadHeaderWithApplicationDataImpl(byte dataNumber)
+    private static void TestReadHeaderWithApplicationData(byte dataNumber)
     {
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
@@ -811,17 +811,17 @@ public class JpegStreamReaderTest
         Assert.Equal(ErrorCode.InvalidParameterInterleaveMode, exception.GetErrorCode());
     }
 
-    private static void ReadHeaderWithJpegLSPresetParameterWithExtendedIdShouldThrowImpl(int id)
+    private static void TestReadHeaderWithJpegLSPresetParameterWithExtendedIdShouldThrow(int id)
     {
         var buffer = new byte[]
             {0xFF, 0xD8, 0xFF,
             0xF8, // LSE: Marks the start of a JPEG-LS preset parameters segment.
             0x00, 0x03, (byte)id
         };
-
         var reader = new JpegStreamReader { Source = buffer };
 
         var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.JpegLSPresetExtendedParameterTypeNotSupported, exception.GetErrorCode());
     }
