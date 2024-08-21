@@ -127,6 +127,11 @@ internal struct JpegStreamReader
         return validatedCodingParameters;
     }
 
+    internal readonly int GetNearLossless(int componentIndex)
+    {
+        return _scanInfos[componentIndex].NearLossless;
+    }
+
     internal CodingParameters GetCodingParameters()
     {
         return new CodingParameters
@@ -646,13 +651,15 @@ internal struct JpegStreamReader
         if (componentCountInScan != 1 && componentCountInScan != FrameInfo.ComponentCount)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
 
+        Span<byte> componentIds = stackalloc byte[componentCountInScan];
+        Span<byte> mappingTableIds = stackalloc byte[componentCountInScan];
+
         CheckSegmentSize(4 + (2 * componentCountInScan));
 
-        for (int i = 0; i != componentCountInScan; i++)
+        for (int i = 0; i != componentCountInScan; ++i)
         {
-            byte componentId = ReadByte();
-            byte mappingTableId = ReadByte();
-            StoreMappingTableId(componentId, mappingTableId);
+            componentIds[i] = ReadByte();
+            mappingTableIds[i] = ReadByte();
         }
 
         _nearLossless = ReadByte(); // Read NEAR parameter
@@ -661,6 +668,11 @@ internal struct JpegStreamReader
 
         InterleaveMode = (InterleaveMode)ReadByte(); // Read ILV parameter
         CheckInterleaveMode(InterleaveMode);
+
+        for (int i = 0; i != componentCountInScan; ++i)
+        {
+            StoreScanInfo(componentIds[i], mappingTableIds[i], (byte)_nearLossless, InterleaveMode);
+        }
 
         if ((ReadByte() & 0xFU) != 0) // Read Ah (no meaning) and Al (point transform).
             ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
@@ -812,16 +824,17 @@ internal struct JpegStreamReader
         _height = value;
     }
 
-    private readonly void StoreMappingTableId(byte componentId, byte tableId)
+    private readonly void StoreScanInfo(byte componentId, byte tableId, int nearLossless, InterleaveMode interleaveMode)
     {
-        if (tableId == 0)
-            return; // default is already 0, no need to search and update.
+        // Ignore when info is default, prevent search and ID mismatch issues.
+        if (tableId == 0 && nearLossless == 0 && interleaveMode == InterleaveMode.None)
+            return;
 
         int index = _scanInfos.FindIndex(scanInfo => scanInfo.ComponentId == componentId);
         if (index == -1)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.UnknownComponentId);
 
-        _scanInfos[index] = new ScanInfo(componentId, tableId);
+        _scanInfos[index] = new ScanInfo(componentId, tableId, nearLossless, InterleaveMode);
     }
 
     private readonly void CheckInterleaveMode(InterleaveMode mode)
@@ -871,13 +884,17 @@ internal struct JpegStreamReader
 
     private readonly struct ScanInfo
     {
+        internal readonly int NearLossless;
+        internal readonly InterleaveMode InterleaveMode;
         internal readonly byte ComponentId;
         internal readonly byte MappingTableId;
 
-        internal ScanInfo(byte componentId, byte mappingTableId = 0)
+        internal ScanInfo(byte componentId, byte mappingTableId = 0, int nearLossless = 0, InterleaveMode interleaveMode = InterleaveMode.None)
         {
             ComponentId = componentId;
             MappingTableId = mappingTableId;
+            NearLossless = nearLossless;
+            InterleaveMode = interleaveMode;
         }
     }
 

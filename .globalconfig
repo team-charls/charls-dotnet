@@ -68,7 +68,3 @@ dotnet_diagnostic.IDE0046.severity = none
 # IDE0010: Add missing swtich cases
 # Rational: Conflicts with code coverage.
 dotnet_diagnostic.IDE0010.severity = none
-
-# IDE0060: Remove unused parameter
-# Rational: Enable when implementation is complete
-dotnet_diagnostic.IDE0060.severity = none

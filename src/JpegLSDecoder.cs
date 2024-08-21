@@ -190,6 +190,7 @@ public sealed class JpegLSDecoder
     public int GetNearLossless(int componentIndex = 0)
     {
         CheckHeaderRead();
+        ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount - 1, componentIndex);
         return _reader.GetCodingParameters().NearLossless;
     }
 

@@ -96,7 +96,7 @@ public class JpegStreamReaderTest
         JpegLSPresetCodingParameters presets = new(1, 2, 3, 4, 5);
         writer.WriteJpegLSPresetParametersSegment(presets);
         writer.WriteStartOfFrameSegment(1, 1, 2, 1);
-        writer.WriteStartOfScanSegment(1, 1, 0, InterleaveMode.None);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
