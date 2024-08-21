@@ -217,7 +217,7 @@ public class EncodeTest
             referenceFile.ImageData, expectedSize, interleaveMode, colorTransformation);
     }
 
-    private static void Encode(FrameInfo frameInfo, ReadOnlyMemory<byte> source, int expectedSize, InterleaveMode interleaveMode,
+    private static void Encode(FrameInfo frameInfo, ReadOnlySpan<byte> source, int expectedSize, InterleaveMode interleaveMode,
         ColorTransformation colorTransformation = ColorTransformation.None)
     {
         JpegLSEncoder encoder = new() { FrameInfo = frameInfo, InterleaveMode = interleaveMode, ColorTransformation = colorTransformation };
@@ -230,6 +230,6 @@ public class EncodeTest
         Assert.Equal(expectedSize, encoder.BytesWritten);
 
         encodedData = encodedData[..encoder.BytesWritten];
-        Util.TestByDecoding(encodedData, frameInfo, source.Span, interleaveMode, colorTransformation);
+        Util.TestByDecoding(encodedData, frameInfo, source, interleaveMode, colorTransformation);
     }
 }
