@@ -58,9 +58,9 @@ internal sealed class GolombCodeTable
         return table;
     }
 
-    private static Tuple<int, int> CreateEncodedValue(int k, int mappedError)
+    private static ValueTuple<int, int> CreateEncodedValue(int k, int mappedError)
     {
         int highBits = mappedError >> k;
-        return new Tuple<int, int>(highBits + k + 1, (1 << k) | (mappedError & ((1 << k) - 1)));
+        return new ValueTuple<int, int>(highBits + k + 1, (1 << k) | (mappedError & ((1 << k) - 1)));
     }
 }

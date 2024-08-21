@@ -132,32 +132,38 @@ public sealed record JpegLSPresetCodingParameters
         Debug.Assert(maximumSampleValue <= ushort.MaxValue);
         Debug.Assert(nearLossless >= 0 && nearLossless <= Algorithm.ComputeMaximumNearLossless(maximumSampleValue));
 
+        // Default threshold values for JPEG-LS statistical modeling as defined in ISO/IEC 14495-1, table C.3
+        // for the case MAXVAL = 255 and NEAR = 0.
+        const int DefaultThreshold1 = 3;  // BASIC_T1
+        const int DefaultThreshold2 = 7;  // BASIC_T2
+        const int DefaultThreshold3 = 21; // BASIC_T3
+
         if (maximumSampleValue >= 128)
         {
             int factor = (Math.Min(maximumSampleValue, 4095) + 128) / 256;
             int threshold1 =
-                Clamp((factor * (Constants.DefaultThreshold1 - 2)) + 2 + (3 * nearLossless), nearLossless + 1, maximumSampleValue);
+                Clamp((factor * (DefaultThreshold1 - 2)) + 2 + (3 * nearLossless), nearLossless + 1, maximumSampleValue);
             int threshold2 =
-                Clamp((factor * (Constants.DefaultThreshold2 - 3)) + 3 + (5 * nearLossless), threshold1, maximumSampleValue);
+                Clamp((factor * (DefaultThreshold2 - 3)) + 3 + (5 * nearLossless), threshold1, maximumSampleValue);
 
             return new JpegLSPresetCodingParameters(
                 maximumSampleValue, threshold1, threshold2,
-                Clamp((factor * (Constants.DefaultThreshold3 - 4)) + 4 + (7 * nearLossless), threshold2, maximumSampleValue),
+                Clamp((factor * (DefaultThreshold3 - 4)) + 4 + (7 * nearLossless), threshold2, maximumSampleValue),
                 Constants.DefaultResetThreshold);
         }
         else
         {
             int factor = 256 / (maximumSampleValue + 1);
             int threshold1 =
-                Clamp(Math.Max(2, (Constants.DefaultThreshold1 / factor) + (3 * nearLossless)), nearLossless + 1,
+                Clamp(Math.Max(2, (DefaultThreshold1 / factor) + (3 * nearLossless)), nearLossless + 1,
                     maximumSampleValue);
             int threshold2 =
-                Clamp(Math.Max(3, (Constants.DefaultThreshold2 / factor) + (5 * nearLossless)), threshold1,
+                Clamp(Math.Max(3, (DefaultThreshold2 / factor) + (5 * nearLossless)), threshold1,
                     maximumSampleValue);
 
             return new JpegLSPresetCodingParameters(
                 maximumSampleValue, threshold1, threshold2,
-                Clamp(Math.Max(4, (Constants.DefaultThreshold3 / factor) + (7 * nearLossless)), threshold2, maximumSampleValue),
+                Clamp(Math.Max(4, (DefaultThreshold3 / factor) + (7 * nearLossless)), threshold2, maximumSampleValue),
                 Constants.DefaultResetThreshold);
         }
     }
@@ -167,5 +173,4 @@ public sealed record JpegLSPresetCodingParameters
     {
         return i > maximumSampleValue || i < j ? j : i;
     }
-
 }
