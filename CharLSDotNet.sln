@@ -23,7 +23,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CharLS.Managed.Test", "test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CharLS.Managed.Benchmark", "benchmark\CharLS.Managed.Benchmark.csproj", "{43E730B3-BCBC-40A8-8F32-72FC278300D5}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{A9E95F06-F2ED-46F9-8AE7-9EBE15768205}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "samples", "{A9E95F06-F2ED-46F9-8AE7-9EBE15768205}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Convert", "samples\Convert\Convert.csproj", "{601E8408-2608-403C-B1E6-E78244506CAB}"
 EndProject
