@@ -1439,21 +1439,10 @@ internal struct ScanDecoder
         return _copyFromLineBuffer(source, destination, pixelCount, pixelStride);
     }
 
-    private readonly int CopyLineBufferToDestinationInterleaveLine(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
-    {
-        return _copyFromLineBuffer(source, destination, pixelCount, pixelStride);
-    }
-
     private readonly int CopyLineBufferToDestination(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
         return _copyFromLineBuffer(sourceInBytes, destination, pixelCount * 2, pixelStride);
-    }
-
-    private readonly int CopyLineBufferToDestinationInterleaveLine(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
-    {
-        Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
-        return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 
     private readonly int CopyLineBufferToDestination(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
@@ -1477,6 +1466,17 @@ internal struct ScanDecoder
     private readonly int CopyLineBufferToDestination(Span<Quad<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(source);
+        return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
+    }
+
+    private readonly int CopyLineBufferToDestinationInterleaveLine(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
+    {
+        return _copyFromLineBuffer(source, destination, pixelCount, pixelStride);
+    }
+
+    private readonly int CopyLineBufferToDestinationInterleaveLine(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
+    {
+        Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
         return _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
     }
 

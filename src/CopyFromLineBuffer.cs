@@ -36,7 +36,6 @@ internal class CopyFromLineBuffer
                                 return CopyLine8Bit3ComponentsHP1;
                             case ColorTransformation.HP2:
                                 return CopyLine8Bit3ComponentsHP2;
-                            case ColorTransformation.HP3:
                             default:
                                 Debug.Assert(colorTransformation == ColorTransformation.HP3);
                                 return CopyLine8Bit3ComponentsHP3;
@@ -47,12 +46,10 @@ internal class CopyFromLineBuffer
                         return CopyToLine8Bit4Components;
                 }
 
-            case InterleaveMode.Sample:
             default:
                 Debug.Assert(interleaveMode == InterleaveMode.Sample);
                 switch (colorTransformation)
                 {
-                    case ColorTransformation.None:
                     default:
                         Debug.Assert(colorTransformation == ColorTransformation.None);
                         switch (componentCount)
@@ -87,7 +84,6 @@ internal class CopyFromLineBuffer
                     case 3:
                         switch (colorTransformation)
                         {
-                            case ColorTransformation.None:
                             default:
                                 Debug.Assert(colorTransformation == ColorTransformation.None);
                                 return CopyLine16Bit3Components;
@@ -104,7 +100,6 @@ internal class CopyFromLineBuffer
                         return CopyLine16Bit4Components;
                 }
 
-            case InterleaveMode.Sample:
             default:
                 Debug.Assert(interleaveMode == InterleaveMode.Sample);
                 switch (colorTransformation)

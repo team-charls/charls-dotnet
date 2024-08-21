@@ -14,6 +14,9 @@ public class JpegLSEncoderTest
     {
         JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) }; // minimum.
         encoder.FrameInfo = new FrameInfo(int.MaxValue, int.MaxValue, 16, 255); // maximum.
+
+        Assert.Equal(int.MaxValue, encoder.FrameInfo.Width);
+        Assert.Equal(int.MaxValue, encoder.FrameInfo.Height);
     }
 
     [Fact]
@@ -68,7 +71,10 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new() { InterleaveMode = InterleaveMode.None };
 
         encoder.InterleaveMode = InterleaveMode.Line;
+        Assert.Equal(InterleaveMode.Line, encoder.InterleaveMode);
+
         encoder.InterleaveMode = InterleaveMode.Sample;
+        Assert.Equal(InterleaveMode.Sample, encoder.InterleaveMode);
     }
 
     [Fact]
@@ -106,7 +112,10 @@ public class JpegLSEncoderTest
     public void TestNearLossless()
     {
         JpegLSEncoder encoder = new() { NearLossless = 0 }; // set lowest value.
+        Assert.Equal(0, encoder.NearLossless);
+
         encoder.NearLossless = 255; // set highest value.
+        Assert.Equal(255, encoder.NearLossless);
     }
 
     [Fact]
@@ -210,6 +219,7 @@ public class JpegLSEncoderTest
 
         var destination = new byte[20];
         encoder.Destination = destination;
+        Assert.Equal(20, encoder.Destination.Length);
     }
 
     [Fact]

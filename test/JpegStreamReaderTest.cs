@@ -34,7 +34,9 @@ public class JpegStreamReaderTest
 
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
-        reader.ReadHeader(false);  // if it doesn't throw test is passed.
+        reader.ReadHeader(false);
+
+        Assert.Equal(28, reader.Position); // should be able to read extra 0xFF.
     }
 
     [Fact]
@@ -68,6 +70,8 @@ public class JpegStreamReaderTest
         TestReadHeaderWithApplicationData(13);
         TestReadHeaderWithApplicationData(14);
         TestReadHeaderWithApplicationData(15);
+
+        Assert.True(true); // helps with static analyzers that expect at least 1 assert.
     }
 
     [Fact]
@@ -186,9 +190,10 @@ public class JpegStreamReaderTest
     {
         byte[] buffer =
         [
-            0xFF, 0xD8, 0xFF,
-            0xF7, // SOF_55: Marks the start of JPEG-LS extended scan.
-            0x00, 0x07
+            0xFF, 0xD8,
+            0xFF, 0xF7, // SOF_55: Marks the start of JPEG-LS extended scan.
+            0x00, 0x06,
+            2, 2, 2, 2, 2, 1
         ];
 
         var reader = new JpegStreamReader { Source = buffer };
@@ -203,9 +208,10 @@ public class JpegStreamReaderTest
     {
         byte[] buffer =
         [
-            0xFF, 0xD8, 0xFF,
-            0xF7, // SOF_55: Marks the start of JPEG-LS extended scan.
-            0x00, 0x07
+            0xFF, 0xD8,
+            0xFF, 0xF7, // SOF_55: Marks the start of JPEG-LS extended scan.
+            0x00, 0x08,
+            2, 2, 2, 2, 2, 1
         ];
 
         var reader = new JpegStreamReader { Source = buffer };
@@ -663,13 +669,13 @@ public class JpegStreamReaderTest
         var reader = new JpegStreamReader { Source = source };
         reader.ReadHeader(false);
 
-        Assert.Equal( 1, reader.MappingTableCount);
+        Assert.Equal(1, reader.MappingTableCount);
         Assert.Equal(0, reader.FindMappingTableIndex(1));
 
         var info = reader.GetMappingTableInfo(0);
-        Assert.Equal( 1, info.TableId);
-        Assert.Equal( 1, info.EntrySize);
-        Assert.Equal( 100000, info.DataSize);
+        Assert.Equal(1, info.TableId);
+        Assert.Equal(1, info.EntrySize);
+        Assert.Equal(100000, info.DataSize);
 
         var tableData = reader.GetMappingTableData(0).Span;
         Assert.Equal(7, tableData[0]);

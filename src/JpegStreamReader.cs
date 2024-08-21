@@ -779,7 +779,7 @@ internal struct JpegStreamReader
 
     private readonly void AddComponent(byte componentId)
     {
-        if (_scanInfos.Any(scan => scan.ComponentId == componentId))
+        if (_scanInfos.Exists(scan => scan.ComponentId == componentId))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.DuplicateComponentIdInStartOfFrameSegment);
 
         _scanInfos.Add(new ScanInfo(componentId));

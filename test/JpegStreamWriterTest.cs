@@ -431,7 +431,7 @@ public class JpegStreamWriterTest
         writer.WriteColorTransformSegment(transformation);
         Assert.Equal(buffer.Length, writer.BytesWritten);
 
-        // Verify mrfx identifier string.
+        // Verify HP color transform identifier string.
         Assert.Equal((byte)'m', buffer[4]);
         Assert.Equal((byte)'r', buffer[5]);
         Assert.Equal((byte)'f', buffer[6]);
