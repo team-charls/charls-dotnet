@@ -14,22 +14,22 @@ public enum SpiffProfileId
     None = 0,
 
     /// <summary>
-    /// Continuous-tone base profile (JPEG)
+    /// Continuous-tone base profile (JPEG).
     /// </summary>
     ContinuousToneBase = 1,
 
     /// <summary>
-    /// Continuous-tone progressive profile
+    /// Continuous-tone progressive profile.
     /// </summary>
     ContinuousToneProgressive = 2,
 
     /// <summary>
-    /// Bi-level facsimile profile (MH, MR, MMR, JBIG)
+    /// Bi-level facsimile profile (MH, MR, MMR, JBIG).
     /// </summary>
     BiLevelFacsimile = 3,
 
     /// <summary>
-    /// Continuous-tone facsimile profile (JPEG)
+    /// Continuous-tone facsimile profile (JPEG).
     /// </summary>
     ContinuousToneFacsimile = 4
 }

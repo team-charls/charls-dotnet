@@ -10,7 +10,6 @@ namespace CharLS.Managed;
 // 0xF7 - 0xF8 are defined in ISO/IEC 14495-1 | ITU T.87: JPEG LS baseline
 // 0xF9         is defined in ISO/IEC 14495-2 | ITU T.870: JPEG LS extensions
 // 0x4F - 0x6F, 0x90 - 0x93 are defined in ISO/IEC 15444-1: JPEG 2000
-
 internal enum JpegMarkerCode
 {
     // The following markers are defined in ISO/IEC 10918-1 | ITU T.81 (general JPEG standard).
@@ -39,7 +38,7 @@ internal enum JpegMarkerCode
     /// <summary>APP2: Application data 2: used for ICC profile.</summary>
     ApplicationData2 = 0xE2,
 
-    /// <summary>APP3: Application data 3: used for meta info</summary>
+    /// <summary>APP3: Application data 3: used for meta info.</summary>
     ApplicationData3 = 0xE3,
 
     /// <summary>APP4: Application data 4.</summary>
@@ -69,10 +68,10 @@ internal enum JpegMarkerCode
     /// <summary>APP12: Application data 12: used for Picture info.</summary>
     ApplicationData12 = 0xEC,
 
-    /// <summary>APP13: Application data 13: used by PhotoShop IRB</summary>
+    /// <summary>APP13: Application data 13: used by PhotoShop IRB.</summary>
     ApplicationData13 = 0xED,
 
-    /// <summary>APP14: Application data 14: used by Adobe</summary>
+    /// <summary>APP14: Application data 14: used by Adobe.</summary>
     ApplicationData14 = 0xEE,
 
     /// <summary>APP15: Application data 15.</summary>

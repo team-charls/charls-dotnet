@@ -9,9 +9,25 @@ is_global = true
 # Default severity for analyzer diagnostics
 dotnet_analyzer_diagnostic.severity = error
 
-# SA1000: The keyword 'new' should be followed by a space.
-# Rational: false warning, not updated for C# 9.0
-dotnet_diagnostic.SA1000.severity = none
+# SA1009 (StyleCop): Closing parenthesis should not be preceded by a space
+# Rational: conflicts with auto format.
+dotnet_diagnostic.SA1009.severity = none
+
+# SA1101 (StyleCop): Prefix local calls with this
+# Rational: follow the style of the .NET core libraries.
+dotnet_diagnostic.SA1101.severity = none
+
+# SA1204 (StyleCop): Static members should appear before non-static members
+# Rational: static methods are often helpers that are more logical to put at the end.
+dotnet_diagnostic.SA1204.severity = none
+
+# SA1309 (StyleCop): Field '' should not begin with an underscore
+# Rational: follow the style of the .NET core libraries.
+dotnet_diagnostic.SA1309.severity = none
+
+# SA1405 (StyleCop): Debug.Assert should provide message text
+# Rational: text doesn't provide additional usefull info. Debug build are only for internal usage.
+dotnet_diagnostic.SA1405.severity = none
 
 # SA1413: Use trailing comma in multi-line initializers
 # Rational: by style guide don't use trailing comma when not needed.
@@ -21,21 +37,21 @@ dotnet_diagnostic.SA1413.severity = none
 # Rational: no braces are allowed for if + throw (no aut checking possible)
 dotnet_diagnostic.SA1503.severity = none
 
-# SA1516 Elements should be separated by blank line
-# Rational: Cannot handle top level C# 9.0 apps.
-dotnet_diagnostic.SA1516.severity = none
+# SA1623 (StyleCop): The property's documentation summary text should begin with: 'Gets'
+# Rational: fails with properties that use init
+dotnet_diagnostic.SA1623.severity = none
 
-# CA1303: literal string used instead of string from resource
-# Rational: Only English is used, no support for other languages by design.
-dotnet_diagnostic.CA1303.severity = none
+# SA1615 (StyleCop): Element return value should be documented
+# Rational: Return values are documented in summary, if not already clear.
+dotnet_diagnostic.SA1615.severity = none
 
 # CA1062: In externally visible method '', validate parameter '' is non-null before usage
 # Rational: non-null is already covered by Nullable
 dotnet_diagnostic.CA1062.severity = none
 
-# CA1812 Program is an internal class that is apparently never instantiated.
-# Rational: False warning (cannot handle C# 9.0 constructs)
-dotnet_diagnostic.CA1812.severity = none
+# CA1303: literal string used instead of string from resource
+# Rational: Only English is used, no support for other languages by design.
+dotnet_diagnostic.CA1303.severity = none
 
 # IDE0055: Fix formatting
 # Rational: Formatting rule is incompatible with StyleCop
@@ -49,34 +65,10 @@ dotnet_diagnostic.IDE0130.severity = none
 # Rational: In many cases the code is more readable without the conditional expression.
 dotnet_diagnostic.IDE0046.severity = none
 
-# CS0649: Field '' is never assigned to, and will always have its default value 0
-# Rational: Enable when implementation is complete
-dotnet_diagnostic.CS0649.severity = none
-
-# CA1822: Member '' does not access instance data and can be marked as static
-# Rational: Enable when implementation is complete
-dotnet_diagnostic.CA1822.severity = none
-
-# IDE0010: Add missing cases
-# Rational: Enable when implementation is complete
+# IDE0010: Add missing swtich cases
+# Rational: Conflicts with code coverage.
 dotnet_diagnostic.IDE0010.severity = none
 
 # IDE0060: Remove unused parameter
 # Rational: Enable when implementation is complete
 dotnet_diagnostic.IDE0060.severity = none
-
-# IDE0044: Make field readonly
-# Rational: Enable when implementation is complete
-dotnet_diagnostic.IDE0044.severity = none
-
-# CS0169: The field '' is never used
-# Rational: Enable when implementation is complete
-dotnet_diagnostic.CS0169.severity = none
-
-# IDE0059: Unnecessary assignment of a value
-# Rational: Enable when implementation is complete
-dotnet_diagnostic.IDE0059.severity = none
-
-# xUnit1004: Test methods should not be skipped
-# Rational: Enable when implementation is complete
-dotnet_diagnostic.xUnit1004.severity = none

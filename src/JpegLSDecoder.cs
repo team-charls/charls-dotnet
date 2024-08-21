@@ -10,37 +10,14 @@ namespace CharLS.Managed;
 /// </summary>
 public sealed class JpegLSDecoder
 {
+    /// <summary>
+    /// Special value to indicate that decoder needs to calculate the required stride.
+    /// </summary>
+    public const int AutoCalculateStride = Constants.AutoCalculateStride;
+
     private JpegStreamReader _reader;
     private ScanDecoder _scanDecoder;
     private State _state = State.Initial;
-
-    private enum State
-    {
-        Initial,
-        SourceSet,
-        SpiffHeaderRead,
-        SpiffHeaderNotFound,
-        HeaderRead,
-        Completed
-    }
-
-    /// <summary>
-    /// Occurs when a comment (COM segment) is read.
-    /// </summary>
-    public event EventHandler<CommentEventArgs>? Comment
-    {
-        add => _reader.Comment += value;
-        remove => _reader.Comment -= value;
-    }
-
-    /// <summary>
-    /// Occurs when an application data (APPn segment) is read.
-    /// </summary>
-    public event EventHandler<ApplicationDataEventArgs> ApplicationData
-    {
-        add => _reader.ApplicationData += value;
-        remove => _reader.ApplicationData -= value;
-    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JpegLSDecoder"/> class.
@@ -65,6 +42,34 @@ public sealed class JpegLSDecoder
         {
             ReadHeader(tryReadSpiffHeader);
         }
+    }
+
+    /// <summary>
+    /// Occurs when a comment (COM segment) is read.
+    /// </summary>
+    public event EventHandler<CommentEventArgs>? Comment
+    {
+        add => _reader.Comment += value;
+        remove => _reader.Comment -= value;
+    }
+
+    /// <summary>
+    /// Occurs when an application data (APPn segment) is read.
+    /// </summary>
+    public event EventHandler<ApplicationDataEventArgs> ApplicationData
+    {
+        add => _reader.ApplicationData += value;
+        remove => _reader.ApplicationData -= value;
+    }
+
+    private enum State
+    {
+        Initial,
+        SourceSet,
+        SpiffHeaderRead,
+        SpiffHeaderNotFound,
+        HeaderRead,
+        Completed
     }
 
     /// <summary>
@@ -115,28 +120,12 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
-    /// Gets the near lossless parameter used to encode the JPEG-LS stream.
-    /// </summary>
-    /// <remarks>
-    /// Value should be obtained after calling <see cref="ReadHeader"/>".
-    /// </remarks>
-    /// <returns>
-    /// The near lossless parameter. A value of 0 means that the image is lossless encoded.
-    /// </returns>
-    /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public int GetNearLossless(int componentIndex = 0)
-    {
-        CheckHeaderRead();
-        return _reader.GetCodingParameters().NearLossless;
-    }
-
-    /// <summary>
     /// Gets the interleave mode that was used to encode the scan(s).
     /// </summary>
     /// <remarks>
     /// Property should be obtained after calling <see cref="ReadHeader"/>".
     /// </remarks>
-    /// <returns>The result of the operation: success or a failure code.</returns>
+    /// <returns>The interleave mode.</returns>
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
     public InterleaveMode InterleaveMode
     {
@@ -172,13 +161,46 @@ public sealed class JpegLSDecoder
     public ColorTransformation ColorTransformation => _reader.ColorTransformation;
 
     /// <summary>
+    /// Returns the count of mapping tables present in the JPEG-LS stream.
+    /// </summary>
+    /// <remarks>
+    /// Property should be called after processing the complete JPEG-LS stream.
+    /// </remarks>
+    /// <value>The number of mapping tables present in the JPEG-LS stream.</value>
+    public int MappingTableCount
+    {
+        get
+        {
+            CheckStateCompleted();
+            return _reader.MappingTableCount;
+        }
+    }
+
+    /// <summary>
+    /// Gets the near lossless parameter used to encode the JPEG-LS stream.
+    /// </summary>
+    /// <remarks>
+    /// Value should be obtained after calling <see cref="ReadHeader"/>".
+    /// </remarks>
+    /// <param name="componentIndex">The index of the component to retrieve the near lossless value for.</param>
+    /// <returns>
+    /// The near lossless parameter. A value of 0 means that the image is lossless encoded.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
+    public int GetNearLossless(int componentIndex = 0)
+    {
+        CheckHeaderRead();
+        return _reader.GetCodingParameters().NearLossless;
+    }
+
+    /// <summary>
     /// Gets the required size of the destination buffer.
     /// </summary>
-    /// <param name="stride">The stride to use; byte count to the next pixel row. Pass 0 for the default.</param>
+    /// <param name="stride">The stride to use; byte count to the next pixel row. Pass 0 (AutoCalculateStride) for the default.</param>
     /// <returns>The size of the destination buffer in bytes.</returns>
     /// <exception cref="OverflowException">When the required destination size doesn't fit in an int.</exception>
     /// <exception cref="InvalidOperationException">Thrown when this method is called before <see cref="ReadHeader(bool)"/>.</exception>
-    public int GetDestinationSize(int stride = 0)
+    public int GetDestinationSize(int stride = AutoCalculateStride)
     {
         CheckHeaderRead();
 
@@ -208,6 +230,7 @@ public sealed class JpegLSDecoder
     /// <remarks>
     /// Function should be called after processing the complete JPEG-LS stream.
     /// </remarks>
+    /// <param name="componentIndex">The index of the component to get the mapping table ID for.</param>
     public int GetMappingTableId(int componentIndex)
     {
         CheckStateCompleted();
@@ -222,6 +245,7 @@ public sealed class JpegLSDecoder
     /// <remarks>
     /// Function should be called after processing the complete JPEG-LS stream.
     /// </remarks>
+    /// <param name="mappingTableId">The mapping table ID to find.</param>
     public int FindMappingTableIndex(int mappingTableId)
     {
         CheckStateCompleted();
@@ -230,27 +254,12 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
-    /// Returns the count of mapping tables present in the JPEG-LS stream.
-    /// </summary>
-    /// <remarks>
-    /// Function should be called after processing the complete JPEG-LS stream.
-    /// </remarks>
-    /// <value>The number of mapping tables present in the JPEG-LS stream.</value>
-    public int MappingTableCount
-    {
-        get
-        {
-            CheckStateCompleted();
-            return _reader.MappingTableCount;
-        }
-    }
-
-    /// <summary>
     /// Returns information about a mapping table.
     /// </summary>
     /// <remarks>
     /// Function should be called after processing the complete JPEG-LS stream.
     /// </remarks>
+    /// <param name="mappingTableIndex">The index of the mapping table to get the info for.</param>
     public MappingTableInfo GetMappingTableInfo(int mappingTableIndex)
     {
         CheckMappingTableIndex(mappingTableIndex);
@@ -263,6 +272,7 @@ public sealed class JpegLSDecoder
     /// <remarks>
     /// Function should be called after processing the complete JPEG-LS stream.
     /// </remarks>
+    /// <param name="mappingTableIndex">The index of the mapping table to get the data for.</param>
     public ReadOnlyMemory<byte> GetMappingTableData(int mappingTableIndex)
     {
         CheckMappingTableIndex(mappingTableIndex);
@@ -295,6 +305,7 @@ public sealed class JpegLSDecoder
     /// Reads the header of the JPEG-LS stream.
     /// After calling this method, the informational properties can be obtained.
     /// </summary>
+    /// <param name="tryReadSpiffHeader">Flag to control if the decoder should try to parse the SPIFF header (default is true).</param>
     /// <exception cref="InvalidDataException">Thrown when the JPEG-LS stream is not valid.</exception>
     public void ReadHeader(bool tryReadSpiffHeader = true)
     {
@@ -338,13 +349,13 @@ public sealed class JpegLSDecoder
     /// <param name="stride">The stride to use, or 0 for the default.</param>
     /// <exception cref="InvalidDataException">Thrown when the JPEG-LS stream is not valid.</exception>
     /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
-    public void Decode(Span<byte> destination, int stride = 0)
+    public void Decode(Span<byte> destination, int stride = AutoCalculateStride)
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.HeaderRead);
 
         // Compute the stride for the uncompressed destination buffer.
         int minimumStride = CalculateMinimumStride();
-        if (stride == Constants.AutoCalculateStride)
+        if (stride == AutoCalculateStride)
         {
             stride = minimumStride;
         }

@@ -39,7 +39,7 @@ public enum SpiffCompressionType
     Jpeg = 5,
 
     /// <summary>
-    /// ISO/IEC 14495-1 or ISO/IEC 14495-2, commonly known as JPEG-LS. (extension defined in ISO/IEC 14495-1)
+    /// ISO/IEC 14495-1 or ISO/IEC 14495-2, commonly known as JPEG-LS (extension defined in ISO/IEC 14495-1).
     /// </summary>
     JpegLS = 6
 }

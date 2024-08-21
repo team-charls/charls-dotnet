@@ -19,8 +19,7 @@ public readonly record struct MappingTableInfo
     public byte EntrySize { get; init; }
 
     /// <summary>
-    /// Size of the table in bytes, range [1, 16711680]
+    /// Size of the table in bytes, range [1, 16711680].
     /// </summary>
     public int DataSize { get; init; }
 }
-

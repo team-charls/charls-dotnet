@@ -108,6 +108,7 @@ public sealed record SpiffHeader
     /// ISO/IEC 10918-3 (SPIFF) and ISO/IEC 14495-1 (JPEG-LS) use different allowed ranges for
     /// bits per sample: (1, 2, 4, 8, 12, 16) vs [2..16]. The JPEG-LS range is used for validation.
     /// </remarks>
+    /// <param name="frameInfo">The frame instance to validate.</param>
     public bool IsValid(FrameInfo frameInfo)
     {
         if (CompressionType != SpiffCompressionType.JpegLS)

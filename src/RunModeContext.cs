@@ -28,6 +28,7 @@ internal struct RunModeContext
             nTest <<= 1;
             Debug.Assert(k <= 32);
         }
+
         return k;
     }
 
@@ -49,7 +50,7 @@ internal struct RunModeContext
     /// <summary>Code segment A.23 – Update of variables for run interruption sample.</summary>
     internal void UpdateVariables(int errorValue, int eMappedErrorValue, byte resetThreshold)
     {
-        if (errorValue< 0)
+        if (errorValue < 0)
         {
             ++_nn;
         }

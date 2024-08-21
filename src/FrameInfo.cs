@@ -14,14 +14,14 @@ public readonly record struct FrameInfo
     private readonly int _componentCount;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FrameInfo"/> record.
+    /// Initializes a new instance of the <see cref="FrameInfo"/> struct.
     /// </summary>
     public FrameInfo()
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FrameInfo"/> record.
+    /// Initializes a new instance of the <see cref="FrameInfo"/> struct.
     /// </summary>
     /// <param name="width">The width.</param>
     /// <param name="height">The height.</param>

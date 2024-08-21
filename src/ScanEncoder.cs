@@ -22,20 +22,7 @@ internal struct ScanEncoder
     private int _stride;
     private CopyToLineBuffer.Method? _copyToLineBuffer;
 
-    private readonly int PixelStride => _scanCodec.FrameInfo.Width + 2;
-    private readonly FrameInfo FrameInfo => _scanCodec.FrameInfo;
-    private readonly CodingParameters CodingParameters => _scanCodec.CodingParameters;
-    private readonly Traits Traits => _scanCodec.Traits;
-
-    private int RunIndex
-    {
-        readonly get => _scanCodec.RunIndex;
-        set => _scanCodec.RunIndex = value;
-    }
-
-
-    internal ScanEncoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters,
-        CodingParameters codingParameters)
+    internal ScanEncoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
         int maximumSampleValue = CalculateMaximumSampleValue(frameInfo.BitsPerSample);
         var traits = new Traits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue);
@@ -46,11 +33,25 @@ internal struct ScanEncoder
         _scanCodec.InitializeParameters(traits.Range);
     }
 
+    private readonly int PixelStride => _scanCodec.FrameInfo.Width + 2;
+
+    private readonly FrameInfo FrameInfo => _scanCodec.FrameInfo;
+
+    private readonly CodingParameters CodingParameters => _scanCodec.CodingParameters;
+
+    private readonly Traits Traits => _scanCodec.Traits;
+
+    private int RunIndex
+    {
+        readonly get => _scanCodec.RunIndex;
+        set => _scanCodec.RunIndex = value;
+    }
+
     internal int EncodeScan(ReadOnlySpan<byte> source, Memory<byte> destination, int stride)
     {
         _stride = stride;
-        _copyToLineBuffer = CopyToLineBuffer.GetMethod(FrameInfo.BitsPerSample, FrameInfo.ComponentCount,
-            CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
+        _copyToLineBuffer = CopyToLineBuffer.GetMethod(
+            FrameInfo.BitsPerSample, FrameInfo.ComponentCount, CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
 
         InitializeDestination(destination);
 
@@ -204,6 +205,7 @@ internal struct ScanEncoder
                         EncodeLines8Bit4ComponentsInterleaveModeSample(source);
                         break;
                 }
+
                 break;
         }
     }
@@ -230,6 +232,7 @@ internal struct ScanEncoder
                         EncodeLines16Bit4ComponentsInterleaveModeSample(source);
                         break;
                 }
+
                 break;
         }
     }
@@ -606,16 +609,16 @@ internal struct ScanEncoder
             rd = previousLine[index + 1];
 
             int qs = ComputeContextId(QuantizeGradient(rd - rb), QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
-            if (qs != 0)
-            {
-                currentLine[index] = (byte)EncodeRegular(qs, currentLine[index], ComputePredictedValue(ra, rb, rc));
-                ++index;
-            }
-            else
+            if (qs == 0)
             {
                 index += EncodeRunMode(index, previousLine, currentLine);
                 rb = previousLine[index - 1];
                 rd = previousLine[index];
+            }
+            else
+            {
+                currentLine[index] = (byte)EncodeRegular(qs, currentLine[index], ComputePredictedValue(ra, rb, rc));
+                ++index;
             }
         }
     }
@@ -658,12 +661,12 @@ internal struct ScanEncoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
-                    QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
-                    QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
-                    QuantizeGradient(rc.V3 - ra.V3));
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(
+                QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3), QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
             {
                 index += EncodeRunMode(index, previousLine, currentLine);
@@ -689,12 +692,12 @@ internal struct ScanEncoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
-                QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
-                QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
-                QuantizeGradient(rc.V3 - ra.V3));
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(
+                QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3), QuantizeGradient(rc.V3 - ra.V3));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0)
             {
                 index += EncodeRunMode(index, previousLine, currentLine);
@@ -721,14 +724,14 @@ internal struct ScanEncoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
-                QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
-                QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
-                QuantizeGradient(rc.V3 - ra.V3));
-            int qs4 = ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
-                QuantizeGradient(rc.V4 - ra.V4));
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(
+                QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3), QuantizeGradient(rc.V3 - ra.V3));
+            int qs4 = ComputeContextId(
+                QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4), QuantizeGradient(rc.V4 - ra.V4));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0 && qs4 == 0)
             {
                 index += EncodeRunMode(index, previousLine, currentLine);
@@ -755,14 +758,14 @@ internal struct ScanEncoder
             var rb = previousLine[index];
             var rd = previousLine[index + 1];
 
-            int qs1 = ComputeContextId(QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1),
-                QuantizeGradient(rc.V1 - ra.V1));
-            int qs2 = ComputeContextId(QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2),
-                QuantizeGradient(rc.V2 - ra.V2));
-            int qs3 = ComputeContextId(QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3),
-                QuantizeGradient(rc.V3 - ra.V3));
-            int qs4 = ComputeContextId(QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4),
-                QuantizeGradient(rc.V4 - ra.V4));
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            int qs3 = ComputeContextId(
+                QuantizeGradient(rd.V3 - rb.V3), QuantizeGradient(rb.V3 - rc.V3), QuantizeGradient(rc.V3 - ra.V3));
+            int qs4 = ComputeContextId(
+                QuantizeGradient(rd.V4 - rb.V4), QuantizeGradient(rb.V4 - rc.V4), QuantizeGradient(rc.V4 - ra.V4));
             if (qs1 == 0 && qs2 == 0 && qs3 == 0 && qs4 == 0)
             {
                 index += EncodeRunMode(index, previousLine, currentLine);
@@ -1068,6 +1071,7 @@ internal struct ScanEncoder
                 AppendToBitStream(0, highBits / 2);
                 highBits -= highBits / 2;
             }
+
             AppendToBitStream(1, highBits + 1);
             AppendToBitStream((uint)(mappedError & ((1 << k) - 1)), k);
             return;
@@ -1082,6 +1086,7 @@ internal struct ScanEncoder
         {
             AppendToBitStream(1, limit - Traits.QuantizedBitsPerSample);
         }
+
         AppendToBitStream((uint)((mappedError - 1) & ((1 << Traits.QuantizedBitsPerSample) - 1)), Traits.QuantizedBitsPerSample);
     }
 

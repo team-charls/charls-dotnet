@@ -4,7 +4,7 @@
 namespace CharLS.Managed;
 
 /// <summary>
-/// Encapsulates event data for Comment event
+/// Encapsulates event data for Comment event.
 /// </summary>
 public sealed class CommentEventArgs : EventArgs
 {
@@ -14,7 +14,7 @@ public sealed class CommentEventArgs : EventArgs
     }
 
     /// <summary>
-    /// Returns the data of the comment.
+    /// Gets the data of the comment.
     /// </summary>
     public ReadOnlyMemory<byte> Data { get; }
 }

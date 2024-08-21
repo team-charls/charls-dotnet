@@ -13,6 +13,11 @@ namespace CharLS.Managed;
 /// </summary>
 public sealed class JpegLSEncoder
 {
+    /// <summary>
+    /// Special value to indicate that encoder needs to calculate the required stride.
+    /// </summary>
+    public const int AutoCalculateStride = Constants.AutoCalculateStride;
+
     private JpegStreamWriter _writer;
     private ScanEncoder _scanEncoder;
     private FrameInfo _frameInfo;
@@ -22,26 +27,6 @@ public sealed class JpegLSEncoder
     private EncodingOptions _encodingOptions;
     private JpegLSPresetCodingParameters? _userPresetCodingParameters = new();
     private State _state = State.Initial;
-
-    private enum State
-    {
-        Initial,
-        DestinationSet,
-        SpiffHeader,
-        TablesAndMiscellaneous,
-        Completed
-    }
-
-    /// <summary>
-    /// Encodes the passed image data into encoded JPEG-LS data.
-    /// </summary>
-    public static Memory<byte> Encode(ReadOnlySpan<byte> source, FrameInfo frameInfo,
-        InterleaveMode interleaveMode = InterleaveMode.None, EncodingOptions encodingOptions = EncodingOptions.None)
-    {
-        JpegLSEncoder encoder = new(frameInfo) { InterleaveMode = interleaveMode, EncodingOptions = encodingOptions };
-        encoder.Encode(source);
-        return encoder.Destination[..encoder.BytesWritten];
-    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JpegLSEncoder"/> class.
@@ -61,8 +46,8 @@ public sealed class JpegLSEncoder
     /// <param name="extraBytes">Number of extra destination bytes. Comments and tables are not included in the estimate.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when one of the arguments is invalid.</exception>
     /// <exception cref="OutOfMemoryException">Thrown when memory allocation for the destination buffer fails.</exception>
-    public JpegLSEncoder(int width, int height, int bitsPerSample, int componentCount, bool allocateDestination = true, int extraBytes = 0) :
-        this(new FrameInfo(width, height, bitsPerSample, componentCount), allocateDestination, extraBytes)
+    public JpegLSEncoder(int width, int height, int bitsPerSample, int componentCount, bool allocateDestination = true, int extraBytes = 0)
+        : this(new FrameInfo(width, height, bitsPerSample, componentCount), allocateDestination, extraBytes)
     {
     }
 
@@ -84,6 +69,15 @@ public sealed class JpegLSEncoder
         {
             Destination = new byte[EstimatedDestinationSize + extraBytes];
         }
+    }
+
+    private enum State
+    {
+        Initial,
+        DestinationSet,
+        SpiffHeader,
+        TablesAndMiscellaneous,
+        Completed
     }
 
     /// <summary>
@@ -118,8 +112,8 @@ public sealed class JpegLSEncoder
 
         set
         {
-            ThrowHelper.ThrowIfOutsideRange(Constants.MinimumNearLossless, Constants.MaximumNearLossless, value,
-                ErrorCode.InvalidArgumentNearLossless);
+            ThrowHelper.ThrowIfOutsideRange(
+                Constants.MinimumNearLossless, Constants.MaximumNearLossless, value, ErrorCode.InvalidArgumentNearLossless);
             _nearLossless = value;
         }
     }
@@ -182,7 +176,7 @@ public sealed class JpegLSEncoder
     /// <summary>
     /// Gets or sets the HP color transformation the encoder should use
     /// If not set the encoder will use no color transformation.
-    /// Color transformations are an HP extension and not defined by the JPEG-LS standard and can only be set for 3 component
+    /// Color transformations are an HP extension and not defined by the JPEG-LS standard and can only be set for 3 component.
     /// </summary>
     /// <value>
     /// The color transformation that should be used to encode the image.
@@ -194,8 +188,8 @@ public sealed class JpegLSEncoder
 
         set
         {
-            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(value.IsValid(),
-                ErrorCode.InvalidArgumentColorTransformation);
+            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(
+                value.IsValid(), ErrorCode.InvalidArgumentColorTransformation);
 
             _colorTransformation = value;
         }
@@ -247,7 +241,7 @@ public sealed class JpegLSEncoder
     /// <value>
     /// The memory region with the encoded data.
     /// </value>
-    public ReadOnlyMemory<byte> EncodedData => Destination[..BytesWritten];
+    public Memory<byte> EncodedData => Destination[..BytesWritten];
 
     /// <summary>
     /// Gets the bytes written to the destination buffer.
@@ -261,6 +255,8 @@ public sealed class JpegLSEncoder
     /// Configures the mapping table ID the encoder should reference when encoding a component.
     /// The referenced mapping table can be included in the stream or provided in another JPEG-LS abbreviated format stream.
     /// </summary>
+    /// <param name="componentIndex">The index of the component to set the mapping table ID for.</param>
+    /// <param name="mappingTableId">The table ID the component should reference.</param>
     public void SetMappingTableId(int componentIndex, int mappingTableId)
     {
         ThrowHelper.ThrowIfOutsideRange(Constants.MinimumComponentIndex, Constants.MaximumComponentIndex, componentIndex);
@@ -326,25 +322,6 @@ public sealed class JpegLSEncoder
         WriteEndOfImage();
     }
 
-    private void EncodeScan(ReadOnlySpan<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
-    {
-        _scanEncoder = new ScanEncoder(
-            new FrameInfo(FrameInfo.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
-            codingParameters,
-            new CodingParameters
-            {
-                InterleaveMode = InterleaveMode,
-                NearLossless = NearLossless,
-                RestartInterval = 0,
-                ColorTransformation = ColorTransformation
-            });
-
-        int bytesWritten = _scanEncoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
-
-        // Synchronize the destination encapsulated in the writer (encode_scan works on a local copy)
-        _writer.AdvancePosition(bytesWritten);
-    }
-
     /// <summary>
     /// Writes a SPIFF header to the destination memory buffer.
     /// A SPIFF header is optional, but recommended for standalone JPEG-LS files.
@@ -371,8 +348,11 @@ public sealed class JpegLSEncoder
     /// <param name="resolutionUnit">The resolution units of the next 2 parameters.</param>
     /// <param name="verticalResolution">The vertical resolution.</param>
     /// <param name="horizontalResolution">The horizontal resolution.</param>
-    public void WriteStandardSpiffHeader(SpiffColorSpace colorSpace, SpiffResolutionUnit resolutionUnit = SpiffResolutionUnit.AspectRatio,
-        int verticalResolution = 1, int horizontalResolution = 1)
+    public void WriteStandardSpiffHeader(
+        SpiffColorSpace colorSpace,
+        SpiffResolutionUnit resolutionUnit = SpiffResolutionUnit.AspectRatio,
+        int verticalResolution = 1,
+        int horizontalResolution = 1)
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured());
         var spiffHeader = new SpiffHeader
@@ -480,7 +460,7 @@ public sealed class JpegLSEncoder
     /// <remarks>
     /// No validation is performed if the table ID is unique and if the table size matches the required size.
     /// </remarks>
-    /// <param name="tableId">Table ID. Unique identifier of the mapping table in the range [1..255]</param>
+    /// <param name="tableId">Table ID. Unique identifier of the mapping table in the range [1..255].</param>
     /// <param name="entrySize">Size in bytes of a single table entry.</param>
     /// <param name="tableData">Buffer that holds the mapping table.</param>
     public void WriteMappingTable(int tableId, int entrySize, ReadOnlySpan<byte> tableData)
@@ -502,6 +482,45 @@ public sealed class JpegLSEncoder
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.TablesAndMiscellaneous);
         WriteEndOfImage();
+    }
+
+    /// <summary>
+    /// Encodes the passed image data into encoded JPEG-LS data.
+    /// </summary>
+    /// <param name="source">Source pixel data that needs to be encoded.</param>
+    /// <param name="frameInfo">Frame info object that describes the pixel data.</param>
+    /// <param name="interleaveMode">Defines how the the pixel data should be encoded.</param>
+    /// <param name="encodingOptions">Defines several options how to encode the pixel data.</param>
+    /// <param name="stride">The stride to use; byte count to the next pixel row. Pass 0 (AutoCalculateStride) for the default.</param>
+    public static Memory<byte> Encode(
+        ReadOnlySpan<byte> source,
+        FrameInfo frameInfo,
+        InterleaveMode interleaveMode = InterleaveMode.None,
+        EncodingOptions encodingOptions = EncodingOptions.None,
+        int stride = AutoCalculateStride)
+    {
+        JpegLSEncoder encoder = new(frameInfo) { InterleaveMode = interleaveMode, EncodingOptions = encodingOptions };
+        encoder.Encode(source, stride);
+        return encoder.EncodedData;
+    }
+
+    private void EncodeScan(ReadOnlySpan<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
+    {
+        _scanEncoder = new ScanEncoder(
+            new FrameInfo(FrameInfo.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
+            codingParameters,
+            new CodingParameters
+            {
+                InterleaveMode = InterleaveMode,
+                NearLossless = NearLossless,
+                RestartInterval = 0,
+                ColorTransformation = ColorTransformation
+            });
+
+        int bytesWritten = _scanEncoder.EncodeScan(source, _writer.GetRemainingDestination(), stride);
+
+        // Synchronize the destination encapsulated in the writer (encode_scan works on a local copy)
+        _writer.AdvancePosition(bytesWritten);
     }
 
     private void TransitionToTablesAndMiscellaneousState()
@@ -560,7 +579,6 @@ public sealed class JpegLSEncoder
 
     private void WriteJpegLSPresetParametersSegment(int maximumSampleValue, JpegLSPresetCodingParameters presetCodingParameters)
     {
-
         if (!_userPresetCodingParameters!.IsDefault(maximumSampleValue, NearLossless) ||
             (EncodingOptions.HasFlag(EncodingOptions.IncludePCParametersJai) && FrameInfo.BitsPerSample > 12))
         {
@@ -586,7 +604,7 @@ public sealed class JpegLSEncoder
     {
         int minimumStride = CalculateMinimumStride();
 
-        if (stride == Constants.AutoCalculateStride)
+        if (stride == AutoCalculateStride)
         {
             stride = minimumStride;
         }
@@ -624,7 +642,7 @@ public sealed class JpegLSEncoder
     private static ReadOnlySpan<byte> ToUtf8(string text)
     {
         if (string.IsNullOrEmpty(text))
-            return new ReadOnlySpan<byte>();
+            return default;
 
         var utf8Encoded = new byte[Encoding.UTF8.GetMaxByteCount(text.Length) + 1];
         int bytesWritten = Encoding.UTF8.GetBytes(text, 0, text.Length, utf8Encoded, 0);

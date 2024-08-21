@@ -20,7 +20,7 @@ internal struct RegularModeContext
     internal int C { get; private set; }
 
     /// <summary>
-    /// Computes the Golomb coding parameter using the algorithm as defined in ISO 14495-1, code segment A.10
+    /// Computes the Golomb coding parameter using the algorithm as defined in ISO 14495-1, code segment A.10.
     /// </summary>
     internal readonly int ComputeGolombCodingParameter()
     {
@@ -41,13 +41,13 @@ internal struct RegularModeContext
         return k != 0 ? 0 : BitWiseSign((2 * _b) + _n - 1);
     }
 
-    /// <summary>Code segment A.12 – Variables update. ISO 14495-1, page 22</summary>
+    /// <summary>Code segment A.12 – Variables update. ISO 14495-1, page 22.</summary>
     internal void UpdateVariablesAndBias(int errorValue, int nearLossless, int resetThreshold)
     {
         Debug.Assert(_n != 0);
 
         _a += Math.Abs(errorValue);
-        _b += errorValue* ((2 * nearLossless) + 1);
+        _b += errorValue * ((2 * nearLossless) + 1);
 
         const int limit = 65536 * 256;
         if (_a >= limit || Math.Abs(_b) >= limit)
@@ -73,6 +73,7 @@ internal struct RegularModeContext
             {
                 _b = -_n + 1;
             }
+
             if (C > minC)
             {
                 --C;
@@ -85,6 +86,7 @@ internal struct RegularModeContext
             {
                 _b = 0;
             }
+
             if (C < maxC)
             {
                 ++C;

@@ -5,10 +5,9 @@
 // attributes that are applied to this project.
 // Project-level suppression either have no target or are given
 // a specific target and scoped to a namespace, type, member, etc.
-using System.Diagnostics.CodeAnalysis;
-
-// The purpose of this file is to suppress false warnings, this to keep the code clean.
+// False warnings are suppressed here to keep the code clean.
 // Warnings that are suppressed by a design choice are suppressed in the source code.
+using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Design", "CA1027:Mark enums with FlagsAttribute", Justification = "False warnings (triggered by missing values), enum values cannot be combined", Scope = "type", Target = "~T:CharLS.Managed.SpiffColorSpace")]
 [assembly: SuppressMessage("Design", "CA1008:Enums should have zero value", Justification = "Values are external defined by ISO", Scope = "type", Target = "~T:CharLS.Managed.SpiffEntryTag")]

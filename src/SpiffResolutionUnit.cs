@@ -18,7 +18,7 @@ public enum SpiffResolutionUnit
     AspectRatio = 0,
 
     /// <summary>
-    /// Units of dots/samples per inch
+    /// Units of dots/samples per inch.
     /// </summary>
     DotsPerInch = 1,
 

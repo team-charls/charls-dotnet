@@ -9,17 +9,36 @@ namespace CharLS.Managed;
 
 internal struct JpegStreamReader
 {
-    private readonly struct ScanInfo
-    {
-        internal readonly byte ComponentId;
-        internal readonly byte MappingTableId;
+    private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0 - D7)
+    private const int JpegRestartMarkerRange = 8;
+    private const int PcTableIdEntrySizeBytes = 3;
 
-        internal ScanInfo(byte componentId, byte mappingTableId = 0)
-        {
-            ComponentId = componentId;
-            MappingTableId = mappingTableId;
-        }
+    private readonly object _eventSender;
+    private readonly List<ScanInfo> _scanInfos = [];
+    private readonly List<MappingTableEntry> _mappingTables = [];
+    private State _state;
+    private int _nearLossless;
+    private int _segmentDataSize;
+    private int _segmentStartPosition;
+    private int _width;
+    private int _height;
+    private int _bitsPerSample;
+    private int _componentCount;
+
+    public JpegStreamReader()
+    {
+        _eventSender = this;
+        _scanInfos = [];
     }
+
+    internal JpegStreamReader(object? eventSender = null)
+    {
+        _eventSender = eventSender ?? this;
+    }
+
+    public event EventHandler<CommentEventArgs>? Comment;
+
+    public event EventHandler<ApplicationDataEventArgs>? ApplicationData;
 
     private enum State
     {
@@ -31,25 +50,6 @@ internal struct JpegStreamReader
         BitStreamSection,
         AfterEndOfImage
     }
-
-    private const int JpegRestartMarkerBase = 0xD0; // RSTm: Marks the next restart interval (range is D0 - D7)
-    private const int JpegRestartMarkerRange = 8;
-    private const int PcTableIdEntrySizeBytes = 3;
-
-    private State _state;
-    private readonly object _eventSender;
-    private int _nearLossless;
-    private int _segmentDataSize;
-    private int _segmentStartPosition;
-    private int _width;
-    private int _height;
-    private int _bitsPerSample;
-    private int _componentCount;
-    private readonly List<ScanInfo> _scanInfos = [];
-    private readonly List<MappingTableEntry> _mappingTables = [];
-
-    public event EventHandler<CommentEventArgs>? Comment;
-    public event EventHandler<ApplicationDataEventArgs>? ApplicationData;
 
     internal readonly int ComponentCount => _scanInfos.Count;
 
@@ -73,18 +73,20 @@ internal struct JpegStreamReader
 
     internal int RestartInterval { get; private set; }
 
+    internal readonly uint MaximumSampleValue
+    {
+        get
+        {
+            if (JpegLSPresetCodingParameters != null && JpegLSPresetCodingParameters.MaximumSampleValue != 0)
+            {
+                return (uint)JpegLSPresetCodingParameters.MaximumSampleValue;
+            }
+
+            return (uint)CalculateMaximumSampleValue(FrameInfo.BitsPerSample);
+        }
+    }
+
     private readonly int SegmentBytesToRead => _segmentStartPosition + _segmentDataSize - Position;
-
-    public JpegStreamReader()
-    {
-        _eventSender = this;
-        _scanInfos = [];
-    }
-
-    internal JpegStreamReader(object? eventSender = null)
-    {
-        _eventSender = eventSender ?? this;
-    }
 
     internal readonly int GetMappingTableId(int componentIndex)
     {
@@ -140,19 +142,6 @@ internal struct JpegStreamReader
     {
         Debug.Assert(_state == State.BitStreamSection);
         return Source[Position..];
-    }
-
-    internal readonly uint MaximumSampleValue
-    {
-        get
-        {
-            if (JpegLSPresetCodingParameters != null && JpegLSPresetCodingParameters.MaximumSampleValue != 0)
-            {
-                return (uint)JpegLSPresetCodingParameters.MaximumSampleValue;
-            }
-
-            return (uint)CalculateMaximumSampleValue(FrameInfo.BitsPerSample);
-        }
     }
 
     internal void ReadHeader(bool readSpiffHeader)
@@ -225,7 +214,20 @@ internal struct JpegStreamReader
             ReadMarkerSegment(markerCode, false);
 
             Debug.Assert(SegmentBytesToRead == 0); // All segment data should be processed.
-        } while (_state == State.ScanSection);
+        }
+        while (_state == State.ScanSection);
+    }
+
+    internal void ReadEndOfImage()
+    {
+        Debug.Assert(_state == State.BitStreamSection);
+
+        var markerCode = ReadNextMarkerCode();
+
+        if (markerCode != JpegMarkerCode.EndOfImage)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.EndOfImageMarkerNotFound);
+
+        _state = State.AfterEndOfImage;
     }
 
     private byte ReadByte()
@@ -277,7 +279,8 @@ internal struct JpegStreamReader
         do
         {
             value = ReadByte();
-        } while (value == Constants.JpegMarkerStartByte);
+        }
+        while (value == Constants.JpegMarkerStartByte);
 
         return (JpegMarkerCode)value;
     }
@@ -475,9 +478,8 @@ internal struct JpegStreamReader
     {
         try
         {
-            ApplicationData?.Invoke(_eventSender,
-                new ApplicationDataEventArgs(markerCode - JpegMarkerCode.ApplicationData0,
-                    Source.Slice(Position, _segmentDataSize)));
+            ApplicationData?.Invoke(
+                _eventSender, new ApplicationDataEventArgs(markerCode - JpegMarkerCode.ApplicationData0, Source.Slice(Position, _segmentDataSize)));
         }
         catch (Exception e)
         {
@@ -636,7 +638,7 @@ internal struct JpegStreamReader
         };
     }
 
-    internal void ReadStartOfScanSegment()
+    private void ReadStartOfScanSegment()
     {
         CheckMinimalSegmentSize(1);
 
@@ -664,18 +666,6 @@ internal struct JpegStreamReader
             ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
 
         _state = State.BitStreamSection;
-    }
-
-    internal void ReadEndOfImage()
-    {
-        Debug.Assert(_state == State.BitStreamSection);
-
-        var markerCode = ReadNextMarkerCode();
-
-        if (markerCode != JpegMarkerCode.EndOfImage)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.EndOfImageMarkerNotFound);
-
-        _state = State.AfterEndOfImage;
     }
 
     private void ReadApplicationData8Segment(bool readSpiffHeader)
@@ -789,7 +779,7 @@ internal struct JpegStreamReader
     {
         if (_height < 1)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterHeight);
-    
+
         if (_width < 1)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterWidth);
     }
@@ -844,7 +834,7 @@ internal struct JpegStreamReader
     /// ISO/IEC 14495-1, Annex C defines 3 data formats.
     /// Annex C.4 defines the format that only contains mapping tables.
     /// </summary>
-    private readonly bool IsAbbreviatedFormatForTableSpecificationData() 
+    private readonly bool IsAbbreviatedFormatForTableSpecificationData()
     {
         if (MappingTableCount == 0)
             return false;
@@ -879,6 +869,18 @@ internal struct JpegStreamReader
         };
     }
 
+    private readonly struct ScanInfo
+    {
+        internal readonly byte ComponentId;
+        internal readonly byte MappingTableId;
+
+        internal ScanInfo(byte componentId, byte mappingTableId = 0)
+        {
+            ComponentId = componentId;
+            MappingTableId = mappingTableId;
+        }
+    }
+
     private readonly struct MappingTableEntry
     {
         private readonly List<ReadOnlyMemory<byte>> _dataFragments = [];
@@ -889,6 +891,12 @@ internal struct JpegStreamReader
             EntrySize = entrySize;
             _dataFragments.Add(tableData);
         }
+
+        internal byte MappingTableId { get; }
+
+        internal byte EntrySize { get; }
+
+        internal int DataSize => _dataFragments.Sum(fragment => fragment.Length);
 
         internal void AddFragment(ReadOnlyMemory<byte> tableData)
         {
@@ -906,10 +914,6 @@ internal struct JpegStreamReader
             CopyFragmentsIntoBuffer(buffer);
             return buffer;
         }
-
-        internal byte MappingTableId { get; }
-        internal byte EntrySize { get; }
-        internal int DataSize => _dataFragments.Sum(fragment => fragment.Length);
 
         private void CopyFragmentsIntoBuffer(Span<byte> buffer)
         {

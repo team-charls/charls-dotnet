@@ -153,22 +153,22 @@ public enum ErrorCode
     InvalidParameterHeight = 28,
 
     /// <summary>
-    /// This error is returned when the stream contains a bits per sample (sample precision) parameter outside the range [2,16]
+    /// This error is returned when the stream contains a bits per sample (sample precision) parameter outside the range [2,16].
     /// </summary>
     InvalidParameterBitsPerSample = 29,
 
     /// <summary>
-    /// This error is returned when the stream contains a component count parameter outside the range [1,255]
+    /// This error is returned when the stream contains a component count parameter outside the range [1,255].
     /// </summary>
     InvalidParameterComponentCount = 30,
 
     /// <summary>
-    /// This error is returned when the stream contains an interleave mode (ILV) parameter outside the range [0, 2]
+    /// This error is returned when the stream contains an interleave mode (ILV) parameter outside the range [0, 2].
     /// </summary>
     InvalidParameterInterleaveMode = 31,
 
     /// <summary>
-    /// This error is returned when the stream contains a near-lossless (NEAR) parameter outside the range [0, min(255, MAXVAL/2)]
+    /// This error is returned when the stream contains a near-lossless (NEAR) parameter outside the range [0, min(255, MAXVAL/2)].
     /// </summary>
     InvalidParameterNearLossless = 32,
 

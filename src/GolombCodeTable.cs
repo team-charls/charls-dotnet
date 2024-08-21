@@ -17,7 +17,7 @@ internal sealed class GolombCodeTable
 
         for (int i = 0; i < 1U << (ByteBitCount - length); ++i)
         {
-            Debug.Assert(_types[((value) << (ByteBitCount - length)) + i].Length == 0);
+            Debug.Assert(_types[(value << (ByteBitCount - length)) + i].Length == 0);
             _types[(value << (ByteBitCount - length)) + i] = code;
         }
     }
@@ -31,7 +31,7 @@ internal sealed class GolombCodeTable
     {
         GolombCodeTable table = new();
 
-        for (short errorValue = 0;; ++errorValue)
+        for (short errorValue = 0; ; ++errorValue)
         {
             // Q is not used when k != 0
             int mappedErrorValue = MapErrorValue(errorValue);
@@ -58,9 +58,9 @@ internal sealed class GolombCodeTable
         return table;
     }
 
-    private static ValueTuple<int, int> CreateEncodedValue(int k, int mappedError)
+    private static (int CodeLenght, int TableValue) CreateEncodedValue(int k, int mappedError)
     {
         int highBits = mappedError >> k;
-        return new ValueTuple<int, int>(highBits + k + 1, (1 << k) | (mappedError & ((1 << k) - 1)));
+        return (highBits + k + 1, (1 << k) | (mappedError & ((1 << k) - 1)));
     }
 }
