@@ -46,7 +46,7 @@ internal struct ScanEncoder
         _scanCodec.InitializeParameters(traits.Range);
     }
 
-    internal int EncodeScan(ReadOnlyMemory<byte> source, Memory<byte> destination, int stride)
+    internal int EncodeScan(ReadOnlySpan<byte> source, Memory<byte> destination, int stride)
     {
         _stride = stride;
         _copyToLineBuffer = CopyToLineBuffer.GetMethod(FrameInfo.BitsPerSample, FrameInfo.ComponentCount,
@@ -182,7 +182,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines8Bit(ReadOnlyMemory<byte> source)
+    private void EncodeLines8Bit(ReadOnlySpan<byte> source)
     {
         switch (CodingParameters.InterleaveMode)
         {
@@ -208,7 +208,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines16Bit(ReadOnlyMemory<byte> source)
+    private void EncodeLines16Bit(ReadOnlySpan<byte> source)
     {
         switch (CodingParameters.InterleaveMode)
         {
@@ -234,7 +234,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines8BitInterleaveModeNone(ReadOnlyMemory<byte> source)
+    private void EncodeLines8BitInterleaveModeNone(ReadOnlySpan<byte> source)
     {
         int pixelStride = PixelStride;
         var rentedArray = RentLineBuffer<byte>(pixelStride * 2);
@@ -255,7 +255,7 @@ internal struct ScanEncoder
                     currentLine = temp;
                 }
 
-                CopySourceToLineBufferInterleaveModeNone(source.Span, currentLine[1..], FrameInfo.Width);
+                CopySourceToLineBufferInterleaveModeNone(source, currentLine[1..], FrameInfo.Width);
 
                 // Initialize edge pixels used for prediction
                 previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
@@ -276,7 +276,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines16BitInterleaveModeNone(ReadOnlyMemory<byte> source)
+    private void EncodeLines16BitInterleaveModeNone(ReadOnlySpan<byte> source)
     {
         int pixelStride = PixelStride;
         var rentedArray = RentLineBuffer<ushort>(pixelStride * 2);
@@ -297,7 +297,7 @@ internal struct ScanEncoder
                     currentLine = temp;
                 }
 
-                CopySourceToLineBufferInterleaveModeNone(source.Span, currentLine[1..], FrameInfo.Width);
+                CopySourceToLineBufferInterleaveModeNone(source, currentLine[1..], FrameInfo.Width);
 
                 // Initialize edge pixels used for prediction
                 previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
@@ -318,7 +318,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines8BitInterleaveModeLine(ReadOnlyMemory<byte> source)
+    private void EncodeLines8BitInterleaveModeLine(ReadOnlySpan<byte> source)
     {
         int pixelStride = PixelStride;
         int componentCount = FrameInfo.ComponentCount;
@@ -341,7 +341,7 @@ internal struct ScanEncoder
                     currentLine = temp;
                 }
 
-                CopySourceToLineBufferInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width);
+                CopySourceToLineBufferInterleaveModeLine(source, currentLine[1..], FrameInfo.Width);
 
                 for (int component = 0; component < componentCount; ++component)
                 {
@@ -371,7 +371,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines16BitInterleaveModeLine(ReadOnlyMemory<byte> source)
+    private void EncodeLines16BitInterleaveModeLine(ReadOnlySpan<byte> source)
     {
         int pixelStride = PixelStride;
         int componentCount = FrameInfo.ComponentCount;
@@ -394,7 +394,7 @@ internal struct ScanEncoder
                     currentLine = temp;
                 }
 
-                CopySourceToLineBufferInterleaveModeLine(source.Span, currentLine[1..], FrameInfo.Width);
+                CopySourceToLineBufferInterleaveModeLine(source, currentLine[1..], FrameInfo.Width);
 
                 for (int component = 0; component < componentCount; ++component)
                 {
@@ -424,7 +424,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines8Bit3ComponentsInterleaveModeSample(ReadOnlyMemory<byte> source)
+    private void EncodeLines8Bit3ComponentsInterleaveModeSample(ReadOnlySpan<byte> source)
     {
         int pixelStride = PixelStride;
         var rentedArray = RentLineBuffer<Triplet<byte>>(pixelStride * 2);
@@ -445,7 +445,7 @@ internal struct ScanEncoder
                     currentLine = temp;
                 }
 
-                CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+                CopySourceToLineBufferInterleaveModeSample(source, currentLine[1..], FrameInfo.Width);
 
                 // Initialize edge pixels used for prediction
                 previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
@@ -466,7 +466,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines16Bit3ComponentsInterleaveModeSample(ReadOnlyMemory<byte> source)
+    private void EncodeLines16Bit3ComponentsInterleaveModeSample(ReadOnlySpan<byte> source)
     {
         int pixelStride = PixelStride;
         var rentedArray = RentLineBuffer<Triplet<ushort>>(pixelStride * 2);
@@ -487,7 +487,7 @@ internal struct ScanEncoder
                     currentLine = temp;
                 }
 
-                CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+                CopySourceToLineBufferInterleaveModeSample(source, currentLine[1..], FrameInfo.Width);
 
                 // Initialize edge pixels used for prediction
                 previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
@@ -508,7 +508,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines8Bit4ComponentsInterleaveModeSample(ReadOnlyMemory<byte> source)
+    private void EncodeLines8Bit4ComponentsInterleaveModeSample(ReadOnlySpan<byte> source)
     {
         int pixelStride = PixelStride;
         var rentedArray = RentLineBuffer<Quad<byte>>(pixelStride * 2);
@@ -529,7 +529,7 @@ internal struct ScanEncoder
                     currentLine = temp;
                 }
 
-                CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+                CopySourceToLineBufferInterleaveModeSample(source, currentLine[1..], FrameInfo.Width);
 
                 // Initialize edge pixels used for prediction
                 previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
@@ -550,7 +550,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines16Bit4ComponentsInterleaveModeSample(ReadOnlyMemory<byte> source)
+    private void EncodeLines16Bit4ComponentsInterleaveModeSample(ReadOnlySpan<byte> source)
     {
         int pixelStride = PixelStride;
         var rentedArray = RentLineBuffer<Quad<ushort>>(pixelStride * 2);
@@ -571,7 +571,7 @@ internal struct ScanEncoder
                     currentLine = temp;
                 }
 
-                CopySourceToLineBufferInterleaveModeSample(source.Span, currentLine[1..], FrameInfo.Width);
+                CopySourceToLineBufferInterleaveModeSample(source, currentLine[1..], FrameInfo.Width);
 
                 // Initialize edge pixels used for prediction
                 previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];

@@ -225,7 +225,7 @@ internal static class Util
         }
     }
 
-    private static bool VerifyEncodedBytes(ReadOnlyMemory<byte> uncompressedSource, ReadOnlyMemory<byte> encodedSource)
+    private static bool VerifyEncodedBytes(ReadOnlySpan<byte> uncompressedSource, ReadOnlyMemory<byte> encodedSource)
     {
         JpegLSDecoder decoder = new(encodedSource);
 

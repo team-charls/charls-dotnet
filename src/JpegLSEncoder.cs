@@ -35,7 +35,7 @@ public sealed class JpegLSEncoder
     /// <summary>
     /// Encodes the passed image data into encoded JPEG-LS data.
     /// </summary>
-    public static Memory<byte> Encode(ReadOnlyMemory<byte> source, FrameInfo frameInfo,
+    public static Memory<byte> Encode(ReadOnlySpan<byte> source, FrameInfo frameInfo,
         InterleaveMode interleaveMode = InterleaveMode.None, EncodingOptions encodingOptions = EncodingOptions.None)
     {
         JpegLSEncoder encoder = new(frameInfo) { InterleaveMode = interleaveMode, EncodingOptions = encodingOptions };
@@ -286,7 +286,7 @@ public sealed class JpegLSEncoder
     /// </summary>
     /// <param name="source">The memory region that is the source input to the encoding process.</param>
     /// <param name="stride">The stride of the image pixel of the source input.</param>
-    public void Encode(ReadOnlyMemory<byte> source, int stride = Constants.AutoCalculateStride)
+    public void Encode(ReadOnlySpan<byte> source, int stride = Constants.AutoCalculateStride)
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured() && _state != State.Initial);
         CheckInterleaveModeAgainstComponentCount();
@@ -326,7 +326,7 @@ public sealed class JpegLSEncoder
         WriteEndOfImage();
     }
 
-    private void EncodeScan(ReadOnlyMemory<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
+    private void EncodeScan(ReadOnlySpan<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
     {
         _scanEncoder = new ScanEncoder(
             new FrameInfo(FrameInfo.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
