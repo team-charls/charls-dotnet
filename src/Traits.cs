@@ -79,9 +79,9 @@ internal class Traits
         return ~(predicted >> (Constants.Int32BitCount - 1)) & MaximumSampleValue;
     }
 
-    internal virtual int ComputeErrorValue(int e)
+    internal virtual int ComputeErrorValue(int errorValue)
     {
-        return ModuloRange(Quantize(e, NearLossless));
+        return ModuloRange(Quantize(errorValue, NearLossless));
     }
 
     internal virtual int ComputeReconstructedSample(int predictedValue, int errorValue)

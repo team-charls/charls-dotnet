@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace CharLS.Managed.Test;
 
-internal sealed class Util
+internal static class Util
 {
     private static string DataFileDirectory
     {

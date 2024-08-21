@@ -14,7 +14,9 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new() { Source = buffer };
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.Source = buffer);
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -23,7 +25,9 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new();
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -32,7 +36,9 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new();
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetDestinationSize());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -41,7 +47,9 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new();
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -51,6 +59,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new() { Source = buffer };
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.JpegMarkerStartByteNotFound, exception.GetErrorCode());
     }
@@ -62,7 +71,9 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new() { Source = buffer };
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.FrameInfo);
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -72,6 +83,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new() { Source = buffer };
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.InterleaveMode);
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
@@ -83,7 +95,9 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new() { Source = buffer };
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetNearLossless());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -93,7 +107,9 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new() { Source = buffer };
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.PresetCodingParameters);
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -189,10 +205,10 @@ public class JpegLSDecoderTest
     public void DecodeWithoutReadingHeaderThrows()
     {
         JpegLSDecoder decoder = new();
-
         byte[] buffer = new byte[1000];
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.Decode(buffer));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
@@ -225,6 +241,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(source, false);
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.TryReadSpiffHeader(out _));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.JpegMarkerStartByteNotFound, exception.GetErrorCode());
     }
@@ -252,6 +269,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(source);
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
@@ -271,6 +289,7 @@ public class JpegLSDecoderTest
         var destination = new byte[decoder.GetDestinationSize()];
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidData, exception.GetErrorCode());
     }
@@ -290,6 +309,7 @@ public class JpegLSDecoderTest
         var destination = new byte[decoder.GetDestinationSize()];
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidData, exception.GetErrorCode());
     }
@@ -309,6 +329,7 @@ public class JpegLSDecoderTest
         var destination = new byte[decoder.GetDestinationSize()];
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.RestartMarkerNotFound, exception.GetErrorCode());
     }
@@ -328,6 +349,7 @@ public class JpegLSDecoderTest
         var destination = new byte[decoder.GetDestinationSize()];
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.RestartMarkerNotFound, exception.GetErrorCode());
     }
@@ -514,6 +536,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(writer.GetBuffer(), false);
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidParameterWidth, exception.GetErrorCode());
     }
@@ -526,10 +549,10 @@ public class JpegLSDecoderTest
         writer.WriteOversizeImageDimension(2, 0, 10);
         writer.WriteStartOfFrameSegment(0, ushort.MaxValue, 8, 3);
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
-
         JpegLSDecoder decoder = new(writer.GetBuffer(), false);
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidParameterHeight, exception.GetErrorCode());
     }
@@ -547,16 +570,15 @@ public class JpegLSDecoderTest
     {
         const uint width = uint.MaxValue;
         const uint height = uint.MaxValue;
-
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteOversizeImageDimension(4, width, height);
         writer.WriteStartOfFrameSegment(0, 0, 8, 2);
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
-
         JpegLSDecoder decoder = new(writer.GetBuffer(), false);
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.ParameterValueNotSupported, exception.GetErrorCode());
     }
@@ -565,7 +587,6 @@ public class JpegLSDecoderTest
     public void AbbreviatedFormatMappingTableCountAfterReadHeader()
     {
         byte[] tableData = new byte[255];
-
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, false);
@@ -602,6 +623,7 @@ public class JpegLSDecoderTest
         _ = decoder.TryReadSpiffHeader(out _);
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.AbbreviatedFormatAndSpiffHeaderMismatch, exception.GetErrorCode());
     }
@@ -692,6 +714,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(writer.GetBuffer(), false);
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidParameterMappingTableId, exception.GetErrorCode());
     }
@@ -712,6 +735,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(writer.GetBuffer(), false);
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidParameterMappingTableId, exception.GetErrorCode());
     }
@@ -737,6 +761,7 @@ public class JpegLSDecoderTest
         decoder.Decode(destination);
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => decoder.GetMappingTableId(3));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
@@ -747,6 +772,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetMappingTableId(0));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
@@ -757,6 +783,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.FindMappingTableIndex(3));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
@@ -769,10 +796,12 @@ public class JpegLSDecoderTest
         decoder.Decode(destination);
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => decoder.FindMappingTableIndex(0));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
 
         exception = Assert.Throws<ArgumentOutOfRangeException>(() => decoder.FindMappingTableIndex(256));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
@@ -783,6 +812,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.MappingTableCount);
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
@@ -793,6 +823,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetMappingTableInfo(0));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
@@ -803,6 +834,7 @@ public class JpegLSDecoderTest
         JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
 
         var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetMappingTableData(0));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
@@ -815,6 +847,7 @@ public class JpegLSDecoderTest
         decoder.Decode(destination);
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => decoder.GetMappingTableData(0));
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
@@ -823,16 +856,15 @@ public class JpegLSDecoderTest
     {
         const int width = 0;
         const int height = ushort.MaxValue;
-
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteOversizeImageDimension(numberOfBytes, width, 10, true);
         writer.WriteStartOfFrameSegment(width, height, 8, 3);
         writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
-
         JpegLSDecoder decoder = new(writer.GetBuffer(), false);
 
         var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidMarkerSegmentSize, exception.GetErrorCode());
     }

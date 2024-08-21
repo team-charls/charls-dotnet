@@ -6,17 +6,17 @@ namespace CharLS.Managed;
 /// <summary>
 /// Defines the information that describes a mapping table.
 /// </summary>
-public sealed record MappingTableInfo
+public readonly record struct MappingTableInfo
 {
     /// <summary>
     /// Identifier of the mapping table, range [1, 255].
     /// </summary>
-    public int TableId { get; init; }
+    public byte TableId { get; init; }
 
     /// <summary>
     /// Width of a table entry in bytes, range [1, 255].
     /// </summary>
-    public int EntrySize { get; init; }
+    public byte EntrySize { get; init; }
 
     /// <summary>
     /// Size of the table in bytes, range [1, 16711680]

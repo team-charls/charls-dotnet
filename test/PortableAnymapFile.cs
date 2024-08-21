@@ -114,12 +114,12 @@ internal sealed class PortableAnymapFile
             return stream.ReadByte();
         }
 
-        public override int Peek()
+        public override int Read(char[] buffer, int index, int count)
         {
             throw new NotImplementedException();
         }
 
-        public override int Read(char[] buffer, int index, int count)
+        public override int Peek()
         {
             throw new NotImplementedException();
         }

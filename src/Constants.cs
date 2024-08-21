@@ -1,16 +1,10 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-namespace CharLS;
+namespace CharLS.Managed;
 
 internal static class Constants
 {
-    // Default threshold values for JPEG-LS statistical modeling as defined in ISO/IEC 14495-1, table C.3
-    // for the case MAXVAL = 255 and NEAR = 0.
-    internal const int DefaultThreshold1 = 3;  // BASIC_T1
-    internal const int DefaultThreshold2 = 7;  // BASIC_T2
-    internal const int DefaultThreshold3 = 21; // BASIC_T3
-
     internal const int DefaultResetThreshold = 64; // Default RESET value as defined in ISO/IEC 14495-1, table C.2
 
     internal const int MinimumComponentCount = 1;

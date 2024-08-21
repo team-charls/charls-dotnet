@@ -14,12 +14,17 @@ public class JpegLSEncoderTest
     {
         JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) }; // minimum.
         encoder.FrameInfo = new FrameInfo(int.MaxValue, int.MaxValue, 16, 255); // maximum.
+
+        Assert.Equal(int.MaxValue, encoder.FrameInfo.Width);
+        Assert.Equal(int.MaxValue, encoder.FrameInfo.Height);
     }
 
     [Fact]
     public void FrameInfoBadWidthThrows()
     {
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(0, 1, 2, 1));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentWidth, exception.GetErrorCode());
     }
 
@@ -27,6 +32,8 @@ public class JpegLSEncoderTest
     public void FrameInfoBadHeightThrows()
     {
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 0, 2, 1));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentHeight, exception.GetErrorCode());
     }
 
@@ -34,9 +41,13 @@ public class JpegLSEncoderTest
     public void FrameInfoBadBitsPerSampleThrows()
     {
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 1, 1));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentBitsPerSample, exception.GetErrorCode());
 
         exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 17, 1));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentBitsPerSample, exception.GetErrorCode());
     }
 
@@ -44,9 +55,13 @@ public class JpegLSEncoderTest
     public void FrameInfoBadComponentCountThrows()
     {
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 2, 0));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentComponentCount, exception.GetErrorCode());
 
         exception = Assert.Throws<ArgumentOutOfRangeException>(() => _ = new JpegLSEncoder(1, 1, 2, 256));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentComponentCount, exception.GetErrorCode());
     }
 
@@ -56,7 +71,10 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new() { InterleaveMode = InterleaveMode.None };
 
         encoder.InterleaveMode = InterleaveMode.Line;
+        Assert.Equal(InterleaveMode.Line, encoder.InterleaveMode);
+
         encoder.InterleaveMode = InterleaveMode.Sample;
+        Assert.Equal(InterleaveMode.Sample, encoder.InterleaveMode);
     }
 
     [Fact]
@@ -65,9 +83,11 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new();
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.InterleaveMode = (InterleaveMode)(-1));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentInterleaveMode, exception.GetErrorCode());
 
         exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.InterleaveMode = (InterleaveMode)3);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentInterleaveMode, exception.GetErrorCode());
     }
 
@@ -79,9 +99,12 @@ public class JpegLSEncoderTest
 
         var exception =
             Assert.Throws<ArgumentException>(() => JpegLSEncoder.Encode(source, frameInfo, InterleaveMode.Sample));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentInterleaveMode, exception.GetErrorCode());
+
         exception = Assert.Throws<ArgumentException>(() =>
             JpegLSEncoder.Encode(source, frameInfo, InterleaveMode.Sample));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentInterleaveMode, exception.GetErrorCode());
     }
 
@@ -89,7 +112,10 @@ public class JpegLSEncoderTest
     public void TestNearLossless()
     {
         JpegLSEncoder encoder = new() { NearLossless = 0 }; // set lowest value.
+        Assert.Equal(0, encoder.NearLossless);
+
         encoder.NearLossless = 255; // set highest value.
+        Assert.Equal(255, encoder.NearLossless);
     }
 
     [Fact]
@@ -98,8 +124,12 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new();
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.NearLossless = -1);
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentNearLossless, exception.GetErrorCode());
+
         exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.NearLossless = 256);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentNearLossless, exception.GetErrorCode());
     }
 
@@ -177,6 +207,8 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new();
 
         var exception = Assert.Throws<InvalidOperationException>(() => encoder.EstimatedDestinationSize);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -187,16 +219,19 @@ public class JpegLSEncoderTest
 
         var destination = new byte[20];
         encoder.Destination = destination;
+        Assert.Equal(20, encoder.Destination.Length);
     }
 
     [Fact]
     public void DestinationCanOnlyBeSetOnceThrows()
     {
         JpegLSEncoder encoder = new();
-
         var destination = new byte[20];
         encoder.Destination = destination;
+
         var exception = Assert.Throws<InvalidOperationException>(() => encoder.Destination = destination);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -239,6 +274,8 @@ public class JpegLSEncoderTest
 
         var exception =
             Assert.Throws<InvalidOperationException>(() => encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -252,6 +289,8 @@ public class JpegLSEncoderTest
 
         var exception =
             Assert.Throws<InvalidOperationException>(() => encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -265,6 +304,8 @@ public class JpegLSEncoderTest
 
         var exception =
             Assert.Throws<InvalidOperationException>(() => encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -301,13 +342,13 @@ public class JpegLSEncoderTest
     public void WriteSpiffHeaderInvalidHeightThrows()
     {
         JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) };
-
         byte[] destination = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = destination;
-
         SpiffHeader spiffHeader = new() { Width = 1 };
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteSpiffHeader(spiffHeader));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentHeight, exception.GetErrorCode());
         Assert.Equal(0, encoder.BytesWritten);
     }
@@ -316,13 +357,13 @@ public class JpegLSEncoderTest
     public void WriteSpiffHeaderInvalidWidthThrows()
     {
         JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) };
-
         byte[] destination = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = destination;
-
         SpiffHeader spiffHeader = new() { Height = 1 };
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteSpiffHeader(spiffHeader));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentWidth, exception.GetErrorCode());
         Assert.Equal(0, encoder.BytesWritten);
     }
@@ -378,6 +419,7 @@ public class JpegLSEncoderTest
         const int endOfSpiffDirectoryTag = 1;
         var exception =
             Assert.Throws<ArgumentException>(() => encoder.WriteSpiffEntry(endOfSpiffDirectoryTag, "test"u8));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
@@ -385,13 +427,13 @@ public class JpegLSEncoderTest
     public void WriteSpiffEntryWithInvalidSizeThrows()
     {
         JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 4) };
-
         var destination = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = destination;
         encoder.WriteStandardSpiffHeader(SpiffColorSpace.Cmyk);
-
         var data = new byte[655281];
+
         var exception = Assert.Throws<ArgumentException>(() => encoder.WriteSpiffEntry(SpiffEntryTag.ImageTitle, data));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentSize, exception.GetErrorCode());
     }
 
@@ -401,10 +443,12 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) };
         var destination = new byte[encoder.EstimatedDestinationSize];
         encoder.Destination = destination;
-
         var data = new byte[100];
+
         var exception =
             Assert.Throws<InvalidOperationException>(() => encoder.WriteSpiffEntry(SpiffEntryTag.ImageTitle, data));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -586,15 +630,14 @@ public class JpegLSEncoderTest
     public void WriteTooLargeCommentThrows()
     {
         JpegLSEncoder encoder = new();
-
         var destination = new byte[2 + 2 + ushort.MaxValue + 1];
-
         encoder.Destination = destination;
-
         const int maxSizeCommentData = ushort.MaxValue - 2;
         var data = new byte[maxSizeCommentData + 1];
 
         var exception = Assert.Throws<ArgumentException>(() => encoder.WriteComment(data));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
@@ -602,16 +645,15 @@ public class JpegLSEncoderTest
     public void WriteCommentAfterEncodeThrows()
     {
         byte[] source = [0, 1, 2, 3, 4, 5];
-
         JpegLSEncoder encoder = new();
-
         var destination = new byte[2 + 2 + ushort.MaxValue];
         encoder.Destination = destination;
-
         encoder.FrameInfo = new FrameInfo(3, 1, 16, 1);
         encoder.Encode(source);
 
         var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteComment("after-encoding"));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -755,6 +797,8 @@ public class JpegLSEncoderTest
         byte[] data = new byte[maxSizeApplicationData + 1];
 
         var exception = Assert.Throws<ArgumentException>(() => encoder.WriteApplicationData(0, data));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
@@ -772,6 +816,8 @@ public class JpegLSEncoderTest
         encoder.Encode(source);
 
         var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteApplicationData(0, []));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -779,13 +825,17 @@ public class JpegLSEncoderTest
     public void WriteApplicationDataWithBadIdThrows()
     {
         JpegLSEncoder encoder = new();
-
         var destination = new byte[100];
         encoder.Destination = destination;
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteApplicationData(-1, []));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+
         exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteApplicationData(16, []));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
@@ -857,14 +907,17 @@ public class JpegLSEncoderTest
     {
         byte[] tableData = [0, 1, 2, 3, 4, 5];
         JpegLSEncoder encoder = new();
-
         var destination = new byte[100];
         encoder.Destination = destination;
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteMappingTable(0, 1, tableData));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
 
         exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteMappingTable(256, 1, tableData));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
@@ -878,9 +931,13 @@ public class JpegLSEncoderTest
         encoder.Destination = destination;
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteMappingTable(1, 0, tableData));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
 
         exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.WriteMappingTable(1, 256, tableData));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
@@ -889,11 +946,12 @@ public class JpegLSEncoderTest
     {
         byte[] tableData = [0];
         JpegLSEncoder encoder = new();
-
         var destination = new byte[100];
         encoder.Destination = destination;
 
         var exception = Assert.Throws<ArgumentException>(() => encoder.WriteMappingTable(1, 2, tableData));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentSize, exception.GetErrorCode());
     }
 
@@ -902,15 +960,15 @@ public class JpegLSEncoderTest
     {
         byte[] tableData = [0];
         byte[] source = [0, 1, 2, 3, 4, 5];
-
         JpegLSEncoder encoder = new();
-
         var destination = new byte[100];
         encoder.Destination = destination;
         encoder.FrameInfo = new FrameInfo(3, 1, 16, 1);
         encoder.Encode(source);
 
         var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteMappingTable(1, 1, tableData));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -952,11 +1010,12 @@ public class JpegLSEncoderTest
     public void CreateTablesOnlyWithNoTablesThrows()
     {
         JpegLSEncoder encoder = new();
-
         var destination = new byte[12];
         encoder.Destination = destination;
 
         var exception = Assert.Throws<InvalidOperationException>(encoder.CreateAbbreviatedFormat);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -1004,6 +1063,8 @@ public class JpegLSEncoderTest
 
         var exception =
             Assert.Throws<ArgumentOutOfRangeException>(() => encoder.ColorTransformation = (ColorTransformation)100);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentColorTransformation, exception.GetErrorCode());
     }
 
@@ -1015,6 +1076,8 @@ public class JpegLSEncoderTest
         byte[] source = [0, 1, 2, 3, 4, 5];
 
         var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentColorTransformation, exception.GetErrorCode());
     }
 
@@ -1060,6 +1123,8 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new();
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.SetMappingTableId(-1, 0));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
@@ -1069,6 +1134,8 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new();
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.SetMappingTableId(0, -1));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
@@ -1079,6 +1146,8 @@ public class JpegLSEncoderTest
         byte[] source = new byte[20];
 
         var exception = Assert.Throws<InvalidOperationException>(() => encoder.Encode(source));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -1091,6 +1160,8 @@ public class JpegLSEncoderTest
         encoder.Destination = destination;
 
         var exception = Assert.Throws<InvalidOperationException>(() => encoder.Encode(source));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
@@ -1247,6 +1318,8 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new(2, 1, 8, 3);
 
         var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source, 1));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentStride, exception.GetErrorCode());
     }
 
@@ -1257,6 +1330,8 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new(2, 1, 8, 3) { InterleaveMode = InterleaveMode.Sample };
 
         var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source, 5));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentStride, exception.GetErrorCode());
     }
 
@@ -1561,6 +1636,8 @@ public class JpegLSEncoderTest
         JpegLSEncoder encoder = new();
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() => encoder.EncodingOptions = (EncodingOptions)8);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgumentEncodingOptions, exception.GetErrorCode());
     }
 

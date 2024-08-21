@@ -80,8 +80,7 @@ public sealed class JpegLSDecoder
 
         set
         {
-            if (_state != State.Initial)
-                throw new InvalidOperationException("Source is already set.");
+            ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.Initial);
 
             _reader.Source = value;
             _state = State.SourceSet;
@@ -110,9 +109,7 @@ public sealed class JpegLSDecoder
     {
         get
         {
-            if (_state < State.HeaderRead)
-                throw new InvalidOperationException("Incorrect state. ReadHeader has not called.");
-
+            CheckHeaderRead();
             return _reader.FrameInfo;
         }
     }
@@ -183,8 +180,7 @@ public sealed class JpegLSDecoder
     /// <exception cref="InvalidOperationException">Thrown when this method is called before <see cref="ReadHeader(bool)"/>.</exception>
     public int GetDestinationSize(int stride = 0)
     {
-        if (_state < State.HeaderRead)
-            throw new InvalidOperationException("Source is not set.");
+        CheckHeaderRead();
 
         if (stride == 0)
         {
