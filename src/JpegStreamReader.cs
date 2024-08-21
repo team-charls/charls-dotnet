@@ -119,7 +119,7 @@ internal struct JpegStreamReader
     {
         JpegLSPresetCodingParameters ??= new JpegLSPresetCodingParameters();
 
-        if (!JpegLSPresetCodingParameters.IsValid(CalculateMaximumSampleValue(FrameInfo.BitsPerSample), _nearLossless, out var validatedCodingParameters))
+        if (!JpegLSPresetCodingParameters.TryMakeExplicit(CalculateMaximumSampleValue(FrameInfo.BitsPerSample), _nearLossless, out var validatedCodingParameters))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterJpegLSPresetParameters);
 
         return validatedCodingParameters;

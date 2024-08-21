@@ -15,7 +15,7 @@ public sealed class JpegLSEncoder
 {
     private JpegStreamWriter _writer;
     private ScanEncoder _scanEncoder;
-    private FrameInfo? _frameInfo;
+    private FrameInfo _frameInfo;
     private int _nearLossless;
     private InterleaveMode _interleaveMode;
     private ColorTransformation _colorTransformation;
@@ -94,7 +94,7 @@ public sealed class JpegLSEncoder
     /// </value>
     /// <exception cref="ArgumentException">Thrown when the passed FrameInfo is invalid.</exception>
     /// <exception cref="ArgumentNullException">Thrown when the passed FrameInfo instance is null.</exception>
-    public FrameInfo? FrameInfo
+    public FrameInfo FrameInfo
     {
         get => _frameInfo;
 
@@ -216,7 +216,7 @@ public sealed class JpegLSEncoder
 
             checked
             {
-                return (FrameInfo!.Width * FrameInfo.Height * FrameInfo.ComponentCount *
+                return (FrameInfo.Width * FrameInfo.Height * FrameInfo.ComponentCount *
                            BitToByteCount(FrameInfo.BitsPerSample)) + 1024 + Constants.SpiffHeaderSizeInBytes;
             }
         }
@@ -292,15 +292,14 @@ public sealed class JpegLSEncoder
         CheckInterleaveModeAgainstComponentCount();
         stride = CheckStrideAndSource(source.Length, stride);
 
-        int maximumSampleValue = CalculateMaximumSampleValue(FrameInfo!.BitsPerSample);
-        ThrowHelper.ThrowArgumentExceptionIfFalse(
-            _userPresetCodingParameters!.IsValid(maximumSampleValue, NearLossless, out var presetCodingParameters),
-            null, ErrorCode.InvalidArgumentPresetCodingParameters);
+        int maximumSampleValue = CalculateMaximumSampleValue(FrameInfo.BitsPerSample);
+        if (!_userPresetCodingParameters!.TryMakeExplicit(maximumSampleValue, NearLossless, out var explicitCodingParameters))
+            throw ThrowHelper.CreateArgumentException(ErrorCode.InvalidArgumentPresetCodingParameters);
 
         TransitionToTablesAndMiscellaneousState();
         WriteColorTransformSegment();
         WriteStartOfFrameSegment();
-        WriteJpegLSPresetParametersSegment(maximumSampleValue, presetCodingParameters);
+        WriteJpegLSPresetParametersSegment(maximumSampleValue, explicitCodingParameters);
 
         if (InterleaveMode == InterleaveMode.None)
         {
@@ -309,7 +308,7 @@ public sealed class JpegLSEncoder
             for (int component = 0; component != FrameInfo.ComponentCount; ++component)
             {
                 _writer.WriteStartOfScanSegment(1, NearLossless, InterleaveMode);
-                EncodeScan(source, stride, 1, presetCodingParameters);
+                EncodeScan(source, stride, 1, explicitCodingParameters);
 
                 // Synchronize the source stream (encode_scan works on a local copy)
                 if (component != lastComponent)
@@ -321,7 +320,7 @@ public sealed class JpegLSEncoder
         else
         {
             _writer.WriteStartOfScanSegment(FrameInfo.ComponentCount, NearLossless, InterleaveMode);
-            EncodeScan(source, stride, FrameInfo.ComponentCount, presetCodingParameters);
+            EncodeScan(source, stride, FrameInfo.ComponentCount, explicitCodingParameters);
         }
 
         WriteEndOfImage();
@@ -330,7 +329,7 @@ public sealed class JpegLSEncoder
     private void EncodeScan(ReadOnlyMemory<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
     {
         _scanEncoder = new ScanEncoder(
-            new FrameInfo(FrameInfo!.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
+            new FrameInfo(FrameInfo.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
             codingParameters,
             new CodingParameters
             {
@@ -379,9 +378,9 @@ public sealed class JpegLSEncoder
         var spiffHeader = new SpiffHeader
         {
             ColorSpace = colorSpace,
-            Height = FrameInfo!.Height,
+            Height = FrameInfo.Height,
             Width = FrameInfo.Width,
-            BitsPerSample = FrameInfo!.BitsPerSample,
+            BitsPerSample = FrameInfo.BitsPerSample,
             ComponentCount = FrameInfo.ComponentCount,
             ResolutionUnit = resolutionUnit,
             VerticalResolution = verticalResolution,
@@ -545,17 +544,17 @@ public sealed class JpegLSEncoder
         if (ColorTransformation == ColorTransformation.None)
             return;
 
-        ThrowHelper.ThrowArgumentExceptionIfFalse(ColorTransformations.IsPossible(FrameInfo!), null, ErrorCode.InvalidArgumentColorTransformation);
+        ThrowHelper.ThrowArgumentExceptionIfFalse(ColorTransformations.IsPossible(FrameInfo), null, ErrorCode.InvalidArgumentColorTransformation);
 
         _writer.WriteColorTransformSegment(ColorTransformation);
     }
 
     private void WriteStartOfFrameSegment()
     {
-        if (_writer.WriteStartOfFrameSegment(FrameInfo!))
+        if (_writer.WriteStartOfFrameSegment(FrameInfo))
         {
             // Image dimensions are oversized and need to be written to a JPEG-LS preset parameters (LSE) segment.
-            _writer.WriteJpegLSPresetParametersSegment(FrameInfo!.Height, FrameInfo.Width);
+            _writer.WriteJpegLSPresetParametersSegment(FrameInfo.Height, FrameInfo.Width);
         }
     }
 
@@ -563,7 +562,7 @@ public sealed class JpegLSEncoder
     {
 
         if (!_userPresetCodingParameters!.IsDefault(maximumSampleValue, NearLossless) ||
-            (EncodingOptions.HasFlag(EncodingOptions.IncludePCParametersJai) && FrameInfo!.BitsPerSample > 12))
+            (EncodingOptions.HasFlag(EncodingOptions.IncludePCParametersJai) && FrameInfo.BitsPerSample > 12))
         {
             // Write the actual used values to the stream, not zero's.
             // Explicit values reduces the risk for decoding by other implementations.
@@ -579,7 +578,7 @@ public sealed class JpegLSEncoder
 
     private void CheckInterleaveModeAgainstComponentCount()
     {
-        if (FrameInfo!.ComponentCount == 1 && InterleaveMode != InterleaveMode.None)
+        if (FrameInfo.ComponentCount == 1 && InterleaveMode != InterleaveMode.None)
             ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentInterleaveMode);
     }
 
@@ -599,8 +598,8 @@ public sealed class JpegLSEncoder
 
         int notUsedBytesAtEnd = stride - minimumStride;
         int minimumSourceLength = InterleaveMode == InterleaveMode.None
-            ? (stride * FrameInfo!.ComponentCount * FrameInfo.Height) - notUsedBytesAtEnd
-            : (stride * FrameInfo!.Height) - notUsedBytesAtEnd;
+            ? (stride * FrameInfo.ComponentCount * FrameInfo.Height) - notUsedBytesAtEnd
+            : (stride * FrameInfo.Height) - notUsedBytesAtEnd;
 
         if (sourceLength < minimumSourceLength)
             ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentSize);
@@ -610,7 +609,7 @@ public sealed class JpegLSEncoder
 
     private int CalculateMinimumStride()
     {
-        int stride = FrameInfo!.Width * BitToByteCount(FrameInfo.BitsPerSample);
+        int stride = FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
         if (_interleaveMode == InterleaveMode.None)
             return stride;
 
@@ -619,7 +618,7 @@ public sealed class JpegLSEncoder
 
     private bool IsFrameInfoConfigured()
     {
-        return FrameInfo != null;
+        return FrameInfo.Height != 0;
     }
 
     private static ReadOnlySpan<byte> ToUtf8(string text)

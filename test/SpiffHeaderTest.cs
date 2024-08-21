@@ -9,7 +9,14 @@ public class SpiffHeaderTest
     public void DefaultIsValid()
     {
         FrameInfo frameInfo = new(1, 1, 2, 1);
-        SpiffHeader spiffHeader = new() { Width = 1, Height = 1, BitsPerSample = 2, ComponentCount = 1, ColorSpace = SpiffColorSpace.Grayscale};
+        SpiffHeader spiffHeader = new()
+        {
+            Width = 1,
+            Height = 1,
+            BitsPerSample = 2,
+            ComponentCount = 1,
+            ColorSpace = SpiffColorSpace.Grayscale
+        };
         Assert.True(spiffHeader.IsValid(frameInfo));
     }
 
@@ -21,37 +28,86 @@ public class SpiffHeaderTest
         var spiffHeader = new SpiffHeader { CompressionType = SpiffCompressionType.Uncompressed };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 2, ComponentCount = 1, ProfileId = SpiffProfileId.BiLevelFacsimile };
+        spiffHeader = new SpiffHeader
+        {
+            Width = 1,
+            Height = 1,
+            BitsPerSample = 2,
+            ComponentCount = 1,
+            ProfileId = SpiffProfileId.BiLevelFacsimile
+        };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 2, ComponentCount = 1, ResolutionUnit = (SpiffResolutionUnit)4 };
+        spiffHeader = new SpiffHeader
+        {
+            Width = 1,
+            Height = 1,
+            BitsPerSample = 2,
+            ComponentCount = 1,
+            ResolutionUnit = (SpiffResolutionUnit)4
+        };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 2, ComponentCount = 1, HorizontalResolution = -1 };
+        spiffHeader = new SpiffHeader
+        {
+            Width = 1,
+            Height = 1,
+            BitsPerSample = 2,
+            ComponentCount = 1,
+            HorizontalResolution = -1
+        };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 2, ComponentCount = 1, VerticalResolution = -1 };
+        spiffHeader = new SpiffHeader
+        {
+            Width = 1,
+            Height = 1,
+            BitsPerSample = 2,
+            ComponentCount = 1,
+            VerticalResolution = -1
+        };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
         spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 2, ComponentCount = 3 };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 7, ComponentCount = 1};
+        spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 7, ComponentCount = 1 };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 1, Height = 9, BitsPerSample = 2, ComponentCount = 1};
+        spiffHeader = new SpiffHeader { Width = 1, Height = 9, BitsPerSample = 2, ComponentCount = 1 };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 11, Height = 1, BitsPerSample = 2, ComponentCount = 1};
+        spiffHeader = new SpiffHeader { Width = 11, Height = 1, BitsPerSample = 2, ComponentCount = 1 };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 2, ComponentCount = 1, ColorSpace = SpiffColorSpace.Cmyk };
+        spiffHeader = new SpiffHeader
+        {
+            Width = 1,
+            Height = 1,
+            BitsPerSample = 2,
+            ComponentCount = 1,
+            ColorSpace = SpiffColorSpace.Cmyk
+        };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 2, ComponentCount = 1, ColorSpace = SpiffColorSpace.BiLevelWhite };
+        spiffHeader = new SpiffHeader
+        {
+            Width = 1,
+            Height = 1,
+            BitsPerSample = 2,
+            ComponentCount = 1,
+            ColorSpace = SpiffColorSpace.BiLevelWhite
+        };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { Width = 1, Height = 1, BitsPerSample = 2, ComponentCount = 1, ColorSpace = SpiffColorSpace.CieLab };
+        spiffHeader = new SpiffHeader
+        {
+            Width = 1,
+            Height = 1,
+            BitsPerSample = 2,
+            ComponentCount = 1,
+            ColorSpace = SpiffColorSpace.CieLab
+        };
         Assert.False(spiffHeader.IsValid(frameInfo));
     }
 
@@ -67,13 +123,32 @@ public class SpiffHeaderTest
         spiffHeader = new SpiffHeader { CompressionType = SpiffCompressionType.ModifiedHuffman };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
-        spiffHeader = new SpiffHeader { CompressionType = SpiffCompressionType.ModifiedModifiedRead};
+        spiffHeader = new SpiffHeader { CompressionType = SpiffCompressionType.ModifiedModifiedRead };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
         spiffHeader = new SpiffHeader { CompressionType = SpiffCompressionType.Jpeg };
         Assert.False(spiffHeader.IsValid(frameInfo));
 
         spiffHeader = new SpiffHeader { CompressionType = SpiffCompressionType.ModifiedRead };
+        Assert.False(spiffHeader.IsValid(frameInfo));
+    }
+
+    [Fact]
+    public void ProfileId()
+    {
+        // Use all official defined profile IDs.
+        FrameInfo frameInfo = new(1, 1, 2, 1);
+
+        SpiffHeader spiffHeader = new() { ProfileId = SpiffProfileId.BiLevelFacsimile};
+        Assert.False(spiffHeader.IsValid(frameInfo));
+
+        spiffHeader = new() { ProfileId = SpiffProfileId.ContinuousToneBase };
+        Assert.False(spiffHeader.IsValid(frameInfo));
+
+        spiffHeader = new() { ProfileId = SpiffProfileId.ContinuousToneFacsimile };
+        Assert.False(spiffHeader.IsValid(frameInfo));
+
+        spiffHeader = new() { ProfileId = SpiffProfileId.ContinuousToneProgressive };
         Assert.False(spiffHeader.IsValid(frameInfo));
     }
 }

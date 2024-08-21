@@ -65,6 +65,11 @@ internal static class ThrowHelper
         throw CreateInvalidDataException(errorCode);
     }
 
+    internal static ArgumentException CreateArgumentException(ErrorCode errorCode)
+    {
+        return AddErrorCode(new ArgumentException(GetErrorMessage(errorCode)), errorCode);
+    }
+
     internal static InvalidDataException CreateInvalidDataException(ErrorCode errorCode)
     {
         return AddErrorCode(new InvalidDataException(GetErrorMessage(errorCode)), errorCode);

@@ -6,7 +6,7 @@ namespace CharLS.Managed;
 /// <summary>
 /// Hold information about an image frame.
 /// </summary>
-public sealed record FrameInfo
+public readonly record struct FrameInfo
 {
     private readonly int _width;
     private readonly int _height;

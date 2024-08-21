@@ -192,7 +192,7 @@ public class ComplianceTest
         Assert.NotEqual(-1, mappingTableId);
 
         var mappingTableInfo = decoder.GetMappingTableInfo(mappingTableIndex);
-        Assert.NotNull(mappingTableInfo);
+        Assert.Equal(5, mappingTableInfo.TableId);
 
         ReadOnlyMemory<byte> mappingTableData = decoder.GetMappingTableData(mappingTableIndex);
         byte[] expectedMappingTable = [0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0xFF, 0, 0, 0, 0xFF];

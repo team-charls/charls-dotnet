@@ -42,10 +42,10 @@ public class ScanDecoderTest
     {
         byte[] source = [0, 0, Constants.JpegMarkerStartByte, 0xD8];
         var frameInfo = new FrameInfo(1, 1, 8, 1);
-        _ = DefaultParameters.IsValid(255, 0, out var cp);
+        _ = DefaultParameters.TryMakeExplicit(255, 0, out var cp);
         var codingParameters = new CodingParameters();
 
-        var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
+        var scanDecoder = new TestScanDecoder(frameInfo, cp!, codingParameters);
         scanDecoder.TestInitialize(source);
 
         for (int i = 0; i < 2 * 8; i++)
@@ -62,10 +62,10 @@ public class ScanDecoderTest
     {
         byte[] source = [0, 0, 0, 0, 0, 0, 0, 0, 0, Constants.JpegMarkerStartByte, 0xD8];
         var frameInfo = new FrameInfo(1, 1, 8, 1);
-        _ = DefaultParameters.IsValid(255, 0, out var cp);
+        _ = DefaultParameters.TryMakeExplicit(255, 0, out var cp);
         var codingParameters = new CodingParameters();
 
-        var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
+        var scanDecoder = new TestScanDecoder(frameInfo, cp!, codingParameters);
         scanDecoder.TestInitialize(source);
 
         for (int i = 0; i < 9 * 8; i++)
@@ -82,10 +82,10 @@ public class ScanDecoderTest
     {
         byte[] source = [7, 8, Constants.JpegMarkerStartByte, 0xD8];
         var frameInfo = new FrameInfo(1, 1, 8, 1);
-        _ = DefaultParameters.IsValid(255, 0, out var cp);
+        _ = DefaultParameters.TryMakeExplicit(255, 0, out var cp);
         var codingParameters = new CodingParameters();
 
-        var scanDecoder = new TestScanDecoder(frameInfo, cp, codingParameters);
+        var scanDecoder = new TestScanDecoder(frameInfo, cp!, codingParameters);
         scanDecoder.TestInitialize(source);
 
         byte peekByte1 = scanDecoder.TestPeekByte();
