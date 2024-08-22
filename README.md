@@ -22,7 +22,7 @@ The following codecs were measured:
 
 |Codec         |Version|Release date|Description|
 |------------  |-------|------------|----------------------------------------------|
-|CharLS.Managed| 0.8.0 |2024-08-22  |C# implementation                             |
+|CharLS.Managed| 0.8.0 |2024-08-23  |C# implementation                             |
 |CharLS.Native | 3.2.0 |2023-09-24  |C# wrapper around C++ implementation          |
 |cscharls      | 0.1.1 |2017-04-24  |C# implementation                             |
 |charls-js     | 2.1.1 |2021-10-07  |WebAssembly implementation based on C++ source|
@@ -35,18 +35,34 @@ and the following test images were used:
 |MG1           |   3064|  4664|             12|         1|Monochrome medical image  |
 |Delta E       |   3072|  2048|              8|         3|Artificial RGB image      |
 
+The benchmarks were performed on 2 hardware platforms: x86 and ARM64.  
+The column 'NEAR' defines the allowed error, 0 means lossless encoding.  
+The column 'ILV' defines the interleave mode used to encode the image.
 
-## x86-64 Platform
+### x86-64 Platform
 
-Characteristics of the test environment: AMD Ryzen 9 5950X, .NET 8.0.8 (X64 RyuJIT AVX2)
+Characteristics of the test environment: AMD Ryzen 9 5950X, .NET 8.0.8 (X64 RyuJIT AVX2)  
+WebAssembly engine: Chrome V8 12.8.374.21
 
-|Operation                           |CharLS.Managed|CharLS.Native|cscharls |charls-js|
-|------------------------------------|-------------:|------------:|--------:|--------:|
-|Decode Tulips  (lossless)           |        5.0 ms|       3.6 ms|  10.4 ms|   5.6 ms|
-|Decode MG1     (lossless)           |      292.3 ms|     205.0 ms| 676.3 ms| 335.2 ms|
-|Decode Delta E (lossless ilv-sample)|       80.0 ms|      89.4 ms|        -|  89.5 ms|
-|Encode Tulips  (lossless)           |        7.1 ms|       4.7 ms|  11.8 ms|        -|
-|Encode MG1     (lossless)           |      404.3 ms|     256.3 ms| 695.8 ms|        -|
+|Operation      |NEAR|ILV   |CharLS.Managed|CharLS.Native|cscharls |charls-js|
+|---------------|---:|------|-------------:|------------:|--------:|--------:|
+|Decode Tulips  |   0|None  |        5.0 ms|       3.6 ms|  10.4 ms|   5.6 ms|
+|Decode MG1     |   0|None  |      292.3 ms|     205.0 ms| 676.3 ms| 335.2 ms|
+|Decode Delta E |   0|Sample|       80.0 ms|      89.4 ms|        -|  89.5 ms|
+|Encode Tulips  |   0|None  |        7.1 ms|       4.7 ms|  11.8 ms|        -|
+|Encode MG1     |   0|None  |      404.3 ms|     256.3 ms| 695.8 ms|        -|
+
+## Arm64 Platform
+
+Characteristics of the test environment: Snapdragon Compute Platform, .NET 8.0.8 (Arm64 RyuJIT AdvSIMD)  
+WebAssembly engine: Chrome V8 12.8.374.21
+
+|Operation      |NEAR|ILV   |CharLS.Managed|CharLS.Native|cscharls |charls-js|
+|---------------|---:|------|-------------:|------------:|--------:|--------:|
+|Decode Tulips  |   0|None  |        7.2 ms|       4.7 ms|  14.3 ms|  10.5 ms|
+|Decode MG1     |   0|None  |      431.7 ms|     261.8 ms|1019.4 ms| 542.1 ms|
+|Encode Tulips  |   0|None  |        9.6 ms|       5.5 ms|  15.7 ms|        -|
+|Encode MG1     |   0|None  |      564.0 ms|     318.6 ms|1017.2 ms|        -|
 
 ## How to use
 
