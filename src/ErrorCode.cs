@@ -246,7 +246,7 @@ public enum ErrorCode
     InvalidArgumentColorTransformation = 109,
 
     /// <summary>
-    /// The argument for the size parameter is outside the valid range.
+    /// The size of a buffer parameter is outside the valid range.
     /// </summary>
     InvalidArgumentSize = 110,
 

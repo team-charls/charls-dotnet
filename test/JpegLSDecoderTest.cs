@@ -444,7 +444,7 @@ public class JpegLSDecoderTest
     [Fact]
     public void ApplicationDataHandlerReceivesApplicationDataBytes()
     {
-        JpegLSEncoder encoder = new(1, 1, 8, 1, true, 100);
+        JpegLSEncoder encoder = new(1, 1, 8, 1, InterleaveMode.None, true, 100);
 
         var applicationData1 = new byte[] { 1, 2, 3, 4 };
         encoder.WriteApplicationData(12, applicationData1);

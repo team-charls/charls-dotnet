@@ -42,12 +42,13 @@ public sealed class JpegLSEncoder
     /// <param name="height">The height of the image to encode.</param>
     /// <param name="bitsPerSample">The bits per sample of the image to encode.</param>
     /// <param name="componentCount">The component count of the image to encode.</param>
-    /// <param name="allocateDestination">Flag to control if destination buffer should be allocated or not.</param>
-    /// <param name="extraBytes">Number of extra destination bytes. Comments and tables are not included in the estimate.</param>
+    /// <param name="interleaveMode">The interleave mode of the image to encode (default None).</param>
+    /// <param name="allocateDestination">Flag to control if destination buffer should be allocated or not (default true).</param>
+    /// <param name="extraBytes">Number of extra destination bytes. Comments and tables are not included in the standard estimate (default 0).</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when one of the arguments is invalid.</exception>
     /// <exception cref="OutOfMemoryException">Thrown when memory allocation for the destination buffer fails.</exception>
-    public JpegLSEncoder(int width, int height, int bitsPerSample, int componentCount, bool allocateDestination = true, int extraBytes = 0)
-        : this(new FrameInfo(width, height, bitsPerSample, componentCount), allocateDestination, extraBytes)
+    public JpegLSEncoder(int width, int height, int bitsPerSample, int componentCount, InterleaveMode interleaveMode = InterleaveMode.None, bool allocateDestination = true, int extraBytes = 0)
+        : this(new FrameInfo(width, height, bitsPerSample, componentCount), interleaveMode, allocateDestination, extraBytes)
     {
     }
 
@@ -55,15 +56,17 @@ public sealed class JpegLSEncoder
     /// Initializes a new instance of the <see cref="JpegLSEncoder"/> class.
     /// </summary>
     /// <param name="frameInfo">The frameInfo of the image to encode.</param>
-    /// <param name="allocateDestination">Flag to control if destination buffer should be allocated or not.</param>
-    /// <param name="extraBytes">Number of extra destination bytes. Comments and tables are not included in the estimate.</param>
+    /// <param name="interleaveMode">The interleave mode of the image to encode (default None).</param>
+    /// <param name="allocateDestination">Flag to control if destination buffer should be allocated or not (default true).</param>
+    /// <param name="extraBytes">Number of extra destination bytes. Comments and tables are not included in the standard estimate (default 0).</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when one of the arguments is invalid.</exception>
     /// <exception cref="OutOfMemoryException">Thrown when memory allocation for the destination buffer fails.</exception>
-    public JpegLSEncoder(FrameInfo frameInfo, bool allocateDestination = true, int extraBytes = 0)
+    public JpegLSEncoder(FrameInfo frameInfo, InterleaveMode interleaveMode = InterleaveMode.None, bool allocateDestination = true, int extraBytes = 0)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(extraBytes);
 
         FrameInfo = frameInfo;
+        InterleaveMode = interleaveMode;
 
         if (allocateDestination)
         {
@@ -489,7 +492,7 @@ public sealed class JpegLSEncoder
     /// </summary>
     /// <param name="source">Source pixel data that needs to be encoded.</param>
     /// <param name="frameInfo">Frame info object that describes the pixel data.</param>
-    /// <param name="interleaveMode">Defines how the the pixel data should be encoded.</param>
+    /// <param name="interleaveMode">Defines how the pixel data should be encoded.</param>
     /// <param name="encodingOptions">Defines several options how to encode the pixel data.</param>
     /// <param name="stride">The stride to use; byte count to the next pixel row. Pass 0 (AutoCalculateStride) for the default.</param>
     public static Memory<byte> Encode(

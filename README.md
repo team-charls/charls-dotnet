@@ -20,24 +20,33 @@ JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard for conti
 A couple of benchmarks have been executed to assist to decide which codec to use.
 The following codecs were measured:
 
-|Name          |Version|Release Date|
-|------------  |-------|------------|
-|CharLS.Managed| 0.8.0 |2024-08-22  |
-|CharLS.Native | 3.2.0 |2023-09-24  |
-|cscharls      | 0.1.1 |2017-04-24  |
-|charls-js     | 2.1.1 |2021-10-07  |
+|Codec         |Version|Release date|Description|
+|------------  |-------|------------|----------------------------------------------|
+|CharLS.Managed| 0.8.0 |2024-08-22  |C# implementation                             |
+|CharLS.Native | 3.2.0 |2023-09-24  |C# wrapper around C++ implementation          |
+|cscharls      | 0.1.1 |2017-04-24  |C# implementation                             |
+|charls-js     | 2.1.1 |2021-10-07  |WebAssembly implementation based on C++ source|
+
+and the following test images were used:
+
+|Image name    |Width  |Height|Bits per sample|Components|Description               |
+|------------  |------:|-----:|--------------:|---------:|--------------------------|
+|Tulips        |    512|   512|              8|         1|Monochrome image of tulips|
+|MG1           |   3064|  4664|             12|         1|Monochrome medical image  |
+|Delta E       |   3072|  2048|              8|         3|Artificial RGB image      |
+
 
 ## x86-64 Platform
 
 Characteristics of the test environment: AMD Ryzen 9 5950X, .NET 8.0.8 (X64 RyuJIT AVX2)
 
-|Operation                                         |CharLS.Managed|CharLS.Native|cscharls |charls-js|
-|--------------------------------------------------|-------------:|------------:|--------:|--------:|
-|Decode Tulips  (512x512x8x1 lossless)             |        5.0 ms|       3.6 ms|  10.4 ms|   5.6 ms|
-|Decode MG1     (3064x4664x12x1 lossless)          |      292.3 ms|     205.0 ms| 676.3 ms| 335.2 ms|
-|Decode Delta E (3072x2048x8x3 lossless ilv-sample)|       80.0 ms|      89.4 ms|        -|  89.5 ms|
-|Encode Tulips  (512x512x8x1 lossless)             |        7.1 ms|       4.7 ms|  11.8 ms|        -|
-|Encode MG1     (3064x4664x12x1 lossless)          |      404.3 ms|     256.3 ms| 695.8 ms|        -|
+|Operation                           |CharLS.Managed|CharLS.Native|cscharls |charls-js|
+|------------------------------------|-------------:|------------:|--------:|--------:|
+|Decode Tulips  (lossless)           |        5.0 ms|       3.6 ms|  10.4 ms|   5.6 ms|
+|Decode MG1     (lossless)           |      292.3 ms|     205.0 ms| 676.3 ms| 335.2 ms|
+|Decode Delta E (lossless ilv-sample)|       80.0 ms|      89.4 ms|        -|  89.5 ms|
+|Encode Tulips  (lossless)           |        7.1 ms|       4.7 ms|  11.8 ms|        -|
+|Encode MG1     (lossless)           |      404.3 ms|     256.3 ms| 695.8 ms|        -|
 
 ## How to use
 
@@ -63,7 +72,7 @@ A sample application is included in the GitHub repository that demonstrates how 
 
 * Use the .NET 8.0 CLI or Visual Studio 2022 (v17.11 or newer) to build the solution file CharLSDotNet.sln.  
  For example: `dotnet build && dotnet test && dotnet publish` to build the NuGet package.  
- Building can be done on all supported .NET SDK platforms: Windows, Linux, macOS
+ Building can be done on all supported .NET SDK platforms: Windows, Linux or macOS
 
 ### Code signing the assembly and the NuGet package
 

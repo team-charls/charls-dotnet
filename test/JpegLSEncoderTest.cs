@@ -1518,7 +1518,7 @@ public class JpegLSEncoderTest
     public void RewindBeforeDestination()
     {
         byte[] source = [0, 1, 2, 3, 4, 5];
-        JpegLSEncoder encoder = new(3, 1, 16, 1, false);
+        JpegLSEncoder encoder = new(3, 1, 16, 1, InterleaveMode.None, false);
 
         byte[] destination = new byte[encoder.EstimatedDestinationSize];
         encoder.Rewind();
