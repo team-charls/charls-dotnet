@@ -362,14 +362,15 @@ public sealed class JpegLSDecoder
         }
         else
         {
-            if (stride < minimumStride)
-                throw new ArgumentException("stride < minimumStride", nameof(stride));
+            ThrowHelper.ThrowArgumentExceptionIfFalse(stride >= minimumStride, nameof(stride), ErrorCode.InvalidArgumentStride);
         }
 
         // Compute the layout of the destination buffer.
         int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * BitToByteCount(FrameInfo.BitsPerSample);
         int planeCount = _reader.InterleaveMode == InterleaveMode.None ? FrameInfo.ComponentCount : 1;
         int minimumDestinationSize = (bytesPerPlane * planeCount) - (stride - minimumStride);
+
+        ThrowHelper.ThrowArgumentExceptionIfFalse(destination.Length >= minimumDestinationSize, nameof(destination), ErrorCode.InvalidArgumentSize);
 
         if (destination.Length < minimumDestinationSize)
             throw new ArgumentException("destination buffer too small", nameof(destination));

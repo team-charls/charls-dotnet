@@ -144,7 +144,7 @@ internal static class ThrowHelper
             ErrorCode.InvalidArgumentNearLossless => "The near lossless argument is outside the range [0, min(255, MAXVAL/2)]",
             ErrorCode.InvalidArgumentPresetCodingParameters => "The argument for the JPEG-LS preset coding parameters is not valid",
             ErrorCode.InvalidArgumentColorTransformation => "The argument for the color component is not (None, Hp1, Hp2, Hp3) or invalid in combination with component count",
-            ErrorCode.InvalidArgumentSize => "The passed size is outside the valid range",
+            ErrorCode.InvalidArgumentSize => "The passed size of a buffer is outside the valid range",
             ErrorCode.InvalidArgumentStride => "The stride argument does not match with the frame info and buffer size",
             ErrorCode.InvalidArgumentEncodingOptions => "The encoding options argument has an invalid value",
             _ => string.Empty
