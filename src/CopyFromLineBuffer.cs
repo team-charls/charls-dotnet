@@ -7,7 +7,7 @@ namespace CharLS.Managed;
 
 internal class CopyFromLineBuffer
 {
-    internal delegate void Method(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride);
+    internal delegate void Method(Span<byte> source, Span<byte> destination, int pixelCount);
 
     internal static Method GetMethod(
         int bitsPerSample,
@@ -130,79 +130,84 @@ internal class CopyFromLineBuffer
         }
     }
 
-    private static void CopySamples(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopySamples(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         source[..pixelCount].CopyTo(destination);
     }
 
-    private static void CopyLine8Bit3Components(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyLine8Bit3Components(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] = new Triplet<byte>(
-                source[i], source[i + sourceStride], source[i + (2 * sourceStride)]);
+                source[i], source[i + pixelStride], source[i + (2 * pixelStride)]);
         }
     }
 
-    private static void CopyLine8Bit3ComponentsHP1(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyLine8Bit3ComponentsHP1(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] = ColorTransformations.ReverseTransformHP1(
-                    source[i], source[i + sourceStride], source[i + (2 * sourceStride)]);
+                    source[i], source[i + pixelStride], source[i + (2 * pixelStride)]);
         }
     }
 
-    private static void CopyLine8Bit3ComponentsHP2(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyLine8Bit3ComponentsHP2(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] = ColorTransformations.ReverseTransformHP2(
-                    source[i], source[i + sourceStride], source[i + (2 * sourceStride)]);
+                    source[i], source[i + pixelStride], source[i + (2 * pixelStride)]);
         }
     }
 
-    private static void CopyLine8Bit3ComponentsHP3(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyLine8Bit3ComponentsHP3(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] = ColorTransformations.ReverseTransformHP3(
-                source[i], source[i + sourceStride], source[i + (2 * sourceStride)]);
+                source[i], source[i + pixelStride], source[i + (2 * pixelStride)]);
         }
     }
 
-    private static void CopyToLine8Bit4Components(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyToLine8Bit4Components(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var destinationQuad = MemoryMarshal.Cast<byte, Quad<byte>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationQuad[i] = new Quad<byte>(
-                source[i], source[i + sourceStride], source[i + (2 * sourceStride)], source[i + (3 * sourceStride)]);
+                source[i], source[i + pixelStride], source[i + (2 * pixelStride)], source[i + (3 * pixelStride)]);
         }
     }
 
-    private static void CopyPixels8BitTriplet(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels8BitTriplet(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         int bytesCount = pixelCount * 3;
         source[..bytesCount].CopyTo(destination);
     }
 
-    private static void CopyPixels8BitQuad(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels8BitQuad(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         int bytesCount = pixelCount * 4;
         source[..bytesCount].CopyTo(destination);
     }
 
-    private static void CopyPixels8BitHP1(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels8BitHP1(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
@@ -214,7 +219,7 @@ internal class CopyFromLineBuffer
         }
     }
 
-    private static void CopyPixels8BitHP2(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels8BitHP2(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
@@ -226,7 +231,7 @@ internal class CopyFromLineBuffer
         }
     }
 
-    private static void CopyPixels8BitHP3(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels8BitHP3(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(destination);
@@ -238,70 +243,75 @@ internal class CopyFromLineBuffer
         }
     }
 
-    private static void CopyLine16Bit3Components(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyLine16Bit3Components(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceUshort = MemoryMarshal.Cast<byte, ushort>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] = new Triplet<ushort>(
-                sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)]);
+                sourceUshort[i], sourceUshort[i + pixelStride], sourceUshort[i + (2 * pixelStride)]);
         }
     }
 
-    private static void CopyLine16Bit3ComponentsHP1(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyLine16Bit3ComponentsHP1(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceUshort = MemoryMarshal.Cast<byte, ushort>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] =
                 ColorTransformations.ReverseTransformHP1(
-                    sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)]);
+                    sourceUshort[i], sourceUshort[i + pixelStride], sourceUshort[i + (2 * pixelStride)]);
         }
     }
 
-    private static void CopyLine16Bit3ComponentsHP2(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyLine16Bit3ComponentsHP2(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceUshort = MemoryMarshal.Cast<byte, ushort>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] =
                 ColorTransformations.ReverseTransformHP2(
-                    sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)]);
+                    sourceUshort[i], sourceUshort[i + pixelStride], sourceUshort[i + (2 * pixelStride)]);
         }
     }
 
-    private static void CopyLine16Bit3ComponentsHP3(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyLine16Bit3ComponentsHP3(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceUshort = MemoryMarshal.Cast<byte, ushort>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationTriplet[i] =
                 ColorTransformations.ReverseTransformHP3(
-                    sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)]);
+                    sourceUshort[i], sourceUshort[i + pixelStride], sourceUshort[i + (2 * pixelStride)]);
         }
     }
 
-    private static void CopyLine16Bit4Components(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyLine16Bit4Components(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceUshort = MemoryMarshal.Cast<byte, ushort>(source);
         var destinationQuad = MemoryMarshal.Cast<byte, Quad<ushort>>(destination);
+        int pixelStride = PixelCountToPixelStride(pixelCount);
 
         for (int i = 0; i < pixelCount; ++i)
         {
             destinationQuad[i] = new Quad<ushort>(
-                sourceUshort[i], sourceUshort[i + sourceStride], sourceUshort[i + (2 * sourceStride)], sourceUshort[i + (3 * sourceStride)]);
+                sourceUshort[i], sourceUshort[i + pixelStride], sourceUshort[i + (2 * pixelStride)], sourceUshort[i + (3 * pixelStride)]);
         }
     }
 
-    private static void CopyPixels16BitHP1(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels16BitHP1(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
@@ -313,7 +323,7 @@ internal class CopyFromLineBuffer
         }
     }
 
-    private static void CopyPixels16BitHP2(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels16BitHP2(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
@@ -325,7 +335,7 @@ internal class CopyFromLineBuffer
         }
     }
 
-    private static void CopyPixels16BitHP3(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels16BitHP3(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(source);
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<ushort>>(destination);
@@ -337,15 +347,21 @@ internal class CopyFromLineBuffer
         }
     }
 
-    private static void CopyPixels16BitTriplet(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels16BitTriplet(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         int bytesCount = pixelCount * 3 * 2;
         source[..bytesCount].CopyTo(destination);
     }
 
-    private static void CopyPixels16BitQuad(Span<byte> source, Span<byte> destination, int pixelCount, int sourceStride)
+    private static void CopyPixels16BitQuad(Span<byte> source, Span<byte> destination, int pixelCount)
     {
         int bytesCount = pixelCount * 4 * 2;
         source[..bytesCount].CopyTo(destination);
+    }
+
+    private static int PixelCountToPixelStride(int pixelCount)
+    {
+        // The line buffer is allocated with 2 extra pixels for the edges.
+        return pixelCount + 2;
     }
 }

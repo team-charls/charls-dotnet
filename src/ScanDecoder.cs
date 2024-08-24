@@ -427,7 +427,7 @@ internal struct ScanDecoder
 
                     DecodeSampleLine(previousLine, currentLine);
 
-                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
                     destination = destination[_stride..];
                 }
 
@@ -477,7 +477,7 @@ internal struct ScanDecoder
 
                     DecodeSampleLine(previousLine, currentLine);
 
-                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
                     destination = destination[_stride..];
                 }
 
@@ -540,7 +540,7 @@ internal struct ScanDecoder
                     }
 
                     int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
-                    CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
+                    CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width);
                     destination = destination[_stride..];
                 }
 
@@ -604,7 +604,7 @@ internal struct ScanDecoder
                     }
 
                     int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
-                    CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width, pixelStride);
+                    CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width);
                     destination = destination[_stride..];
                 }
 
@@ -655,7 +655,7 @@ internal struct ScanDecoder
 
                     DecodeTripletLine(previousLine, currentLine);
 
-                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
                     destination = destination[_stride..];
                 }
 
@@ -705,7 +705,7 @@ internal struct ScanDecoder
 
                     DecodeTripletLine(previousLine, currentLine);
 
-                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
                     destination = destination[_stride..];
                 }
 
@@ -755,7 +755,7 @@ internal struct ScanDecoder
 
                     DecodeQuadLine(previousLine, currentLine);
 
-                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
                     destination = destination[_stride..];
                 }
 
@@ -805,7 +805,7 @@ internal struct ScanDecoder
 
                     DecodeQuadLine(previousLine, currentLine);
 
-                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width, pixelStride);
+                    CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
                     destination = destination[_stride..];
                 }
 
@@ -1440,50 +1440,50 @@ internal struct ScanDecoder
         return errorValue;
     }
 
-    private readonly void CopyLineBufferToDestination(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly void CopyLineBufferToDestination(Span<byte> source, Span<byte> destination, int pixelCount)
     {
-        _copyFromLineBuffer(source, destination, pixelCount, pixelStride);
+        _copyFromLineBuffer(source, destination, pixelCount);
     }
 
-    private readonly void CopyLineBufferToDestination(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly void CopyLineBufferToDestination(Span<ushort> source, Span<byte> destination, int pixelCount)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
-        _copyFromLineBuffer(sourceInBytes, destination, pixelCount * 2, pixelStride);
+        _copyFromLineBuffer(sourceInBytes, destination, pixelCount * 2);
     }
 
-    private readonly void CopyLineBufferToDestination(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly void CopyLineBufferToDestination(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<byte>, byte>(source);
-        _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
+        _copyFromLineBuffer(sourceInBytes, destination, pixelCount);
     }
 
-    private readonly void CopyLineBufferToDestination(Span<Triplet<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly void CopyLineBufferToDestination(Span<Triplet<ushort>> source, Span<byte> destination, int pixelCount)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(source);
-        _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
+        _copyFromLineBuffer(sourceInBytes, destination, pixelCount);
     }
 
-    private readonly void CopyLineBufferToDestination(Span<Quad<byte>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly void CopyLineBufferToDestination(Span<Quad<byte>> source, Span<byte> destination, int pixelCount)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<byte>, byte>(source);
-        _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
+        _copyFromLineBuffer(sourceInBytes, destination, pixelCount);
     }
 
-    private readonly void CopyLineBufferToDestination(Span<Quad<ushort>> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly void CopyLineBufferToDestination(Span<Quad<ushort>> source, Span<byte> destination, int pixelCount)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(source);
-        _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
+        _copyFromLineBuffer(sourceInBytes, destination, pixelCount);
     }
 
-    private readonly void CopyLineBufferToDestinationInterleaveLine(Span<byte> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly void CopyLineBufferToDestinationInterleaveLine(Span<byte> source, Span<byte> destination, int pixelCount)
     {
-        _copyFromLineBuffer(source, destination, pixelCount, pixelStride);
+        _copyFromLineBuffer(source, destination, pixelCount);
     }
 
-    private readonly void CopyLineBufferToDestinationInterleaveLine(Span<ushort> source, Span<byte> destination, int pixelCount, int pixelStride)
+    private readonly void CopyLineBufferToDestinationInterleaveLine(Span<ushort> source, Span<byte> destination, int pixelCount)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
-        _copyFromLineBuffer(sourceInBytes, destination, pixelCount, pixelStride);
+        _copyFromLineBuffer(sourceInBytes, destination, pixelCount);
     }
 
     private static T[] RentLineBuffer<T>(int length)
