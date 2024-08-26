@@ -32,15 +32,14 @@ internal struct ScanDecoder
     private ulong _readCache;
     private int _restartIntervalCounter;
     private int _restartInterval;
-    private int _stride;
 
     internal ScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
         var traits = Traits.Create(frameInfo, codingParameters.NearLossless, presetCodingParameters.ResetValue);
         _scanCodec = new ScanCodec(traits, frameInfo, presetCodingParameters, codingParameters);
 
-        _copyFromLineBuffer = CopyFromLineBuffer.GetMethod(
-            FrameInfo.BitsPerSample, FrameInfo.ComponentCount, CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
+        _copyFromLineBuffer = CopyFromLineBuffer.GetCopyMethod(
+            FrameInfo.BitsPerSample, CodingParameters.InterleaveMode, FrameInfo.ComponentCount, CodingParameters.ColorTransformation);
 
         _scanCodec.InitializeParameters(traits.Range);
     }
@@ -62,7 +61,6 @@ internal struct ScanDecoder
 
     internal int DecodeScan(ReadOnlyMemory<byte> source, Span<byte> destination, int stride)
     {
-        _stride = stride;
         Initialize(source);
 
         // Process images without a restart interval, as 1 large restart interval.
@@ -70,11 +68,11 @@ internal struct ScanDecoder
 
         if (FrameInfo.BitsPerSample <= 8)
         {
-            DecodeLines8Bit(destination);
+            DecodeLines8Bit(destination, stride);
         }
         else
         {
-            DecodeLines16Bit(destination);
+            DecodeLines16Bit(destination, stride);
         }
 
         EndScan();
@@ -344,26 +342,26 @@ internal struct ScanDecoder
         return true;
     }
 
-    private void DecodeLines8Bit(Span<byte> destination)
+    private void DecodeLines8Bit(Span<byte> destination, int stride)
     {
         switch (CodingParameters.InterleaveMode)
         {
             case InterleaveMode.None:
-                DecodeLines8BitInterleaveModeNone(destination);
+                DecodeLines8BitInterleaveModeNone(destination, stride);
                 break;
 
             case InterleaveMode.Line:
-                DecodeLines8BitInterleaveModeLine(destination);
+                DecodeLines8BitInterleaveModeLine(destination, stride);
                 break;
 
             case InterleaveMode.Sample:
                 switch (FrameInfo.ComponentCount)
                 {
                     case 3:
-                        DecodeLines8Bit3ComponentsInterleaveModeSample(destination);
+                        DecodeLines8Bit3ComponentsInterleaveModeSample(destination, stride);
                         break;
                     case 4:
-                        DecodeLines8Bit4ComponentsInterleaveModeSample(destination);
+                        DecodeLines8Bit4ComponentsInterleaveModeSample(destination, stride);
                         break;
                 }
 
@@ -371,26 +369,26 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines16Bit(Span<byte> destination)
+    private void DecodeLines16Bit(Span<byte> destination, int stride)
     {
         switch (CodingParameters.InterleaveMode)
         {
             case InterleaveMode.None:
-                DecodeLines16BitInterleaveModeNone(destination);
+                DecodeLines16BitInterleaveModeNone(destination, stride);
                 break;
 
             case InterleaveMode.Line:
-                DecodeLines16BitInterleaveModeLine(destination);
+                DecodeLines16BitInterleaveModeLine(destination, stride);
                 break;
 
             case InterleaveMode.Sample:
                 switch (FrameInfo.ComponentCount)
                 {
                     case 3:
-                        DecodeLines16Bit3ComponentsInterleaveModeSample(destination);
+                        DecodeLines16Bit3ComponentsInterleaveModeSample(destination, stride);
                         break;
                     case 4:
-                        DecodeLines16Bit4ComponentsInterleaveModeSample(destination);
+                        DecodeLines16Bit4ComponentsInterleaveModeSample(destination, stride);
                         break;
                 }
 
@@ -398,7 +396,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines8BitInterleaveModeNone(Span<byte> destination)
+    private void DecodeLines8BitInterleaveModeNone(Span<byte> destination, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<byte>(pixelStride * 2);
@@ -426,7 +424,7 @@ internal struct ScanDecoder
                 DecodeSampleLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
-                destination = destination[_stride..];
+                destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
@@ -440,7 +438,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines16BitInterleaveModeNone(Span<byte> destination)
+    private void DecodeLines16BitInterleaveModeNone(Span<byte> destination, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<ushort>(pixelStride * 2);
@@ -468,7 +466,7 @@ internal struct ScanDecoder
                 DecodeSampleLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
-                destination = destination[_stride..];
+                destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
@@ -482,7 +480,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines8BitInterleaveModeLine(Span<byte> destination)
+    private void DecodeLines8BitInterleaveModeLine(Span<byte> destination, int stride)
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = FrameInfo.ComponentCount;
@@ -523,7 +521,7 @@ internal struct ScanDecoder
 
                 int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
                 CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width);
-                destination = destination[_stride..];
+                destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
@@ -538,7 +536,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines16BitInterleaveModeLine(Span<byte> destination)
+    private void DecodeLines16BitInterleaveModeLine(Span<byte> destination, int stride)
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = FrameInfo.ComponentCount;
@@ -579,7 +577,7 @@ internal struct ScanDecoder
 
                 int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
                 CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width);
-                destination = destination[_stride..];
+                destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
@@ -594,7 +592,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines8Bit3ComponentsInterleaveModeSample(Span<byte> destination)
+    private void DecodeLines8Bit3ComponentsInterleaveModeSample(Span<byte> destination, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<Triplet<byte>>(pixelStride * 2);
@@ -622,7 +620,7 @@ internal struct ScanDecoder
                 DecodeTripletLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
-                destination = destination[_stride..];
+                destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
@@ -636,7 +634,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines16Bit3ComponentsInterleaveModeSample(Span<byte> destination)
+    private void DecodeLines16Bit3ComponentsInterleaveModeSample(Span<byte> destination, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<Triplet<ushort>>(pixelStride * 2);
@@ -664,7 +662,7 @@ internal struct ScanDecoder
                 DecodeTripletLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
-                destination = destination[_stride..];
+                destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
@@ -678,7 +676,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines8Bit4ComponentsInterleaveModeSample(Span<byte> destination)
+    private void DecodeLines8Bit4ComponentsInterleaveModeSample(Span<byte> destination, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<Quad<byte>>(pixelStride * 2);
@@ -706,7 +704,7 @@ internal struct ScanDecoder
                 DecodeQuadLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
-                destination = destination[_stride..];
+                destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
@@ -720,7 +718,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines16Bit4ComponentsInterleaveModeSample(Span<byte> destination)
+    private void DecodeLines16Bit4ComponentsInterleaveModeSample(Span<byte> destination, int stride)
     {
         int pixelStride = FrameInfo.Width + 2;
         using var rentedArray = ArrayPoolHelper.Rent<Quad<ushort>>(pixelStride * 2);
@@ -748,7 +746,7 @@ internal struct ScanDecoder
                 DecodeQuadLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
-                destination = destination[_stride..];
+                destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
@@ -1385,7 +1383,7 @@ internal struct ScanDecoder
     private readonly void CopyLineBufferToDestination(Span<ushort> source, Span<byte> destination, int pixelCount)
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
-        _copyFromLineBuffer(sourceInBytes, destination, pixelCount * 2);
+        _copyFromLineBuffer(sourceInBytes, destination, pixelCount);
     }
 
     private readonly void CopyLineBufferToDestination(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount)
