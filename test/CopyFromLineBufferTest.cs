@@ -6,16 +6,16 @@ namespace CharLS.Managed.Test;
 public class CopyFromLineBufferTest
 {
     [Fact]
-    public void GetMethod8BitInterleaveModeNone()
+    public void GetCopyMethod8BitInterleaveModeNone()
     {
-        var method = CopyFromLineBuffer.GetMethod(8, 1, InterleaveMode.None, ColorTransformation.None);
+        var method = CopyFromLineBuffer.GetCopyMethod(8, InterleaveMode.None, 1,  ColorTransformation.None);
         Assert.NotNull(method);
     }
 
     [Fact]
-    public void GetMethod16BitInterleaveModeNone()
+    public void GetCopyMethod16BitInterleaveModeNone()
     {
-        var method = CopyFromLineBuffer.GetMethod(16, 1, InterleaveMode.None, ColorTransformation.None);
+        var method = CopyFromLineBuffer.GetCopyMethod(16, InterleaveMode.None, 1,  ColorTransformation.None);
         Assert.NotNull(method);
     }
 }

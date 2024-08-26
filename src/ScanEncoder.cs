@@ -18,7 +18,6 @@ internal struct ScanEncoder
     private int _compressedLength;
     private bool _isFFWritten;
     private int _bytesWritten;
-    private int _stride;
     private CopyToLineBuffer.Method? _copyToLineBuffer;
 
     internal ScanEncoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
@@ -48,19 +47,18 @@ internal struct ScanEncoder
 
     internal int EncodeScan(ReadOnlySpan<byte> source, Memory<byte> destination, int stride)
     {
-        _stride = stride;
-        _copyToLineBuffer = CopyToLineBuffer.GetMethod(
+        _copyToLineBuffer = CopyToLineBuffer.GetCopyMethod(
             FrameInfo.BitsPerSample, FrameInfo.ComponentCount, CodingParameters.InterleaveMode, CodingParameters.ColorTransformation);
 
         InitializeDestination(destination);
 
         if (FrameInfo.BitsPerSample <= 8)
         {
-            EncodeLines8Bit(source);
+            EncodeLines8Bit(source, stride);
         }
         else
         {
-            EncodeLines16Bit(source);
+            EncodeLines16Bit(source, stride);
         }
 
         EndScan();
@@ -182,26 +180,26 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines8Bit(ReadOnlySpan<byte> source)
+    private void EncodeLines8Bit(ReadOnlySpan<byte> source, int stride)
     {
         switch (CodingParameters.InterleaveMode)
         {
             case InterleaveMode.None:
-                EncodeLines8BitInterleaveModeNone(source);
+                EncodeLines8BitInterleaveModeNone(source, stride);
                 break;
 
             case InterleaveMode.Line:
-                EncodeLines8BitInterleaveModeLine(source);
+                EncodeLines8BitInterleaveModeLine(source, stride);
                 break;
 
             case InterleaveMode.Sample:
                 switch (FrameInfo.ComponentCount)
                 {
                     case 3:
-                        EncodeLines8Bit3ComponentsInterleaveModeSample(source);
+                        EncodeLines8Bit3ComponentsInterleaveModeSample(source, stride);
                         break;
                     case 4:
-                        EncodeLines8Bit4ComponentsInterleaveModeSample(source);
+                        EncodeLines8Bit4ComponentsInterleaveModeSample(source, stride);
                         break;
                 }
 
@@ -209,26 +207,26 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines16Bit(ReadOnlySpan<byte> source)
+    private void EncodeLines16Bit(ReadOnlySpan<byte> source, int stride)
     {
         switch (CodingParameters.InterleaveMode)
         {
             case InterleaveMode.None:
-                EncodeLines16BitInterleaveModeNone(source);
+                EncodeLines16BitInterleaveModeNone(source, stride);
                 break;
 
             case InterleaveMode.Line:
-                EncodeLines16BitInterleaveModeLine(source);
+                EncodeLines16BitInterleaveModeLine(source, stride);
                 break;
 
             case InterleaveMode.Sample:
                 switch (FrameInfo.ComponentCount)
                 {
                     case 3:
-                        EncodeLines16Bit3ComponentsInterleaveModeSample(source);
+                        EncodeLines16Bit3ComponentsInterleaveModeSample(source, stride);
                         break;
                     case 4:
-                        EncodeLines16Bit4ComponentsInterleaveModeSample(source);
+                        EncodeLines16Bit4ComponentsInterleaveModeSample(source, stride);
                         break;
                 }
 
@@ -236,7 +234,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void EncodeLines8BitInterleaveModeNone(ReadOnlySpan<byte> source)
+    private void EncodeLines8BitInterleaveModeNone(ReadOnlySpan<byte> source, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<byte>(pixelStride * 2);
@@ -266,11 +264,11 @@ internal struct ScanEncoder
             if (line == FrameInfo.Height)
                 break;
 
-            source = source[_stride..];
+            source = source[stride..];
         }
     }
 
-    private void EncodeLines16BitInterleaveModeNone(ReadOnlySpan<byte> source)
+    private void EncodeLines16BitInterleaveModeNone(ReadOnlySpan<byte> source, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<ushort>(pixelStride * 2);
@@ -300,11 +298,11 @@ internal struct ScanEncoder
             if (line == FrameInfo.Height)
                 break;
 
-            source = source[_stride..];
+            source = source[stride..];
         }
     }
 
-    private void EncodeLines8BitInterleaveModeLine(ReadOnlySpan<byte> source)
+    private void EncodeLines8BitInterleaveModeLine(ReadOnlySpan<byte> source, int stride)
     {
         int pixelStride = PixelStride;
         int componentCount = FrameInfo.ComponentCount;
@@ -345,11 +343,11 @@ internal struct ScanEncoder
             if (line == FrameInfo.Height)
                 break;
 
-            source = source[_stride..];
+            source = source[stride..];
         }
     }
 
-    private void EncodeLines16BitInterleaveModeLine(ReadOnlySpan<byte> source)
+    private void EncodeLines16BitInterleaveModeLine(ReadOnlySpan<byte> source, int stride)
     {
         int pixelStride = PixelStride;
         int componentCount = FrameInfo.ComponentCount;
@@ -390,11 +388,11 @@ internal struct ScanEncoder
             if (line == FrameInfo.Height)
                 break;
 
-            source = source[_stride..];
+            source = source[stride..];
         }
     }
 
-    private void EncodeLines8Bit3ComponentsInterleaveModeSample(ReadOnlySpan<byte> source)
+    private void EncodeLines8Bit3ComponentsInterleaveModeSample(ReadOnlySpan<byte> source, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<Triplet<byte>>(pixelStride * 2);
@@ -424,11 +422,11 @@ internal struct ScanEncoder
             if (line == FrameInfo.Height)
                 break;
 
-            source = source[_stride..];
+            source = source[stride..];
         }
     }
 
-    private void EncodeLines16Bit3ComponentsInterleaveModeSample(ReadOnlySpan<byte> source)
+    private void EncodeLines16Bit3ComponentsInterleaveModeSample(ReadOnlySpan<byte> source, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<Triplet<ushort>>(pixelStride * 2);
@@ -458,11 +456,11 @@ internal struct ScanEncoder
             if (line == FrameInfo.Height)
                 break;
 
-            source = source[_stride..];
+            source = source[stride..];
         }
     }
 
-    private void EncodeLines8Bit4ComponentsInterleaveModeSample(ReadOnlySpan<byte> source)
+    private void EncodeLines8Bit4ComponentsInterleaveModeSample(ReadOnlySpan<byte> source, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<Quad<byte>>(pixelStride * 2);
@@ -492,11 +490,11 @@ internal struct ScanEncoder
             if (line == FrameInfo.Height)
                 break;
 
-            source = source[_stride..];
+            source = source[stride..];
         }
     }
 
-    private void EncodeLines16Bit4ComponentsInterleaveModeSample(ReadOnlySpan<byte> source)
+    private void EncodeLines16Bit4ComponentsInterleaveModeSample(ReadOnlySpan<byte> source, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<Quad<ushort>>(pixelStride * 2);
@@ -527,7 +525,7 @@ internal struct ScanEncoder
             if (line == FrameInfo.Height)
                 break;
 
-            source = source[_stride..];
+            source = source[stride..];
         }
     }
 
@@ -1057,24 +1055,24 @@ internal struct ScanEncoder
     private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<byte>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Triplet<byte>, byte>(destination);
-        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3, _mask);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
     }
 
     private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Triplet<ushort>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Triplet<ushort>, byte>(destination);
-        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 3, _mask);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
     }
 
     private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<byte>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Quad<byte>, byte>(destination);
-        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4, _mask);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
     }
 
     private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Quad<ushort>> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<Quad<ushort>, byte>(destination);
-        _copyToLineBuffer!(source, destinationInBytes, pixelCount * 4, _mask);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
     }
 }

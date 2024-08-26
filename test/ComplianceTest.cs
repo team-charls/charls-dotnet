@@ -48,7 +48,7 @@ public class ComplianceTest
     }
 
     [Fact]
-    public void DecodeEncodeColor8BitInterleaveLineLosslessNonDefault()
+    public void DecodeEncodeColor8BitInterleaveNoneLosslessNonDefault()
     {
         // ISO 14495-1: official test image 9 (T87_test-1-2-3-4-5-6.zip)
         // NON-DEFAULT parameters T1=T2=T3=9,RESET=31.
@@ -56,7 +56,7 @@ public class ComplianceTest
     }
 
     [Fact]
-    public void DecodeEncodeColor8BitInterleaveLineNearLossless3NonDefault()
+    public void DecodeEncodeColor8BitInterleaveNoneNearLossless3NonDefault()
     {
         // ISO 14495-1: official test image 10 (T87_test-1-2-3-4-5-6.zip)
         // NON-DEFAULT parameters T1=T2=T3=9,RESET=31.
