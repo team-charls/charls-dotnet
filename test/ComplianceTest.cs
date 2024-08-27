@@ -87,7 +87,7 @@ public class ComplianceTest
     }
 
     [Fact]
-    public void DecodeEncodeTulipsMonochrome8BitLosslessHpForMeasurement()
+    public void DecodeTulipsMonochrome8BitLosslessHpForMeasurement()
     {
         var encodedSource = Util.ReadFile("test-images/tulips-gray-8bit-512-512-hp-encoder.jls");
 
