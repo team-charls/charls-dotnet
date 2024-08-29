@@ -153,6 +153,15 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
+    /// Returns the compressed data format of the JPEG-LS data stream.
+    /// </summary>
+    /// <remarks>
+    /// Function can be called after reading the header or after processing the complete JPEG-LS stream.
+    /// After reading the header the method may report Unknown or AbbreviatedTableSpecification.
+    /// </remarks>
+    public CompressedDataFormat CompressedDataFormat => _reader.CompressedDataFormat;
+
+    /// <summary>
     /// Returns the HP color transformation that was used to encode the scan.
     /// </summary>
     /// <value>

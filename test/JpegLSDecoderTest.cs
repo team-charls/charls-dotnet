@@ -592,9 +592,24 @@ public class JpegLSDecoderTest
         writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, false);
         writer.WriteMarker(JpegMarkerCode.EndOfImage);
 
-        JpegLSDecoder decoder = new(writer.GetBuffer());
+        JpegLSDecoder decoder = new(writer.GetBuffer(), false);
+        Assert.Equal(CompressedDataFormat.Unknown, decoder.CompressedDataFormat);
+
+        decoder.ReadHeader();
         int count = decoder.MappingTableCount;
+
         Assert.Equal(1, count);
+        Assert.Equal(CompressedDataFormat.AbbreviatedTableSpecification, decoder.CompressedDataFormat);
+    }
+
+    [Fact]
+    public void CompressedDataFormatAbbreviatedImageData()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("conformance/t8c0e0.jls"));
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+
+        decoder.Decode(destination);
+        Assert.Equal(CompressedDataFormat.Interchange, decoder.CompressedDataFormat);
     }
 
     [Fact]
