@@ -21,7 +21,7 @@ internal static class ThrowHelper
         throw AddErrorCode(new ArgumentException(GetErrorMessage(errorCode), paramName), errorCode);
     }
 
-    internal static void ThrowArgumentOutOfRangeExceptionIfFalse(bool condition, ErrorCode errorCode, string? paramName = null)
+    internal static void ThrowArgumentOutOfRangeExceptionIfFalse([DoesNotReturnIf(false)] bool condition, ErrorCode errorCode, string? paramName = null)
     {
         if (condition)
             return;
@@ -43,7 +43,7 @@ internal static class ThrowHelper
             ThrowArgumentOutOfRangeException(errorCode, paramName);
     }
 
-    internal static void ThrowInvalidOperationIfFalse(bool condition)
+    internal static void ThrowInvalidOperationIfFalse([DoesNotReturnIf(false)] bool condition)
     {
         if (condition)
             return;
@@ -51,7 +51,7 @@ internal static class ThrowHelper
         ThrowInvalidOperationException();
     }
 
-    internal static void ThrowArgumentExceptionIfFalse(bool value, string? paramName = null, ErrorCode errorCode = ErrorCode.InvalidArgument)
+    internal static void ThrowArgumentExceptionIfFalse([DoesNotReturnIf(false)] bool value, string? paramName = null, ErrorCode errorCode = ErrorCode.InvalidArgument)
     {
         if (value)
             return;

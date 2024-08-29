@@ -23,7 +23,7 @@ internal struct ScanEncoder
     internal ScanEncoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
         int maximumSampleValue = CalculateMaximumSampleValue(frameInfo.BitsPerSample);
-        var traits = new Traits(maximumSampleValue, codingParameters.NearLossless, presetCodingParameters.ResetValue);
+        var traits = new Traits(maximumSampleValue, codingParameters.NearLossless);
         _scanCodec = new ScanCodec(traits, frameInfo, presetCodingParameters, codingParameters);
 
         _mask = (1 << frameInfo.BitsPerSample) - 1;
@@ -724,8 +724,8 @@ internal struct ScanEncoder
         int predictedValue = Traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
         int errorValue = Traits.ComputeErrorValue(ApplySign(x - predictedValue, sign));
 
-        EncodeMappedValue(k, MapErrorValue(context.GetErrorCorrection(k | Traits.NearLossless) ^ errorValue), Traits.Limit);
-        context.UpdateVariablesAndBias(errorValue, Traits.NearLossless, Traits.ResetThreshold);
+        EncodeMappedValue(k, MapErrorValue(context.GetErrorCorrection(k | _scanCodec.NearLossless) ^ errorValue), _scanCodec.Limit);
+        context.UpdateVariablesAndBias(errorValue, _scanCodec.NearLossless, _scanCodec.ResetThreshold);
 
         Debug.Assert(Traits.IsNear(Traits.ComputeReconstructedSample(predictedValue, ApplySign(errorValue, sign)), x));
         return Traits.ComputeReconstructedSample(predictedValue, ApplySign(errorValue, sign));
@@ -895,7 +895,8 @@ internal struct ScanEncoder
 
     private int EncodeRunInterruptionPixel(int x, int ra, int rb)
     {
-        if (Math.Abs(ra - rb) <= Traits.NearLossless)
+        bool same = _scanCodec.NearLossless == 0 ? ra == rb : AbsUnchecked(ra - rb) <= _scanCodec.NearLossless;
+        if (same)
         {
             int errorValue = Traits.ComputeErrorValue(x - ra);
             EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[1], errorValue);
@@ -989,16 +990,16 @@ internal struct ScanEncoder
     {
         int k = context.GetGolombCode();
         int map = context.ComputeMap(errorValue, k) ? 1 : 0;
-        int eMappedErrorValue = (2 * Math.Abs(errorValue)) - context.RunInterruptionType - map;
+        int eMappedErrorValue = (2 * AbsUnchecked(errorValue)) - context.RunInterruptionType - map;
         Debug.Assert(errorValue == context.ComputeErrorValue(eMappedErrorValue + context.RunInterruptionType, k));
-        EncodeMappedValue(k, eMappedErrorValue, Traits.Limit - ScanCodec.J[RunIndex] - 1);
+        EncodeMappedValue(k, eMappedErrorValue, _scanCodec.Limit - ScanCodec.J[RunIndex] - 1);
         context.UpdateVariables(errorValue, eMappedErrorValue, (byte)_scanCodec.PresetCodingParameters.ResetValue);
     }
 
     private void EncodeMappedValue(int k, int mappedError, int limit)
     {
         int highBits = mappedError >> k;
-        if (highBits < limit - Traits.QuantizedBitsPerSample - 1)
+        if (highBits < limit - _scanCodec.QuantizedBitsPerSample - 1)
         {
             if (highBits + 1 > 31)
             {
@@ -1011,22 +1012,22 @@ internal struct ScanEncoder
             return;
         }
 
-        if (limit - Traits.QuantizedBitsPerSample > 31)
+        if (limit - _scanCodec.QuantizedBitsPerSample > 31)
         {
             AppendToBitStream(0, 31);
-            AppendToBitStream(1, limit - Traits.QuantizedBitsPerSample - 31);
+            AppendToBitStream(1, limit - _scanCodec.QuantizedBitsPerSample - 31);
         }
         else
         {
-            AppendToBitStream(1, limit - Traits.QuantizedBitsPerSample);
+            AppendToBitStream(1, limit - _scanCodec.QuantizedBitsPerSample);
         }
 
-        AppendToBitStream((uint)((mappedError - 1) & ((1 << Traits.QuantizedBitsPerSample) - 1)), Traits.QuantizedBitsPerSample);
+        AppendToBitStream((uint)((mappedError - 1) & ((1 << _scanCodec.QuantizedBitsPerSample) - 1)), _scanCodec.QuantizedBitsPerSample);
     }
 
     private readonly int QuantizeGradient(int di)
     {
-        Debug.Assert(_scanCodec.QuantizeGradient(di, Traits.NearLossless) == _scanCodec.QuantizationLut[(_scanCodec.QuantizationLut.Length / 2) + di]);
+        Debug.Assert(_scanCodec.QuantizeGradient(di, _scanCodec.NearLossless) == _scanCodec.QuantizationLut[(_scanCodec.QuantizationLut.Length / 2) + di]);
         return _scanCodec.QuantizationLut[(_scanCodec.QuantizationLut.Length / 2) + di];
     }
 

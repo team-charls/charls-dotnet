@@ -2,11 +2,31 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace CharLS.Managed;
 
 internal static class Algorithm
 {
+    /// <summary>
+    /// Abs, but without the check for overflow.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static int AbsUnchecked(int value)
+    {
+        Debug.Assert(value != int.MinValue);
+        return value < 0 ? -value : value;
+    }
+
+    /// <summary>
+    /// Checks if a value is outside the range [-range, range].
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool OutsideRange(int value, int range)
+    {
+        return value < -range || value > range;
+    }
+
     internal static int Log2Ceiling(int value)
     {
         Debug.Assert(value >= 0);

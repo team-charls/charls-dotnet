@@ -27,8 +27,6 @@ internal static class Constants
     internal const int AutoCalculateStride = 0;
     internal const byte JpegMarkerStartByte = 0xFF;
 
-    internal const int MaxKValue = 16; // This is an implementation limit (theoretical limit is 32)
-
     // ISO/IEC 14495-1, section 4.8.1 defines the SPIFF version numbers to be used for the SPIFF header in combination with
     // JPEG-LS.
     internal const byte SpiffMajorRevisionNumber = 2;
