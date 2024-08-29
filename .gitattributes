@@ -7,6 +7,9 @@
 # Explicit define text files types.
 *.cs text diff=csharp
 
+# Explicit use CRLF for spell checker exclusion file.
+*.dic text eol=crlf
+
 # Explicit exclude binary files from the line ending normalization.
 *.png binary
 *.jls binary

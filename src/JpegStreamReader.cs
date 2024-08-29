@@ -24,6 +24,7 @@ internal struct JpegStreamReader
     private int _height;
     private int _bitsPerSample;
     private int _componentCount;
+    private bool _componentWithMappingTableExists;
 
     public JpegStreamReader()
     {
@@ -66,6 +67,8 @@ internal struct JpegStreamReader
     internal SpiffHeader? SpiffHeader { get; private set; }
 
     internal InterleaveMode InterleaveMode { get; private set; }
+
+    internal CompressedDataFormat CompressedDataFormat { get; private set; }
 
     internal ColorTransformation ColorTransformation { get; private set; }
 
@@ -169,6 +172,7 @@ internal struct JpegStreamReader
                 if (IsAbbreviatedFormatForTableSpecificationData())
                 {
                     _state = State.AfterEndOfImage;
+                    CompressedDataFormat = CompressedDataFormat.AbbreviatedTableSpecification;
                     return;
                 }
 
@@ -228,9 +232,12 @@ internal struct JpegStreamReader
         Debug.Assert(_state == State.BitStreamSection);
 
         var markerCode = ReadNextMarkerCode();
-
         if (markerCode != JpegMarkerCode.EndOfImage)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.EndOfImageMarkerNotFound);
+
+        Debug.Assert(CompressedDataFormat == CompressedDataFormat.Unknown);
+        CompressedDataFormat = _componentWithMappingTableExists && HasExternalMappingTableIds() ?
+            CompressedDataFormat.AbbreviatedImageData : CompressedDataFormat.Interchange;
 
         _state = State.AfterEndOfImage;
     }
@@ -824,7 +831,7 @@ internal struct JpegStreamReader
         _height = value;
     }
 
-    private readonly void StoreScanInfo(byte componentId, byte tableId, int nearLossless, InterleaveMode interleaveMode)
+    private void StoreScanInfo(byte componentId, byte tableId, int nearLossless, InterleaveMode interleaveMode)
     {
         // Ignore when info is default, prevent search and ID mismatch issues.
         if (tableId == 0 && nearLossless == 0 && interleaveMode == InterleaveMode.None)
@@ -833,6 +840,11 @@ internal struct JpegStreamReader
         int index = _scanInfos.FindIndex(scanInfo => scanInfo.ComponentId == componentId);
         if (index == -1)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.UnknownComponentId);
+
+        if (tableId != 0)
+        {
+            _componentWithMappingTableExists = true;
+        }
 
         _scanInfos[index] = new ScanInfo(componentId, tableId, nearLossless, InterleaveMode);
     }
@@ -856,6 +868,17 @@ internal struct JpegStreamReader
             ThrowHelper.ThrowInvalidDataException(ErrorCode.AbbreviatedFormatAndSpiffHeaderMismatch);
 
         return _state == State.HeaderSection;
+    }
+
+    private readonly bool HasExternalMappingTableIds()
+    {
+        foreach (var scanInfo in _scanInfos)
+        {
+            if (scanInfo.MappingTableId != 0 && FindMappingTableIndex(scanInfo.MappingTableId) == -1)
+                return true;
+        }
+
+        return false;
     }
 
     private static bool IsKnownJpegSofMarker(JpegMarkerCode markerCode)
