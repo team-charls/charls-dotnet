@@ -22,8 +22,7 @@ internal struct ScanEncoder
 
     internal ScanEncoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
-        int maximumSampleValue = CalculateMaximumSampleValue(frameInfo.BitsPerSample);
-        var traits = new Traits(maximumSampleValue, codingParameters.NearLossless);
+        var traits = Traits.Create(frameInfo, codingParameters.NearLossless);
         _scanCodec = new ScanCodec(traits, frameInfo, presetCodingParameters, codingParameters);
 
         _mask = (1 << frameInfo.BitsPerSample) - 1;

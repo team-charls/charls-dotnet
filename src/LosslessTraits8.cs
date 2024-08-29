@@ -13,7 +13,7 @@ internal sealed class LosslessTraits8(int maximumSampleValue, int nearLossless)
 
     internal override int ComputeReconstructedSample(int predictedValue, int errorValue)
     {
-        return predictedValue + errorValue;
+        return (byte)(predictedValue + errorValue);
     }
 
     internal override int ModuloRange(int errorValue)
