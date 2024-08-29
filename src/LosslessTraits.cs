@@ -5,8 +5,8 @@ namespace CharLS.Managed;
 
 internal class LosslessTraits : Traits
 {
-    internal LosslessTraits(int maximumSampleValue, int nearLossless, int resetThreshold)
-        : base(maximumSampleValue, nearLossless, resetThreshold)
+    internal LosslessTraits(int maximumSampleValue, int nearLossless)
+        : base(maximumSampleValue, nearLossless)
     {
     }
 

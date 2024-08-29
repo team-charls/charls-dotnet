@@ -200,7 +200,7 @@ public sealed class JpegLSDecoder
     {
         CheckHeaderRead();
         ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount - 1, componentIndex);
-        return _reader.GetCodingParameters().NearLossless;
+        return _reader.GetNearLossless(componentIndex);
     }
 
     /// <summary>

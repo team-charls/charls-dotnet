@@ -18,11 +18,11 @@ public class ComputeReconstructedSample
     [GlobalSetup]
     public void Init()
     {
-        _traits = new Traits(256, 0, 64);
-        _traitsLossy = new Traits(256, 3, 64);
-        _losslessTraits = new LosslessTraits(256, 0, 64);
-        _losslessTraits8 = new LosslessTraits8(256, 0, 64);
-        _losslessTraits16 = new LosslessTraits16(256, 0, 64);
+        _traits = new Traits(256, 0);
+        _traitsLossy = new Traits(256, 3);
+        _losslessTraits = new LosslessTraits(256, 0);
+        _losslessTraits8 = new LosslessTraits8(256, 0);
+        _losslessTraits16 = new LosslessTraits16(256, 0);
         _predictedValue = 256;
         _errorValue = 240;
     }

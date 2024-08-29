@@ -18,6 +18,26 @@ internal struct ScanCodec
 
     internal int RunIndex;
 
+    /// <summary>
+    /// ISO 14495-1 RESET symbol: threshold value at which A, B, and N are halved.
+    /// </summary>
+    internal int ResetThreshold;
+
+    /// <summary>
+    /// ISO 14495-1 NEAR symbol: difference bound for near-lossless coding, 0 means lossless.
+    /// </summary>
+    internal int NearLossless;
+
+    /// <summary>
+    /// ISO 14495-1 LIMIT symbol: the value of glimit for a sample encoded in regular mode.
+    /// </summary>
+    internal int Limit;
+
+    /// <summary>
+    /// ISO 14495-1 qbpp symbol: number of bits needed to represent a mapped error value.
+    /// </summary>
+    internal int QuantizedBitsPerSample;
+
     internal RunModeContextArray RunModeContexts;
 
     internal RegularModeContextArray RegularModeContext;
@@ -40,6 +60,12 @@ internal struct ScanCodec
         FrameInfo = frameInfo;
         PresetCodingParameters = presetCodingParameters;
         CodingParameters = codingParameters;
+
+        // Copy often used preset coding parameters to local fields for faster access.
+        ResetThreshold = presetCodingParameters.ResetValue;
+        NearLossless = CodingParameters.NearLossless;
+        Limit = ComputeLimitParameter(traits.BitsPerSample);
+        QuantizedBitsPerSample = Log2Ceiling(traits.Range);
     }
 
     internal FrameInfo FrameInfo { get; private set; }
@@ -98,11 +124,12 @@ internal struct ScanCodec
         }
 
         // Initialize the quantization lookup table dynamic.
-        var quantizationLut = new sbyte[traits.QuantizationRange * 2];
+        int quantizationRange = 1 << traits.BitsPerSample;
+        var quantizationLut = new sbyte[quantizationRange * 2];
         for (int i = 0; i < quantizationLut.Length; ++i)
         {
             quantizationLut[i] = QuantizeGradientOrg(
-                -traits.QuantizationRange + i, threshold1, threshold2, threshold3, traits.NearLossless);
+                -quantizationRange + i, threshold1, threshold2, threshold3, traits.NearLossless);
         }
 
         return quantizationLut;

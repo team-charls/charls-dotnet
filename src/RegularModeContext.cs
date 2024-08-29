@@ -22,16 +22,35 @@ internal struct RegularModeContext
     /// <summary>
     /// Computes the Golomb coding parameter using the algorithm as defined in ISO 14495-1, code segment A.10.
     /// </summary>
-    internal readonly int ComputeGolombCodingParameter()
+    /// <remarks>
+    /// An additional check is done for bad input values to prevent an endless loop.
+    /// </remarks>
+    internal readonly int ComputeGolombCodingParameterChecked()
     {
+        const int maxKValue = 16; // This is an implementation limit (theoretical limit is 32)
+
         int k = 0;
-        for (; _n << k < _a && k < Constants.MaxKValue; ++k)
+        for (; _n << k < _a && k < maxKValue; ++k)
         {
             // Purpose of this loop is to calculate 'k', by design no content.
         }
 
-        if (k == Constants.MaxKValue)
+        if (k == maxKValue)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
+
+        return k;
+    }
+
+    /// <summary>
+    /// Computes the Golomb coding parameter using the algorithm as defined in ISO 14495-1, code segment A.10.
+    /// </summary>
+    internal readonly int ComputeGolombCodingParameter()
+    {
+        int k = 0;
+        for (; _n << k < _a; ++k)
+        {
+            // Purpose of this loop is to calculate 'k', by design no content.
+        }
 
         return k;
     }
@@ -46,11 +65,11 @@ internal struct RegularModeContext
     {
         Debug.Assert(_n != 0);
 
-        _a += Math.Abs(errorValue);
+        _a += AbsUnchecked(errorValue);
         _b += errorValue * ((2 * nearLossless) + 1);
 
         const int limit = 65536 * 256;
-        if (_a >= limit || Math.Abs(_b) >= limit)
+        if (_a >= limit || OutsideRange(_b, limit))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         if (_n == resetThreshold)

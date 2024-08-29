@@ -3,8 +3,8 @@
 
 namespace CharLS.Managed;
 
-internal sealed class LosslessTraits8(int maximumSampleValue, int nearLossless, int resetThreshold)
-    : LosslessTraits(maximumSampleValue, nearLossless, resetThreshold)
+internal sealed class LosslessTraits8(int maximumSampleValue, int nearLossless)
+    : LosslessTraits(maximumSampleValue, nearLossless)
 {
     internal override int ComputeErrorValue(int errorValue)
     {
