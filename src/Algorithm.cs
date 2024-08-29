@@ -33,10 +33,9 @@ internal static class Algorithm
         Debug.Assert((uint)value <= uint.MaxValue >> 2); // otherwise 1 << x becomes negative.
 
         int log2Floor = BitOperations.Log2((uint)value);
-        bool isPowerOfTwo = (value & (value - 1)) == 0;
 
         // If value is not a power of two, add 1 to get the ceiling
-        return isPowerOfTwo ? log2Floor : log2Floor + 1;
+        return BitOperations.IsPow2(value) ? log2Floor : log2Floor + 1;
     }
 
     /// <summary>
