@@ -27,15 +27,10 @@ internal struct RegularModeContext
     /// </remarks>
     internal readonly int ComputeGolombCodingParameterChecked()
     {
-        const int maxKValue = 16; // This is an implementation limit (theoretical limit is 32)
+        const int maxKValue = 16; // This is an implementation limit as there are only 16 lookup tables (theoretical limit is 32)
 
-        int k = 0;
-        for (; _n << k < _a && k < maxKValue; ++k)
-        {
-            // Purpose of this loop is to calculate 'k', by design no content.
-        }
-
-        if (k == maxKValue)
+        int k = ComputeGolombCodingParameter();
+        if (k >= maxKValue)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
 
         return k;
@@ -64,6 +59,7 @@ internal struct RegularModeContext
     internal void UpdateVariablesAndBias(int errorValue, int nearLossless, int resetThreshold)
     {
         Debug.Assert(_n != 0);
+        Debug.Assert(resetThreshold >= 3);
 
         _a += AbsUnchecked(errorValue);
         _b += errorValue * ((2 * nearLossless) + 1);
@@ -75,7 +71,7 @@ internal struct RegularModeContext
         if (_n == resetThreshold)
         {
             _a >>= 1;
-            _b >>= 1;
+            _b >>= 1; // Note: C# performs arithmetic right shift on signed integers, handling _b < 0 case is not needed.
             _n >>= 1;
         }
 
