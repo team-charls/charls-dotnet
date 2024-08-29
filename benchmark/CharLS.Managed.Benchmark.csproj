@@ -9,6 +9,8 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>CharLS.Managed.Benchmark</RootNamespace>
     <IsPackable>false</IsPackable>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\src\CharLS.Managed.KeyPair.snk</AssemblyOriginatorKeyFile>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <!--
       CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'
