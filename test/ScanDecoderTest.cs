@@ -17,7 +17,7 @@ internal sealed class TestScanDecoder
         _scanDecoder.Initialize(source);
     }
 
-    public bool TestReadBit()
+    public nuint TestReadBit()
     {
         return _scanDecoder.ReadBit();
     }
@@ -27,7 +27,7 @@ internal sealed class TestScanDecoder
         _scanDecoder.EndScan();
     }
 
-    public byte TestPeekByte()
+    public int TestPeekByte()
     {
         return _scanDecoder.PeekByte();
     }
@@ -51,7 +51,7 @@ public class ScanDecoderTest
         for (int i = 0; i < 2 * 8; i++)
         {
             var actual = scanDecoder.TestReadBit();
-            Assert.False(actual);
+            Assert.Equal(0UL, actual);
         }
 
         scanDecoder.TestEndScan();
@@ -71,7 +71,7 @@ public class ScanDecoderTest
         for (int i = 0; i < 9 * 8; i++)
         {
             var actual = scanDecoder.TestReadBit();
-            Assert.False(actual);
+            Assert.Equal(0UL, actual);
         }
 
         scanDecoder.TestEndScan();
@@ -88,12 +88,12 @@ public class ScanDecoderTest
         var scanDecoder = new TestScanDecoder(frameInfo, cp!, codingParameters);
         scanDecoder.TestInitialize(source);
 
-        byte peekByte1 = scanDecoder.TestPeekByte();
+        int peekByte1 = scanDecoder.TestPeekByte();
         for (int i = 0; i < 1 * 8; i++)
         {
             _ = scanDecoder.TestReadBit();
         }
-        byte peekByte2 = scanDecoder.TestPeekByte();
+        int peekByte2 = scanDecoder.TestPeekByte();
         for (int i = 0; i < 1 * 8; i++)
         {
             _ = scanDecoder.TestReadBit();

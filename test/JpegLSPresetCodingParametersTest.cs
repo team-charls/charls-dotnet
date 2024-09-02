@@ -3,8 +3,146 @@
 
 namespace CharLS.Managed.Test;
 
-internal sealed class JpegLSPresetCodingParametersTest
+public sealed class JpegLSPresetCodingParametersTest
 {
+    [Fact]
+    public void DefaultIsAllZeros()
+    {
+        var defaultParameters = JpegLSPresetCodingParameters.Default;
+
+        Assert.Equal(0, defaultParameters.MaximumSampleValue);
+        Assert.Equal(0, defaultParameters.ResetValue);
+        Assert.Equal(0, defaultParameters.Threshold1);
+        Assert.Equal(0, defaultParameters.Threshold2);
+        Assert.Equal(0, defaultParameters.Threshold3);
+    }
+
+    [Fact]
+    public void DefaultIsDefault()
+    {
+        var defaultParameters = JpegLSPresetCodingParameters.Default;
+        Assert.True(defaultParameters.IsDefault(256, 0));
+    }
+
+    [Fact]
+    public void CreateDefault()
+    {
+        var defaultParameters = new JpegLSPresetCodingParameters(256, 3, 7, 21, 64);
+        Assert.True(defaultParameters.IsDefault(256, 0));
+    }
+
+    [Fact]
+    public void IsNotDefaultThreshold2()
+    {
+        var defaultParameters = new JpegLSPresetCodingParameters(256, 3, 7 + 1, 21, 64);
+        Assert.False(defaultParameters.IsDefault(256, 0));
+    }
+
+    [Fact]
+    public void IsNotDefaultThreshold3()
+    {
+        var defaultParameters = new JpegLSPresetCodingParameters(256, 3, 7, 21 + 1, 64);
+        Assert.False(defaultParameters.IsDefault(256, 0));
+    }
+
+    [Fact]
+    public void MaxValueLossless()
+    {
+        var expected = ComputeDefaultsUsingReferenceImplementation(ushort.MaxValue, 0);
+        var parameters = JpegLSPresetCodingParameters.ComputeDefault(ushort.MaxValue, 0);
+
+        Assert.Equal(expected.MaxValue, parameters.MaximumSampleValue);
+        Assert.Equal(expected.T1, parameters.Threshold1);
+        Assert.Equal(expected.T2, parameters.Threshold2);
+        Assert.Equal(expected.T3, parameters.Threshold3);
+        Assert.Equal(expected.Reset, parameters.ResetValue);
+    }
+
+    [Fact]
+    public void MinValueLossless()
+    {
+        var expected = ComputeDefaultsUsingReferenceImplementation(3, 0);
+        var parameters = JpegLSPresetCodingParameters.ComputeDefault(3, 0);
+
+        Assert.Equal(expected.MaxValue, parameters.MaximumSampleValue);
+        Assert.Equal(expected.T1, parameters.Threshold1);
+        Assert.Equal(expected.T2, parameters.Threshold2);
+        Assert.Equal(expected.T3, parameters.Threshold3);
+        Assert.Equal(expected.Reset, parameters.ResetValue);
+    }
+
+    [Fact]
+    public void MinHighValueLossless()
+    {
+        var expected = ComputeDefaultsUsingReferenceImplementation(128, 0);
+        var parameters = JpegLSPresetCodingParameters.ComputeDefault(128, 0);
+
+        Assert.Equal(expected.MaxValue, parameters.MaximumSampleValue);
+        Assert.Equal(expected.T1, parameters.Threshold1);
+        Assert.Equal(expected.T2, parameters.Threshold2);
+        Assert.Equal(expected.T3, parameters.Threshold3);
+        Assert.Equal(expected.Reset, parameters.ResetValue);
+    }
+
+    [Fact]
+    public void MaxLowValueLossless()
+    {
+        var expected = ComputeDefaultsUsingReferenceImplementation(127, 0);
+        var parameters = JpegLSPresetCodingParameters.ComputeDefault(127, 0);
+
+        Assert.Equal(expected.MaxValue, parameters.MaximumSampleValue);
+        Assert.Equal(expected.T1, parameters.Threshold1);
+        Assert.Equal(expected.T2, parameters.Threshold2);
+        Assert.Equal(expected.T3, parameters.Threshold3);
+        Assert.Equal(expected.Reset, parameters.ResetValue);
+    }
+
+    [Fact]
+    public void MaxValueLossy()
+    {
+        var expected = ComputeDefaultsUsingReferenceImplementation(ushort.MaxValue, 255);
+        var parameters = JpegLSPresetCodingParameters.ComputeDefault(ushort.MaxValue, 255);
+
+        Assert.Equal(expected.MaxValue, parameters.MaximumSampleValue);
+        Assert.Equal(expected.T1, parameters.Threshold1);
+        Assert.Equal(expected.T2, parameters.Threshold2);
+        Assert.Equal(expected.T3, parameters.Threshold3);
+        Assert.Equal(expected.Reset, parameters.ResetValue);
+    }
+
+    [Fact]
+    public void MinValueLossy()
+    {
+        var expected = ComputeDefaultsUsingReferenceImplementation(3, 1);
+        var parameters = JpegLSPresetCodingParameters.ComputeDefault(3, 1);
+
+        Assert.Equal(expected.MaxValue, parameters.MaximumSampleValue);
+        Assert.Equal(expected.T1, parameters.Threshold1);
+        Assert.Equal(expected.T2, parameters.Threshold2);
+        Assert.Equal(expected.T3, parameters.Threshold3);
+        Assert.Equal(expected.Reset, parameters.ResetValue);
+    }
+
+    [Fact]
+    public void IsValidDefault()
+    {
+        const int bitsPerSample = 16;
+        const int maximumComponentValue = (1 << bitsPerSample) - 1;
+        JpegLSPresetCodingParameters p = new();
+
+        Assert.True(p.TryMakeExplicit(maximumComponentValue, 0, out _));
+    }
+
+    [Fact]
+    public void IsValidThresholdsZero()
+    {
+        const int bitsPerSample = 16;
+        const int maximumComponentValue = (1 << bitsPerSample) - 1;
+        JpegLSPresetCodingParameters p = new(maximumComponentValue, 0, 0, 0, 63);
+
+        Assert.True(p.TryMakeExplicit(maximumComponentValue, 0, out _));
+    }
+
     // Threshold function of JPEG-LS reference implementation.
     internal static Thresholds ComputeDefaultsUsingReferenceImplementation(int maxValue, ushort near)
     {

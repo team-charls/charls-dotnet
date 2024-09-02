@@ -112,9 +112,9 @@ internal class Traits
 
         return frameInfo.BitsPerSample switch
         {
-            8 => new LosslessTraits8(maximumSampleValue, nearLossless),
-            16 => new LosslessTraits16(maximumSampleValue, nearLossless),
-            _ => new LosslessTraits(maximumSampleValue, nearLossless)
+            8 => new LosslessTraits8(),
+            16 => new LosslessTraits16(),
+            _ => new LosslessTraits(maximumSampleValue)
         };
     }
 

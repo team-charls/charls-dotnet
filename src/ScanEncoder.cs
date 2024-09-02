@@ -65,35 +65,13 @@ internal struct ScanEncoder
         return GetLength();
     }
 
-    private void InitializeDestination(Memory<byte> destination)
+    internal void InitializeDestination(Memory<byte> destination)
     {
         _destination = destination;
         _compressedLength = destination.Length;
     }
 
-    private void EncodeRunPixels(int runLength, bool endOfLine)
-    {
-        while (runLength >= 1 << ScanCodec.J[RunIndex])
-        {
-            AppendOnesToBitStream(1);
-            runLength -= 1 << ScanCodec.J[RunIndex];
-            _scanCodec.IncrementRunIndex();
-        }
-
-        if (endOfLine)
-        {
-            if (runLength != 0)
-            {
-                AppendOnesToBitStream(1);
-            }
-        }
-        else
-        {
-            AppendToBitStream((uint)runLength, ScanCodec.J[RunIndex] + 1); // leading 0 + actual remaining length
-        }
-    }
-
-    private void AppendToBitStream(uint bits, int bitCount)
+    internal void AppendToBitStream(uint bits, int bitCount)
     {
         Debug.Assert(bitCount is >= 0 and < 32);
         Debug.Assert((bits | ((1U << bitCount) - 1U)) == ((1U << bitCount) - 1U)); // Not used bits must be set to zero.
@@ -121,31 +99,7 @@ internal struct ScanEncoder
         }
     }
 
-    private void AppendOnesToBitStream(int bitCount)
-    {
-        AppendToBitStream((1U << bitCount) - 1U, bitCount);
-    }
-
-    private void EndScan()
-    {
-        Flush();
-
-        // if a 0xff was written, Flush() will force one unset bit anyway
-        if (_isFFWritten)
-        {
-            AppendToBitStream(0, (_freeBitCount - 1) % 8);
-        }
-
-        Flush();
-        Debug.Assert(_freeBitCount == 32);
-    }
-
-    private readonly int GetLength()
-    {
-        return _bytesWritten - ((_freeBitCount - 32) / 8);
-    }
-
-    private void Flush()
+    internal void Flush()
     {
         if (_compressedLength < 4)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.DestinationTooSmall);
@@ -177,6 +131,52 @@ internal struct ScanEncoder
             --_compressedLength;
             ++_bytesWritten;
         }
+    }
+
+    private void EncodeRunPixels(int runLength, bool endOfLine)
+    {
+        while (runLength >= 1 << ScanCodec.J[RunIndex])
+        {
+            AppendOnesToBitStream(1);
+            runLength -= 1 << ScanCodec.J[RunIndex];
+            _scanCodec.IncrementRunIndex();
+        }
+
+        if (endOfLine)
+        {
+            if (runLength != 0)
+            {
+                AppendOnesToBitStream(1);
+            }
+        }
+        else
+        {
+            AppendToBitStream((uint)runLength, ScanCodec.J[RunIndex] + 1); // leading 0 + actual remaining length
+        }
+    }
+
+    private void AppendOnesToBitStream(int bitCount)
+    {
+        AppendToBitStream((1U << bitCount) - 1U, bitCount);
+    }
+
+    private void EndScan()
+    {
+        Flush();
+
+        // if a 0xff was written, Flush() will force one unset bit anyway
+        if (_isFFWritten)
+        {
+            AppendToBitStream(0, (_freeBitCount - 1) % 8);
+        }
+
+        Flush();
+        Debug.Assert(_freeBitCount == 32);
+    }
+
+    private readonly int GetLength()
+    {
+        return _bytesWritten - ((_freeBitCount - 32) / 8);
     }
 
     private void EncodeLines8Bit(ReadOnlySpan<byte> source, int stride)
@@ -987,7 +987,7 @@ internal struct ScanEncoder
 
     private void EncodeRunInterruptionError(ref RunModeContext context, int errorValue)
     {
-        int k = context.GetGolombCode();
+        int k = context.ComputeGolombCodingParameter();
         int map = context.ComputeMap(errorValue, k) ? 1 : 0;
         int eMappedErrorValue = (2 * AbsUnchecked(errorValue)) - context.RunInterruptionType - map;
         Debug.Assert(errorValue == context.ComputeErrorValue(eMappedErrorValue + context.RunInterruptionType, k));

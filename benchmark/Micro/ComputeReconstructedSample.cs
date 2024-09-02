@@ -20,9 +20,9 @@ public class ComputeReconstructedSample
     {
         _traits = new Traits(256, 0);
         _traitsLossy = new Traits(256, 3);
-        _losslessTraits = new LosslessTraits(256, 0);
-        _losslessTraits8 = new LosslessTraits8(256, 0);
-        _losslessTraits16 = new LosslessTraits16(256, 0);
+        _losslessTraits = new LosslessTraits(255);
+        _losslessTraits8 = new LosslessTraits8();
+        _losslessTraits16 = new LosslessTraits16();
         _predictedValue = 256;
         _errorValue = 240;
     }

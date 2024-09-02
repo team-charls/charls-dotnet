@@ -19,6 +19,13 @@ public class AlgorithmTest
     }
 
     [Fact]
+    public void OutsideRange()
+    {
+        Assert.True(Algorithm.OutsideRange(101, 100));
+        Assert.True(Algorithm.OutsideRange(-101, 100));
+    }
+
+    [Fact]
     public void InitializationValueForA()
     {
         int minValue = Algorithm.InitializationValueForA(4);

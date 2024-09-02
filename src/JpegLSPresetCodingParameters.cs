@@ -11,6 +11,11 @@ namespace CharLS.Managed;
 public sealed record JpegLSPresetCodingParameters
 {
     /// <summary>
+    /// Default JPEG-LS preset coding parameters that contains all zero values.
+    /// </summary>
+    public static readonly JpegLSPresetCodingParameters Default = new();
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="JpegLSPresetCodingParameters"/> class.
     /// </summary>
     public JpegLSPresetCodingParameters()

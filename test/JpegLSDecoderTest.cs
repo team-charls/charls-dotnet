@@ -867,6 +867,17 @@ public class JpegLSDecoderTest
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
     }
 
+    [Fact]
+    public void ReadHeaderNon8Or16BitWithColorTransformationThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("test-images/land10-10bit-rgb-hp3-invalid.jls"), false);
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.ReadHeader());
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterColorTransformation, exception.GetErrorCode());
+    }
+
     private static void OversizeImageDimensionBadSegmentSizeThrows(int numberOfBytes)
     {
         const int width = 0;

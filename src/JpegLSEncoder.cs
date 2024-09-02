@@ -333,6 +333,8 @@ public sealed class JpegLSEncoder
     /// <param name="spiffHeader">Reference to a SPIFF header that will be written to the destination buffer.</param>
     public void WriteSpiffHeader(SpiffHeader spiffHeader)
     {
+        ArgumentNullException.ThrowIfNull(spiffHeader);
+
         ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Height, ErrorCode.InvalidArgumentHeight);
         ThrowHelper.ThrowIfOutsideRange(1, int.MaxValue, spiffHeader.Width, ErrorCode.InvalidArgumentWidth);
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.DestinationSet);
