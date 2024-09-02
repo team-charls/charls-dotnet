@@ -18,7 +18,7 @@ internal struct RunModeContext
 
     internal int RunInterruptionType { get; }
 
-    internal readonly int GetGolombCode()
+    internal readonly int ComputeGolombCodingParameter()
     {
         int temp = _a + ((_n >> 1) * RunInterruptionType);
         int nTest = _n;

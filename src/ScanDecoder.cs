@@ -13,12 +13,12 @@ internal struct ScanDecoder
     private const int CacheBitCount = sizeof(ulong) * 8;
     private const int MaxReadableCacheBits = CacheBitCount - 8;
 
-    private static readonly GolombCodeTable[] GolombCodeTable =
+    private static readonly GolombCodeMatchTable[] GolombCodeTable =
     [
-        Managed.GolombCodeTable.Create(0), Managed.GolombCodeTable.Create(1), Managed.GolombCodeTable.Create(2), Managed.GolombCodeTable.Create(3),
-        Managed.GolombCodeTable.Create(4), Managed.GolombCodeTable.Create(5), Managed.GolombCodeTable.Create(6), Managed.GolombCodeTable.Create(7),
-        Managed.GolombCodeTable.Create(8), Managed.GolombCodeTable.Create(9), Managed.GolombCodeTable.Create(10), Managed.GolombCodeTable.Create(11),
-        Managed.GolombCodeTable.Create(12), Managed.GolombCodeTable.Create(13), Managed.GolombCodeTable.Create(14), Managed.GolombCodeTable.Create(15)
+        new(0), new(1), new(2), new(3),
+        new(4), new(5), new(6), new(7),
+        new(8), new(9), new(10), new(11),
+        new(12), new(13), new(14), new(15)
     ];
 
     private readonly CopyFromLineBuffer.Method _copyFromLineBuffer;
@@ -129,17 +129,22 @@ internal struct ScanDecoder
         }
     }
 
-    internal int DecodeValue(int k, int limit, int quantizedBitsPerPixel)
+    /// <summary>
+    /// Step F.1, 9: decode the mapped error value MErrval from the limited golomb code stored in the bitstream.
+    /// </summary>
+    internal int DecodeMappedErrorValue(int k, int limit, int quantizedBitsPerPixel)
     {
-        int highBits = ReadHighBits();
+        int unaryCode = ReadUnaryCode();
 
-        if (highBits >= limit - (quantizedBitsPerPixel + 1))
-            return ReadValue(quantizedBitsPerPixel) + 1;
+        if (unaryCode < limit - quantizedBitsPerPixel - 1)
+        {
+            // Option a: mapped error value is stored as golomb code.
+            return k == 0 ? unaryCode : (unaryCode << k) + ReadValue(k);
+        }
 
-        if (k == 0)
-            return highBits;
-
-        return (highBits << k) + ReadValue(k);
+        // Option b: unary code was escape code as mapped error value was too large,
+        // read mapped error value - 1 from bitstream.
+        return ReadValue(quantizedBitsPerPixel) + 1;
     }
 
     internal int ReadValue(int bitCount)
@@ -159,28 +164,38 @@ internal struct ScanDecoder
         return result;
     }
 
-    internal byte PeekByte()
+    /// <summary>
+    /// Reads a byte from the bitstream without removing it.
+    /// This byte is used to check if there is a pre-computed Golomb code available.
+    /// </summary>
+    internal int PeekByte()
     {
         if (_validBits < 8)
         {
             FillReadCache();
         }
 
-        return (byte)(_readCache >> MaxReadableCacheBits);
+        return (int)(_readCache >> MaxReadableCacheBits);
     }
 
-    internal bool ReadBit()
+    internal nuint ReadBit()
     {
         if (_validBits <= 0)
         {
             FillReadCache();
         }
 
-        bool set = (_readCache & (1UL << (CacheBitCount - 1))) != 0;
+        nuint bit = (nuint)(_readCache >> (CacheBitCount - 1));
         SkipBits(1);
-        return set;
+        return bit;
     }
 
+    /// <summary>
+    /// Peek how many leading zero bits are present.
+    /// </summary>
+    /// <returns>
+    /// The number of leading zero bits or -1 when there are more than 16 leading zero bits.
+    /// </returns>
     internal int Peek0Bits()
     {
         if (_validBits < 16)
@@ -200,7 +215,10 @@ internal struct ScanDecoder
         return -1;
     }
 
-    internal int ReadHighBits()
+    /// <summary>
+    /// Read zero bits until the first high bit.
+    /// </summary>
+    internal int ReadUnaryCode()
     {
         int count = Peek0Bits();
         if (count >= 0)
@@ -210,11 +228,10 @@ internal struct ScanDecoder
         }
 
         SkipBits(15);
-
-        for (int highBitsCount = 15; ; ++highBitsCount)
+        for (int zeroBitCount = 15; ; ++zeroBitCount)
         {
-            if (ReadBit())
-                return highBitsCount;
+            if (ReadBit() == 1)
+                return zeroBitCount;
         }
     }
 
@@ -957,16 +974,17 @@ internal struct ScanDecoder
         int predictedValue = Traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
 
         int errorValue;
-        var code = GolombCodeTable[k].Get(PeekByte());
-        if (code.Length != 0)
+        var golombCodeMatch = GolombCodeTable[k].Get(PeekByte());
+        if (golombCodeMatch.BitCount != 0)
         {
-            SkipBits(code.Length);
-            errorValue = code.Value;
+            // There is a pre-computed match.
+            SkipBits(golombCodeMatch.BitCount);
+            errorValue = golombCodeMatch.ErrorValue;
             Debug.Assert(Math.Abs(errorValue) <= ushort.MaxValue);
         }
         else
         {
-            errorValue = UnmapErrorValue(DecodeValue(k, _scanCodec.Limit, _scanCodec.QuantizedBitsPerSample));
+            errorValue = UnmapErrorValue(DecodeMappedErrorValue(k, _scanCodec.Limit, _scanCodec.QuantizedBitsPerSample));
             if (OutsideRange(errorValue, ushort.MaxValue))
                 ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
         }
@@ -1086,7 +1104,7 @@ internal struct ScanDecoder
     private int DecodeRunPixels(byte ra, Span<byte> startPos, int pixelCount)
     {
         int index = 0;
-        while (ReadBit())
+        while (ReadBit() == 1)
         {
             int count = Math.Min(1 << ScanCodec.J[_scanCodec.RunIndex], pixelCount - index);
             index += count;
@@ -1121,7 +1139,7 @@ internal struct ScanDecoder
     private int DecodeRunPixels(ushort ra, Span<ushort> startPos, int pixelCount)
     {
         int index = 0;
-        while (ReadBit())
+        while (ReadBit() == 1)
         {
             int count = Math.Min(1 << ScanCodec.J[_scanCodec.RunIndex], pixelCount - index);
             index += count;
@@ -1156,7 +1174,7 @@ internal struct ScanDecoder
     private int DecodeRunPixels(Triplet<byte> ra, Span<Triplet<byte>> startPos, int pixelCount)
     {
         int index = 0;
-        while (ReadBit())
+        while (ReadBit() == 1)
         {
             int count = Math.Min(1 << ScanCodec.J[_scanCodec.RunIndex], pixelCount - index);
             index += count;
@@ -1191,7 +1209,7 @@ internal struct ScanDecoder
     private int DecodeRunPixels(Triplet<ushort> ra, Span<Triplet<ushort>> startPos, int pixelCount)
     {
         int index = 0;
-        while (ReadBit())
+        while (ReadBit() == 1)
         {
             int count = Math.Min(1 << ScanCodec.J[_scanCodec.RunIndex], pixelCount - index);
             index += count;
@@ -1226,7 +1244,7 @@ internal struct ScanDecoder
     private int DecodeRunPixels(Quad<byte> ra, Span<Quad<byte>> startPos, int pixelCount)
     {
         int index = 0;
-        while (ReadBit())
+        while (ReadBit() == 1)
         {
             int count = Math.Min(1 << ScanCodec.J[_scanCodec.RunIndex], pixelCount - index);
             index += count;
@@ -1261,7 +1279,7 @@ internal struct ScanDecoder
     private int DecodeRunPixels(Quad<ushort> ra, Span<Quad<ushort>> startPos, int pixelCount)
     {
         int index = 0;
-        while (ReadBit())
+        while (ReadBit() == 1)
         {
             int count = Math.Min(1 << ScanCodec.J[_scanCodec.RunIndex], pixelCount - index);
             index += count;
@@ -1362,8 +1380,8 @@ internal struct ScanDecoder
 
     private int DecodeRunInterruptionError(ref RunModeContext context)
     {
-        int k = context.GetGolombCode();
-        int eMappedErrorValue = DecodeValue(k, _scanCodec.Limit - ScanCodec.J[_scanCodec.RunIndex] - 1, _scanCodec.QuantizedBitsPerSample);
+        int k = context.ComputeGolombCodingParameter();
+        int eMappedErrorValue = DecodeMappedErrorValue(k, _scanCodec.Limit - ScanCodec.J[_scanCodec.RunIndex] - 1, _scanCodec.QuantizedBitsPerSample);
         int errorValue = context.ComputeErrorValue(eMappedErrorValue + context.RunInterruptionType, k);
         context.UpdateVariables(errorValue, eMappedErrorValue, (byte)_scanCodec.PresetCodingParameters.ResetValue);
         return errorValue;

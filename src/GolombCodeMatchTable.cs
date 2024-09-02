@@ -5,32 +5,13 @@ using static CharLS.Managed.Algorithm;
 
 namespace CharLS.Managed;
 
-internal sealed class GolombCodeTable
+internal sealed class GolombCodeMatchTable
 {
     private const int ByteBitCount = 8;
-    private readonly GolombCode[] _types = new GolombCode[1 << ByteBitCount];
+    private readonly GolombCodeMatch[] _matches = new GolombCodeMatch[1 << ByteBitCount];
 
-    internal void AddEntry(int value, GolombCode code)
+    internal GolombCodeMatchTable(int k)
     {
-        int length = code.Length;
-        Debug.Assert(length <= ByteBitCount);
-
-        for (int i = 0; i < 1U << (ByteBitCount - length); ++i)
-        {
-            Debug.Assert(_types[(value << (ByteBitCount - length)) + i].Length == 0);
-            _types[(value << (ByteBitCount - length)) + i] = code;
-        }
-    }
-
-    internal GolombCode Get(int value)
-    {
-        return _types[value];
-    }
-
-    internal static GolombCodeTable Create(int k)
-    {
-        GolombCodeTable table = new();
-
         for (short errorValue = 0; ; ++errorValue)
         {
             // Q is not used when k != 0
@@ -39,8 +20,8 @@ internal sealed class GolombCodeTable
             if (codeLength > ByteBitCount)
                 break;
 
-            var code = new GolombCode(errorValue, codeLength);
-            table.AddEntry(tableValue, code);
+            var code = new GolombCodeMatch(errorValue, codeLength);
+            AddEntry(tableValue, code);
         }
 
         for (short errorValue = -1; ; --errorValue)
@@ -51,11 +32,26 @@ internal sealed class GolombCodeTable
             if (codeLength > ByteBitCount)
                 break;
 
-            var code = new GolombCode(errorValue, codeLength);
-            table.AddEntry(tableValue, code);
+            var code = new GolombCodeMatch(errorValue, codeLength);
+            AddEntry(tableValue, code);
         }
+    }
 
-        return table;
+    internal GolombCodeMatch Get(int value)
+    {
+        return _matches[value];
+    }
+
+    private void AddEntry(int value, GolombCodeMatch codeMatch)
+    {
+        int length = codeMatch.BitCount;
+        Debug.Assert(length <= ByteBitCount);
+
+        for (int i = 0; i < 1U << (ByteBitCount - length); ++i)
+        {
+            Debug.Assert(_matches[(value << (ByteBitCount - length)) + i].BitCount == 0);
+            _matches[(value << (ByteBitCount - length)) + i] = codeMatch;
+        }
     }
 
     private static (int CodeLenght, int TableValue) CreateEncodedValue(int k, int mappedError)

@@ -339,6 +339,16 @@ public class JpegLSEncoderTest
     }
 
     [Fact]
+    public void WriteSpiffHeaderNullThrows()
+    {
+        JpegLSEncoder encoder = new(1, 1, 2, 1);
+
+#nullable disable
+        _ = Assert.Throws<ArgumentNullException>(() => encoder.WriteSpiffHeader(null!));
+#nullable enable
+    }
+
+    [Fact]
     public void WriteSpiffHeaderInvalidHeightThrows()
     {
         JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(1, 1, 2, 1) };
@@ -545,6 +555,30 @@ public class JpegLSEncoderTest
     }
 
     [Fact]
+    public void WriteNullCommentIsSameAsEmptyString()
+    {
+        JpegLSEncoder encoder = new();
+        var destination = new byte[6];
+        encoder.Destination = destination;
+
+#nullable disable
+        encoder.WriteComment(((string)null!)!);
+#nullable enable
+
+        Assert.Equal(6, encoder.BytesWritten);
+
+        // Check that SOI marker has been written.
+        Assert.Equal(0xFF, destination[0]);
+        Assert.Equal((byte)JpegMarkerCode.StartOfImage, destination[1]);
+
+        // Verify that a COM segment has been written.
+        Assert.Equal(0xFF, destination[2]);
+        Assert.Equal((byte)JpegMarkerCode.Comment, destination[3]);
+        Assert.Equal(0, destination[4]);
+        Assert.Equal(2, destination[5]);
+    }
+
+    [Fact]
     public void WriteEmptyCommentBuffer()
     {
         JpegLSEncoder encoder = new();
@@ -639,6 +673,17 @@ public class JpegLSEncoderTest
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void WriteCommentBeforeDestinationThrows()
+    {
+        JpegLSEncoder encoder = new();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => encoder.WriteComment("before-destination"));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
     }
 
     [Fact]
@@ -1233,7 +1278,7 @@ public class JpegLSEncoderTest
         encoder.Encode(source, 10);
 
         byte[] expectedDestination = [100, 100, 100, 150, 150, 150, 200, 200, 200];
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.None);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, expectedDestination, InterleaveMode.None);
     }
 
     [Fact]
@@ -1245,7 +1290,7 @@ public class JpegLSEncoderTest
         encoder.Encode(source, 4);
 
         byte[] expectedDestination = [100, 99, 101, 98];
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.None);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, expectedDestination, InterleaveMode.None);
     }
 
     [Fact]
@@ -1261,7 +1306,7 @@ public class JpegLSEncoderTest
         encoder.Encode(ConvertToByteArray(source), 10 * sizeof(ushort));
 
         ushort[] expectedDestination = [100, 100, 100, 150, 150, 150, 200, 200, 200];
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo,
             MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.None);
     }
 
@@ -1274,7 +1319,7 @@ public class JpegLSEncoderTest
         encoder.Encode(source, 10);
 
         byte[] expectedDestination = [100, 150, 200, 100, 150, 200, 100, 150, 200];
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Sample);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, expectedDestination, InterleaveMode.Sample);
     }
 
     [Fact]
@@ -1286,7 +1331,7 @@ public class JpegLSEncoderTest
         encoder.Encode(ConvertToByteArray(source), 10 * sizeof(ushort));
 
         ushort[] expectedDestination = [100, 150, 200, 100, 150, 200, 100, 150, 200];
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo,
             MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Sample);
     }
 
@@ -1347,7 +1392,7 @@ public class JpegLSEncoderTest
 
         byte[] expected = new byte[512 * 512];
         Array.Fill(expected, (byte)15);
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expected, InterleaveMode.None);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, expected, InterleaveMode.None);
     }
 
     [Fact]
@@ -1363,7 +1408,7 @@ public class JpegLSEncoderTest
         ushort[] expectedDestination = new ushort[512 * 512];
         Array.Fill(expectedDestination, (ushort)4095);
 
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo,
             MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.None);
     }
 
@@ -1379,7 +1424,7 @@ public class JpegLSEncoderTest
 
         byte[] expectedDestination = new byte[512 * 512 * 3];
         Array.Fill(expectedDestination, (byte)63);
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Sample);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, expectedDestination, InterleaveMode.Sample);
     }
 
     [Fact]
@@ -1394,7 +1439,7 @@ public class JpegLSEncoderTest
 
         byte[] expectedDestination = new byte[512 * 512 * 3];
         Array.Fill(expectedDestination, (byte)63);
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Line);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, expectedDestination, InterleaveMode.Line);
     }
 
     [Fact]
@@ -1410,7 +1455,7 @@ public class JpegLSEncoderTest
         ushort[] expectedDestination = new ushort[512 * 512 * 3];
         Array.Fill(expectedDestination, (ushort)1023);
 
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo,
             MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Sample);
     }
 
@@ -1427,7 +1472,7 @@ public class JpegLSEncoderTest
         ushort[] expectedDestination = new ushort[512 * 512 * 3];
         Array.Fill(expectedDestination, (ushort)1023);
 
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo,
             MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Line);
     }
 
@@ -1443,7 +1488,7 @@ public class JpegLSEncoderTest
 
         byte[] expectedDestination = new byte[512 * 512 * 4];
         Array.Fill(expectedDestination, (byte)31);
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Line);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, expectedDestination, InterleaveMode.Line);
     }
 
     [Fact]
@@ -1458,7 +1503,7 @@ public class JpegLSEncoderTest
 
         byte[] expectedDestination = new byte[512 * 512 * 4];
         Array.Fill(expectedDestination, (byte)127);
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, expectedDestination, InterleaveMode.Sample);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, expectedDestination, InterleaveMode.Sample);
     }
 
     [Fact]
@@ -1474,7 +1519,7 @@ public class JpegLSEncoderTest
         ushort[] expectedDestination = new ushort[512 * 512 * 4];
         Array.Fill(expectedDestination, (ushort)2047);
 
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo,
             MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Line);
     }
 
@@ -1491,7 +1536,7 @@ public class JpegLSEncoderTest
         ushort[] expectedDestination = new ushort[512 * 512 * 4];
         Array.Fill(expectedDestination, (ushort)8191);
 
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!,
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo,
             MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(expectedDestination)), InterleaveMode.Sample);
     }
 
@@ -1501,7 +1546,7 @@ public class JpegLSEncoderTest
         byte[] source = [0, 1, 2, 3, 4, 5];
         JpegLSEncoder encoder = new(3, 1, 16, 1);
         encoder.Encode(source);
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, source, InterleaveMode.None);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, source, InterleaveMode.None);
         byte[] destinationBackup = new byte[encoder.BytesWritten];
         encoder.EncodedData.Span.CopyTo(destinationBackup);
         int bytesWritten1 = encoder.BytesWritten;
@@ -1525,7 +1570,7 @@ public class JpegLSEncoderTest
         encoder.Destination = destination;
         encoder.Encode(source);
 
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, source, InterleaveMode.None);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, source, InterleaveMode.None);
     }
 
     [Fact]
@@ -1537,7 +1582,7 @@ public class JpegLSEncoderTest
         encoder.Encode(source);
 
         Assert.Equal(99, encoder.EncodedData.Length);
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, source, InterleaveMode.None);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, source, InterleaveMode.None);
     }
 
     [Fact]
@@ -1549,7 +1594,7 @@ public class JpegLSEncoderTest
         encoder.Encode(source);
 
         Assert.Equal(100, encoder.EncodedData.Length);
-        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo!, source, InterleaveMode.None);
+        Util.TestByDecoding(encoder.EncodedData, encoder.FrameInfo, source, InterleaveMode.None);
     }
 
     [Fact]
@@ -1645,7 +1690,7 @@ public class JpegLSEncoderTest
     public void LargeImageContainsLseForOversizeImageDimension()
     {
         JpegLSEncoder encoder = new(ushort.MaxValue + 1, 1, 16, 1);
-        byte[] source = new byte[encoder.FrameInfo!.Width * encoder.FrameInfo.Height * 2];
+        byte[] source = new byte[encoder.FrameInfo.Width * encoder.FrameInfo.Height * 2];
 
         encoder.Encode(source);
 
@@ -1659,7 +1704,7 @@ public class JpegLSEncoderTest
     public void EncodeOversizedImage()
     {
         JpegLSEncoder encoder = new(ushort.MaxValue + 1, 1, 8, 1);
-        byte[] source = new byte[encoder.FrameInfo!.Width * encoder.FrameInfo.Height];
+        byte[] source = new byte[encoder.FrameInfo.Width * encoder.FrameInfo.Height];
 
         encoder.Encode(source);
 
@@ -1670,7 +1715,7 @@ public class JpegLSEncoderTest
     public void ImageContainsNoPresetCodingParametersByDefault()
     {
         JpegLSEncoder encoder = new(512, 512, 8, 1);
-        byte[] source = new byte[encoder.FrameInfo!.Width * encoder.FrameInfo.Height];
+        byte[] source = new byte[encoder.FrameInfo.Width * encoder.FrameInfo.Height];
 
         encoder.Encode(source);
         Assert.Equal(99, encoder.BytesWritten);
@@ -1683,7 +1728,7 @@ public class JpegLSEncoderTest
     public void ImageContainsNoPresetCodingParametersIfConfiguredPCIsDefault()
     {
         JpegLSEncoder encoder = new(512, 512, 8, 1);
-        byte[] source = new byte[encoder.FrameInfo!.Width * encoder.FrameInfo.Height];
+        byte[] source = new byte[encoder.FrameInfo.Width * encoder.FrameInfo.Height];
 
         encoder.PresetCodingParameters = new JpegLSPresetCodingParameters(255, 3, 7, 21, 64);
 
@@ -1698,7 +1743,7 @@ public class JpegLSEncoderTest
     public void ImageContainsNoPresetCodingParametersIfConfiguredPCIsNonDefault()
     {
         JpegLSEncoder encoder = new(512, 512, 8, 1);
-        byte[] source = new byte[encoder.FrameInfo!.Width * encoder.FrameInfo.Height];
+        byte[] source = new byte[encoder.FrameInfo.Width * encoder.FrameInfo.Height];
 
         encoder.PresetCodingParameters = new JpegLSPresetCodingParameters(255, 3, 7, 21, 65);
 
@@ -1713,7 +1758,7 @@ public class JpegLSEncoderTest
     public void ImageContainsPresetCodingParametersIfConfiguredPCHasDiffMaxValue()
     {
         JpegLSEncoder encoder = new(512, 512, 8, 1);
-        byte[] source = new byte[encoder.FrameInfo!.Width * encoder.FrameInfo.Height];
+        byte[] source = new byte[encoder.FrameInfo.Width * encoder.FrameInfo.Height];
 
         encoder.PresetCodingParameters = new JpegLSPresetCodingParameters(100, 0, 0, 0, 0);
 
@@ -1722,6 +1767,30 @@ public class JpegLSEncoderTest
 
         int index = FindFirstLseSegment(encoder.EncodedData.Span);
         Assert.False(index == -1);
+    }
+
+    [Fact]
+    public void EncodeNon8Or16BitWithColorTransformationThrows()
+    {
+        JpegLSEncoder encoder = new(2, 1, 10, 3) { ColorTransformation = ColorTransformation.HP1 };
+        byte[] source = new byte[encoder.FrameInfo.Width * encoder.FrameInfo.Height * 2 * 3];
+
+        var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgumentColorTransformation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void EncodeNon3ComponentsWithColorTransformationThrows()
+    {
+        JpegLSEncoder encoder = new(2, 1, 8, 4) { ColorTransformation = ColorTransformation.HP1 };
+        byte[] source = new byte[encoder.FrameInfo.Width * encoder.FrameInfo.Height * 4];
+
+        var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(source));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgumentColorTransformation, exception.GetErrorCode());
     }
 
     private static void EncodeWithCustomPresetCodingParameters(JpegLSPresetCodingParameters pcParameters)

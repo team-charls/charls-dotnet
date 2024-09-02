@@ -18,4 +18,11 @@ public class CopyFromLineBufferTest
         var method = CopyFromLineBuffer.GetCopyMethod(16, InterleaveMode.None, 1,  ColorTransformation.None);
         Assert.NotNull(method);
     }
+
+    [Fact]
+    public void GetCopyMethodNotUsed()
+    {
+        var method = CopyFromLineBuffer.GetCopyMethod(8, InterleaveMode.None, 1, ColorTransformation.None);
+        Assert.NotNull(method);
+    }
 }

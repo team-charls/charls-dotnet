@@ -52,24 +52,24 @@ public class JpegStreamReaderTest
     }
 
     [Fact]
+    public void ReadHeaderFromBufferNotStartingWithStartOfImageShouldThrow()
+    {
+        byte[] buffer = [0x0F, 0xD2, 0xFF, 0xFF, 0xDA];
+
+        var reader = new JpegStreamReader { Source = buffer };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.JpegMarkerStartByteNotFound, exception.GetErrorCode());
+    }
+
+    [Fact]
     public void ReadHeaderWithApplicationData()
     {
-        TestReadHeaderWithApplicationData(0);
-        TestReadHeaderWithApplicationData(1);
-        TestReadHeaderWithApplicationData(2);
-        TestReadHeaderWithApplicationData(3);
-        TestReadHeaderWithApplicationData(4);
-        TestReadHeaderWithApplicationData(5);
-        TestReadHeaderWithApplicationData(6);
-        TestReadHeaderWithApplicationData(7);
-        TestReadHeaderWithApplicationData(8);
-        TestReadHeaderWithApplicationData(9);
-        TestReadHeaderWithApplicationData(10);
-        TestReadHeaderWithApplicationData(11);
-        TestReadHeaderWithApplicationData(12);
-        TestReadHeaderWithApplicationData(13);
-        TestReadHeaderWithApplicationData(14);
-        TestReadHeaderWithApplicationData(15);
+        for (byte i = 0; i != 16; ++i)
+        {
+            TestReadHeaderWithApplicationData(i);
+        }
 
         Assert.True(true); // helps with static analyzers that expect at least 1 assert.
     }

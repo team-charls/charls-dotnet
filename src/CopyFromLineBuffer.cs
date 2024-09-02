@@ -130,7 +130,6 @@ internal class CopyFromLineBuffer
 
     private static void NotUsed(Span<byte> source, Span<byte> destination, int pixelCount)
     {
-        Debug.Assert(false);
     }
 
     private static void CopyLine8Bit3Components(Span<byte> source, Span<byte> destination, int pixelCount)

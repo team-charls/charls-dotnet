@@ -32,9 +32,10 @@ internal struct JpegStreamReader
         _scanInfos = [];
     }
 
-    internal JpegStreamReader(object? eventSender = null)
+    internal JpegStreamReader(object eventSender)
     {
-        _eventSender = eventSender ?? this;
+        _eventSender = eventSender;
+        _scanInfos = [];
     }
 
     public event EventHandler<CommentEventArgs>? Comment;
@@ -66,7 +67,7 @@ internal struct JpegStreamReader
 
     internal SpiffHeader? SpiffHeader { get; private set; }
 
-    internal InterleaveMode InterleaveMode { get; private set; }
+    internal InterleaveMode CurrentInterleaveMode { get; private set; }
 
     internal CompressedDataFormat CompressedDataFormat { get; private set; }
 
@@ -135,12 +136,17 @@ internal struct JpegStreamReader
         return _scanInfos[componentIndex].NearLossless;
     }
 
+    internal readonly InterleaveMode GetInterleaveMode(int componentIndex)
+    {
+        return _scanInfos[componentIndex].InterleaveMode;
+    }
+
     internal CodingParameters GetCodingParameters()
     {
         return new CodingParameters
         {
             NearLossless = _nearLossless,
-            InterleaveMode = InterleaveMode,
+            InterleaveMode = CurrentInterleaveMode,
             RestartInterval = RestartInterval,
             ColorTransformation = ColorTransformation
         };
@@ -673,12 +679,12 @@ internal struct JpegStreamReader
         if (_nearLossless > ComputeMaximumNearLossless((int)MaximumSampleValue))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterNearLossless);
 
-        InterleaveMode = (InterleaveMode)ReadByte(); // Read ILV parameter
-        CheckInterleaveMode(InterleaveMode);
+        CurrentInterleaveMode = (InterleaveMode)ReadByte(); // Read ILV parameter
+        CheckInterleaveMode(CurrentInterleaveMode);
 
         for (int i = 0; i != componentCountInScan; ++i)
         {
-            StoreScanInfo(componentIds[i], mappingTableIds[i], (byte)_nearLossless, InterleaveMode);
+            StoreScanInfo(componentIds[i], mappingTableIds[i], (byte)_nearLossless, CurrentInterleaveMode);
         }
 
         if ((ReadByte() & 0xFU) != 0) // Read Ah (no meaning) and Al (point transform).
@@ -846,7 +852,7 @@ internal struct JpegStreamReader
             _componentWithMappingTableExists = true;
         }
 
-        _scanInfos[index] = new ScanInfo(componentId, tableId, nearLossless, InterleaveMode);
+        _scanInfos[index] = new ScanInfo(componentId, tableId, nearLossless, interleaveMode);
     }
 
     private readonly void CheckInterleaveMode(InterleaveMode mode)

@@ -114,7 +114,7 @@ public sealed class JpegLSDecoder
     {
         get
         {
-            CheckHeaderRead();
+            CheckStateHeaderRead();
             return _reader.FrameInfo;
         }
     }
@@ -131,8 +131,8 @@ public sealed class JpegLSDecoder
     {
         get
         {
-            CheckHeaderRead();
-            return _reader.InterleaveMode;
+            CheckStateHeaderRead();
+            return _reader.GetInterleaveMode(0);
         }
     }
 
@@ -147,8 +147,8 @@ public sealed class JpegLSDecoder
     {
         get
         {
-            CheckHeaderRead();
-            return _reader.JpegLSPresetCodingParameters ?? new JpegLSPresetCodingParameters();
+            CheckStateHeaderRead();
+            return _reader.JpegLSPresetCodingParameters ?? JpegLSPresetCodingParameters.Default;
         }
     }
 
@@ -198,7 +198,7 @@ public sealed class JpegLSDecoder
     /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
     public int GetNearLossless(int componentIndex = 0)
     {
-        CheckHeaderRead();
+        CheckStateHeaderRead();
         ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount - 1, componentIndex);
         return _reader.GetNearLossless(componentIndex);
     }
@@ -212,9 +212,9 @@ public sealed class JpegLSDecoder
     /// <exception cref="InvalidOperationException">Thrown when this method is called before <see cref="ReadHeader(bool)"/>.</exception>
     public int GetDestinationSize(int stride = AutoCalculateStride)
     {
-        CheckHeaderRead();
+        CheckStateHeaderRead();
 
-        if (stride == 0)
+        if (stride == AutoCalculateStride)
         {
             return FrameInfo.ComponentCount * FrameInfo.Height * FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
         }
@@ -345,7 +345,7 @@ public sealed class JpegLSDecoder
     /// <exception cref="InvalidDataException">Thrown when the JPEG-LS stream is not valid.</exception>
     /// <exception cref="ObjectDisposedException">Thrown when the instance is used after being disposed.</exception>
     /// <exception cref="InvalidOperationException">Thrown when this method is called before <see cref="ReadHeader(bool)"/>.</exception>
-    public byte[] Decode(int stride = 0)
+    public byte[] Decode(int stride = AutoCalculateStride)
     {
         var destination = new byte[GetDestinationSize()];
         Decode(destination, stride);
@@ -376,7 +376,7 @@ public sealed class JpegLSDecoder
 
         // Compute the layout of the destination buffer.
         int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * BitToByteCount(FrameInfo.BitsPerSample);
-        int planeCount = _reader.InterleaveMode == InterleaveMode.None ? FrameInfo.ComponentCount : 1;
+        int planeCount = _reader.CurrentInterleaveMode == InterleaveMode.None ? FrameInfo.ComponentCount : 1;
         int minimumDestinationSize = (bytesPerPlane * planeCount) - (stride - minimumStride);
 
         ThrowHelper.ThrowArgumentExceptionIfFalse(destination.Length >= minimumDestinationSize, nameof(destination), ErrorCode.InvalidArgumentSize);
@@ -402,7 +402,7 @@ public sealed class JpegLSDecoder
         _state = State.Completed;
     }
 
-    private void CheckHeaderRead()
+    private void CheckStateHeaderRead()
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(_state >= State.HeaderRead);
     }
@@ -420,7 +420,7 @@ public sealed class JpegLSDecoder
     private int CalculateMinimumStride()
     {
         int componentsInPlaneCount =
-            _reader.InterleaveMode == InterleaveMode.None
+            _reader.CurrentInterleaveMode == InterleaveMode.None
             ? 1
             : FrameInfo.ComponentCount;
         return componentsInPlaneCount * FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
