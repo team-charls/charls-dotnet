@@ -77,9 +77,9 @@ public enum ErrorCode
     UnknownJpegMarkerFound = 13,
 
     /// <summary>
-    /// This error is returned when a JPEG marker is found that is not valid for the current state.
+    /// This error is returned when the stream contains an unexpected SOS marker.
     /// </summary>
-    UnexpectedMarkerFound = 14,
+    UnexpectedStartOfScanMarker = 14,
 
     /// <summary>
     /// This error is returned when the segment size of a marker segment is invalid.
@@ -133,64 +133,74 @@ public enum ErrorCode
     EndOfImageMarkerNotFound = 24,
 
     /// <summary>
+    /// This error is returned when the stream contains an unexpected DefineNumberOfLines (DNL) marker.
+    /// </summary>
+    UnexpectedDefineNumberOfLinesMarker = 25,
+
+    /// <summary>
+    /// This error is returned when the DefineNumberOfLines (DNL) marker could not be found.
+    /// </summary>
+    DefineNumberOfLinesMarkerNotFound = 26,
+
+    /// <summary>
     /// This error is returned when an unknown component ID in a scan is detected.
     /// </summary>
-    UnknownComponentId = 25,
+    UnknownComponentId = 27,
 
     /// <summary>
     /// This error is returned for stream with only mapping tables and a spiff header.
     /// </summary>
-    AbbreviatedFormatAndSpiffHeaderMismatch = 26,
+    AbbreviatedFormatAndSpiffHeaderMismatch = 28,
 
     /// <summary>
     /// This error is returned when the width parameter is defined more than once in an incompatible way.
     /// </summary>
-    InvalidParameterWidth = 27,
+    InvalidParameterWidth = 29,
 
     /// <summary>
     /// This error is returned when the height parameter is defined more than once in an incompatible way.
     /// </summary>
-    InvalidParameterHeight = 28,
+    InvalidParameterHeight = 30,
 
     /// <summary>
     /// This error is returned when the stream contains a bits per sample (sample precision) parameter outside the range [2,16].
     /// </summary>
-    InvalidParameterBitsPerSample = 29,
+    InvalidParameterBitsPerSample = 31,
 
     /// <summary>
     /// This error is returned when the stream contains a component count parameter outside the range [1,255].
     /// </summary>
-    InvalidParameterComponentCount = 30,
+    InvalidParameterComponentCount = 32,
 
     /// <summary>
     /// This error is returned when the stream contains an interleave mode (ILV) parameter outside the range [0, 2].
     /// </summary>
-    InvalidParameterInterleaveMode = 31,
+    InvalidParameterInterleaveMode = 33,
 
     /// <summary>
     /// This error is returned when the stream contains a near-lossless (NEAR) parameter outside the range [0, min(255, MAXVAL/2)].
     /// </summary>
-    InvalidParameterNearLossless = 32,
+    InvalidParameterNearLossless = 34,
 
     /// <summary>
     /// This error is returned when the stream contains an invalid JPEG-LS preset parameters segment.
     /// </summary>
-    InvalidParameterJpegLSPresetParameters = 33,
+    InvalidParameterJpegLSPresetParameters = 35,
 
     /// <summary>
     /// This error is returned when the stream contains an invalid color transformation segment or one that doesn't match with frame info.
     /// </summary>
-    InvalidParameterColorTransformation = 34,
+    InvalidParameterColorTransformation = 36,
 
     /// <summary>
     /// This error is returned when the stream contains a mapping table with an invalid ID.
     /// </summary>
-    InvalidParameterMappingTableId = 35,
+    InvalidParameterMappingTableId = 37,
 
     /// <summary>
     /// This error is returned when the stream contains an invalid mapping table continuation.
     /// </summary>
-    InvalidParameterMappingTableContinuation = 36,
+    InvalidParameterMappingTableContinuation = 38,
 
     // Logic errors:
 

@@ -216,6 +216,12 @@ internal sealed class JpegTestStreamWriter
         }
     }
 
+    internal void WriteDefineNumberOfLines(int height)
+    {
+        WriteSegmentStart(JpegMarkerCode.DefineNumberOfLines, 2);
+        WriteUint16(height);
+    }
+
     internal void WriteColorTransformSegment(ColorTransformation colorTransformation)
     {
         Span<byte> segment = [(byte)'m', (byte)'r', (byte)'f', (byte)'x', (byte)colorTransformation];

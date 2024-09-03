@@ -249,7 +249,7 @@ public class JpegStreamReaderTest
         var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.UnexpectedMarkerFound, exception.GetErrorCode());
+        Assert.Equal(ErrorCode.UnexpectedStartOfScanMarker, exception.GetErrorCode());
     }
 
     [Fact]
@@ -723,13 +723,13 @@ public class JpegStreamReaderTest
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(1, 0, 2, 3);
-        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.Sample);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         JpegStreamReader reader = new() { Source = writer.GetBuffer() };
 
         var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidParameterHeight, exception.GetErrorCode());
+        Assert.Equal(ErrorCode.DefineNumberOfLinesMarkerNotFound, exception.GetErrorCode());
     }
 
     [Fact]
@@ -738,7 +738,7 @@ public class JpegStreamReaderTest
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(0, 11, 2, 3);
-        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.Sample);
+        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
         JpegStreamReader reader = new() { Source = writer.GetBuffer() };
 
         var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
@@ -754,7 +754,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(1, 1, 2, 3);
         writer.WriteColorTransformSegment(ColorTransformation.HP1);
-        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.Sample);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
 
         JpegStreamReader reader = new() { Source = writer.GetBuffer() };
 
@@ -762,6 +762,94 @@ public class JpegStreamReaderTest
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidParameterColorTransformation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadDefineNumberOfLines()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 0, 2, 3);
+        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
+        writer.WriteBytes([0, 1, 0xFF, 5]);
+        writer.WriteDefineNumberOfLines(1);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+        reader.ReadHeader(true);
+
+        Assert.Equal(1, reader.FrameInfo.Height);
+    }
+
+    [Fact]
+    public void ReadInvalidHeightInDefineNumberOfLinesThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 0, 2, 3);
+        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
+        writer.WriteDefineNumberOfLines(0);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterHeight, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadDefineNumberOfLinesIsMissingThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 0, 2, 3);
+        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
+        writer.WriteMarker(JpegMarkerCode.EndOfImage);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.DefineNumberOfLinesMarkerNotFound, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadDefineNumberOfLinesBeforeScanThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 0, 2, 3);
+        writer.WriteDefineNumberOfLines(1);
+        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
+        writer.WriteMarker(JpegMarkerCode.EndOfImage);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.UnexpectedDefineNumberOfLinesMarker, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadDefineNumberOfLinesTwiceThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 0, 2, 3);
+        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
+        writer.WriteDefineNumberOfLines(1);
+        writer.WriteDefineNumberOfLines(1);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        reader.ReadHeader(false);
+
+        var exception = Assert.Throws<InvalidDataException>(reader.ReadNextStartOfScan);
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.UnexpectedDefineNumberOfLinesMarker, exception.GetErrorCode());
     }
 
     private static void TestReadSpiffHeader(byte lowVersion)
