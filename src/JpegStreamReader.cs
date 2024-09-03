@@ -14,9 +14,10 @@ internal struct JpegStreamReader
     private const int PcTableIdEntrySizeBytes = 3;
 
     private readonly object _eventSender;
-    private readonly List<ScanInfo> _scanInfos = [];
+    private readonly List<ScanInfo> _scanInfos;
     private readonly List<MappingTableEntry> _mappingTables = [];
     private State _state;
+    private bool _dnlMarkerExpected;
     private int _nearLossless;
     private int _segmentDataSize;
     private int _segmentStartPosition;
@@ -27,9 +28,8 @@ internal struct JpegStreamReader
     private bool _componentWithMappingTableExists;
 
     public JpegStreamReader()
+        : this(null!)
     {
-        _eventSender = this;
-        _scanInfos = [];
     }
 
     internal JpegStreamReader(object eventSender)
@@ -86,7 +86,7 @@ internal struct JpegStreamReader
                 return (uint)JpegLSPresetCodingParameters.MaximumSampleValue;
             }
 
-            return (uint)CalculateMaximumSampleValue(FrameInfo.BitsPerSample);
+            return (uint)CalculateMaximumSampleValue(_bitsPerSample);
         }
     }
 
@@ -210,6 +210,8 @@ internal struct JpegStreamReader
 
             if (_state == State.BitStreamSection)
             {
+                CheckWidth();
+                CheckHeight();
                 CheckCodingParameters();
                 return;
             }
@@ -323,7 +325,6 @@ internal struct JpegStreamReader
                 break;
 
             case JpegMarkerCode.StartOfScan:
-                CheckHeightAndWidth();
                 ReadStartOfScanSegment();
                 break;
 
@@ -337,6 +338,11 @@ internal struct JpegStreamReader
 
             case JpegMarkerCode.DefineRestartInterval:
                 ReadDefineRestartIntervalSegment();
+                break;
+
+            case JpegMarkerCode.DefineNumberOfLines:
+                _ = ReadDefineNumberOfLinesSegment();
+                _dnlMarkerExpected = false;
                 break;
 
             case JpegMarkerCode.ApplicationData0:
@@ -360,10 +366,6 @@ internal struct JpegStreamReader
             case JpegMarkerCode.ApplicationData8:
                 ReadApplicationData8Segment(readSpiffHeader);
                 break;
-
-            default: // Other tags not supported (among which DNL)
-                Debug.Fail("Unreachable");
-                break;
         }
     }
 
@@ -376,7 +378,7 @@ internal struct JpegStreamReader
         {
             case JpegMarkerCode.StartOfScan:
                 if (_state != State.ScanSection)
-                    ThrowHelper.ThrowInvalidDataException(ErrorCode.UnexpectedMarkerFound);
+                    ThrowHelper.ThrowInvalidDataException(ErrorCode.UnexpectedStartOfScanMarker);
 
                 return;
 
@@ -407,16 +409,13 @@ internal struct JpegStreamReader
             case JpegMarkerCode.ApplicationData15:
                 return;
 
-            case JpegMarkerCode.DefineNumberOfLines: // DLN is a JPEG-LS valid marker, but not supported: handle as unknown.
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.UnknownJpegMarkerFound);
-                break;
+            case JpegMarkerCode.DefineNumberOfLines:
+                if (!_dnlMarkerExpected)
+                    ThrowHelper.ThrowInvalidDataException(ErrorCode.UnexpectedDefineNumberOfLinesMarker);
+                return;
 
             case JpegMarkerCode.StartOfImage:
                 ThrowHelper.ThrowInvalidDataException(ErrorCode.DuplicateStartOfImageMarker);
-                break;
-
-            case JpegMarkerCode.EndOfImage:
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.UnexpectedEndOfImageMarker);
                 break;
         }
 
@@ -661,7 +660,7 @@ internal struct JpegStreamReader
         CheckMinimalSegmentSize(1);
 
         int componentCountInScan = ReadByte();
-        if (componentCountInScan != 1 && componentCountInScan != FrameInfo.ComponentCount)
+        if (componentCountInScan != 1 && componentCountInScan != _componentCount)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
 
         Span<byte> componentIds = stackalloc byte[componentCountInScan];
@@ -680,7 +679,7 @@ internal struct JpegStreamReader
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterNearLossless);
 
         CurrentInterleaveMode = (InterleaveMode)ReadByte(); // Read ILV parameter
-        CheckInterleaveMode(CurrentInterleaveMode);
+        CheckInterleaveMode(CurrentInterleaveMode, componentCountInScan);
 
         for (int i = 0; i != componentCountInScan; ++i)
         {
@@ -800,13 +799,19 @@ internal struct JpegStreamReader
         _scanInfos.Add(new ScanInfo(componentId));
     }
 
-    private readonly void CheckHeightAndWidth()
+    private readonly void CheckWidth()
     {
-        if (_height < 1)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterHeight);
-
         if (_width < 1)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterWidth);
+    }
+
+    private void CheckHeight()
+    {
+        if (_height != 0)
+            return;
+
+        _height = FindAndReadDefineNumberOfLinesSegment();
+        _dnlMarkerExpected = true;
     }
 
     private readonly void CheckCodingParameters()
@@ -855,9 +860,9 @@ internal struct JpegStreamReader
         _scanInfos[index] = new ScanInfo(componentId, tableId, nearLossless, interleaveMode);
     }
 
-    private readonly void CheckInterleaveMode(InterleaveMode mode)
+    private static void CheckInterleaveMode(InterleaveMode mode, int componentCountInScan)
     {
-        if (!mode.IsValid() || (FrameInfo.ComponentCount == 1 && mode != InterleaveMode.None))
+        if (!mode.IsValid() || (mode != InterleaveMode.None && componentCountInScan == 1))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterInterleaveMode);
     }
 
@@ -885,6 +890,45 @@ internal struct JpegStreamReader
         }
 
         return false;
+    }
+
+    private int FindAndReadDefineNumberOfLinesSegment()
+    {
+        var source = Source.Span;
+        for (int i = Position; i < source.Length - 1; ++i)
+        {
+            if (source[i] != 0xFF)
+                continue;
+
+            byte optionalMarkerCode = source[i + 1];
+            if (optionalMarkerCode is < 128 or 0xFF)
+                continue;
+
+            // Found a marker, ISO/IEC 10918-1 B.2.5 requires that if DNL is used it must be at the end of the first scan.
+            if ((JpegMarkerCode)optionalMarkerCode != JpegMarkerCode.DefineNumberOfLines)
+                break;
+
+            int currentPosition = Position;
+            Position = i + 2;
+
+            ReadSegmentSize();
+            int height = ReadDefineNumberOfLinesSegment();
+
+            Position = currentPosition;
+            return height;
+        }
+
+        throw ThrowHelper.CreateInvalidDataException(ErrorCode.DefineNumberOfLinesMarkerNotFound);
+    }
+
+    private int ReadDefineNumberOfLinesSegment()
+    {
+        CheckSegmentSize(2);
+        int height = ReadUint16();
+        if (height == 0)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterHeight);
+
+        return height;
     }
 
     private static bool IsKnownJpegSofMarker(JpegMarkerCode markerCode)
