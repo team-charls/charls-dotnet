@@ -35,7 +35,7 @@ internal struct ScanDecoder
 
     internal ScanDecoder(FrameInfo frameInfo, JpegLSPresetCodingParameters presetCodingParameters, CodingParameters codingParameters)
     {
-        var traits = Traits.Create(frameInfo, codingParameters.NearLossless);
+        var traits = Traits.Create(frameInfo.BitsPerSample, codingParameters.NearLossless);
         _scanCodec = new ScanCodec(traits, frameInfo, presetCodingParameters, codingParameters);
 
         _copyFromLineBuffer = CopyFromLineBuffer.GetCopyMethod(
@@ -416,11 +416,11 @@ internal struct ScanDecoder
         {
             int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int mcu = 0; ;)
             {
                 var previousLine = lineBuffer;
                 var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                if ((mcu & 1) == 1)
                 {
                     var temp = previousLine;
                     previousLine = currentLine;
@@ -434,12 +434,21 @@ internal struct ScanDecoder
                 DecodeSampleLine(previousLine, currentLine);
 
                 CopyLineBufferToDestinationInterleaveNone(currentLine[1..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
                 destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
                 break;
 
+            destination = destination[stride..];
             ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
@@ -458,11 +467,11 @@ internal struct ScanDecoder
         {
             int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int mcu = 0; ;)
             {
                 var previousLine = lineBuffer;
                 var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                if ((mcu & 1) == 1)
                 {
                     var temp = previousLine;
                     previousLine = currentLine;
@@ -476,12 +485,21 @@ internal struct ScanDecoder
                 DecodeSampleLine(previousLine, currentLine);
 
                 CopyLineBufferToDestinationInterleaveNone(currentLine[1..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
                 destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
                 break;
 
+            destination = destination[stride..];
             ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
@@ -502,11 +520,11 @@ internal struct ScanDecoder
         {
             int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int mcu = 0; ;)
             {
                 var previousLine = lineBuffer;
                 var currentLine = lineBuffer[(componentCount * pixelStride)..];
-                bool oddLine = (line & 1) == 1;
+                bool oddLine = (mcu & 1) == 1;
                 if (oddLine)
                 {
                     var temp = previousLine;
@@ -531,12 +549,21 @@ internal struct ScanDecoder
 
                 int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
                 CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
                 destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
                 break;
 
+            destination = destination[stride..];
             ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
@@ -558,11 +585,11 @@ internal struct ScanDecoder
         {
             int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int mcu = 0; ;)
             {
                 var previousLine = lineBuffer;
                 var currentLine = lineBuffer[(componentCount * pixelStride)..];
-                bool oddLine = (line & 1) == 1;
+                bool oddLine = (mcu & 1) == 1;
                 if (oddLine)
                 {
                     var temp = previousLine;
@@ -587,12 +614,21 @@ internal struct ScanDecoder
 
                 int startPosition = (oddLine ? 0 : (pixelStride * componentCount)) + 1;
                 CopyLineBufferToDestinationInterleaveLine(lineBuffer[startPosition..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
                 destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
                 break;
 
+            destination = destination[stride..];
             ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
@@ -612,11 +648,11 @@ internal struct ScanDecoder
         {
             int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int mcu = 0; ;)
             {
                 var previousLine = lineBuffer;
                 var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                if ((mcu & 1) == 1)
                 {
                     var temp = previousLine;
                     previousLine = currentLine;
@@ -630,12 +666,21 @@ internal struct ScanDecoder
                 DecodeTripletLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
                 destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
                 break;
 
+            destination = destination[stride..];
             ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
@@ -654,11 +699,11 @@ internal struct ScanDecoder
         {
             int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int mcu = 0; ;)
             {
                 var previousLine = lineBuffer;
                 var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                if ((mcu & 1) == 1)
                 {
                     var temp = previousLine;
                     previousLine = currentLine;
@@ -672,12 +717,21 @@ internal struct ScanDecoder
                 DecodeTripletLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
                 destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
                 break;
 
+            destination = destination[stride..];
             ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
@@ -696,11 +750,11 @@ internal struct ScanDecoder
         {
             int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int mcu = 0; ;)
             {
                 var previousLine = lineBuffer;
                 var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                if ((mcu & 1) == 1)
                 {
                     var temp = previousLine;
                     previousLine = currentLine;
@@ -714,12 +768,21 @@ internal struct ScanDecoder
                 DecodeQuadLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
                 destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
                 break;
 
+            destination = destination[stride..];
             ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.
@@ -738,11 +801,11 @@ internal struct ScanDecoder
         {
             int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
 
-            for (int mcu = 0; mcu < linesInInterval; ++mcu, ++line)
+            for (int mcu = 0; ;)
             {
                 var previousLine = lineBuffer;
                 var currentLine = lineBuffer[pixelStride..];
-                if ((line & 1) == 1)
+                if ((mcu & 1) == 1)
                 {
                     var temp = previousLine;
                     previousLine = currentLine;
@@ -756,12 +819,21 @@ internal struct ScanDecoder
                 DecodeQuadLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
                 destination = destination[stride..];
             }
 
             if (line == FrameInfo.Height)
                 break;
 
+            destination = destination[stride..];
             ProcessRestartMarker();
 
             // After a restart marker it is required to reset the decoder.

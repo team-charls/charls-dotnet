@@ -103,14 +103,14 @@ internal class Traits
                Math.Abs(lhs.V3 - rhs.V3) <= NearLossless && Math.Abs(lhs.V4 - rhs.V4) <= NearLossless;
     }
 
-    internal static Traits Create(FrameInfo frameInfo, int nearLossless)
+    internal static Traits Create(int bitsPerSample, int nearLossless)
     {
-        int maximumSampleValue = CalculateMaximumSampleValue(frameInfo.BitsPerSample);
+        int maximumSampleValue = CalculateMaximumSampleValue(bitsPerSample);
 
         if (nearLossless != 0)
             return new Traits(maximumSampleValue, nearLossless);
 
-        return frameInfo.BitsPerSample switch
+        return bitsPerSample switch
         {
             8 => new LosslessTraits8(),
             16 => new LosslessTraits16(),

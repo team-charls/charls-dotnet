@@ -221,16 +221,13 @@ public sealed class JpegLSDecoder
 
         switch (InterleaveMode)
         {
-            case InterleaveMode.None:
-                return stride * FrameInfo.ComponentCount * FrameInfo.Height;
-
             case InterleaveMode.Line:
             case InterleaveMode.Sample:
                 return stride * FrameInfo.Height;
 
             default:
-                Debug.Assert(false);
-                return 0;
+                Debug.Assert(InterleaveMode == InterleaveMode.None);
+                return stride * FrameInfo.ComponentCount * FrameInfo.Height;
         }
     }
 
@@ -363,39 +360,19 @@ public sealed class JpegLSDecoder
     {
         ThrowHelper.ThrowInvalidOperationIfFalse(_state == State.HeaderRead);
 
-        // Compute the stride for the uncompressed destination buffer.
-        int minimumStride = CalculateMinimumStride();
-        if (stride == AutoCalculateStride)
+        for (int component = 0; ;)
         {
-            stride = minimumStride;
-        }
-        else
-        {
-            ThrowHelper.ThrowArgumentExceptionIfFalse(stride >= minimumStride, nameof(stride), ErrorCode.InvalidArgumentStride);
-        }
-
-        // Compute the layout of the destination buffer.
-        int bytesPerPlane = FrameInfo.Width * FrameInfo.Height * BitToByteCount(FrameInfo.BitsPerSample);
-        int planeCount = _reader.CurrentInterleaveMode == InterleaveMode.None ? FrameInfo.ComponentCount : 1;
-        int minimumDestinationSize = (bytesPerPlane * planeCount) - (stride - minimumStride);
-
-        ThrowHelper.ThrowArgumentExceptionIfFalse(destination.Length >= minimumDestinationSize, nameof(destination), ErrorCode.InvalidArgumentSize);
-
-        if (destination.Length < minimumDestinationSize)
-            throw new ArgumentException("destination buffer too small", nameof(destination));
-
-        for (int plane = 0; ;)
-        {
-            _scanDecoder = new ScanDecoder(FrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
-            int bytesRead = _scanDecoder.DecodeScan(_reader.RemainingSource(), destination, stride);
+            int scanStride = CheckStrideAndDestinationLength(destination.Length, stride);
+            _scanDecoder = new ScanDecoder(_reader.ScanFrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
+            int bytesRead = _scanDecoder.DecodeScan(_reader.RemainingSource(), destination, scanStride);
             _reader.AdvancePosition(bytesRead);
 
-            ++plane;
-            if (plane == planeCount)
+            component += _reader.ScanComponentCount;
+            if (component == _reader.ComponentCount)
                 break;
 
+            destination = destination[(scanStride * FrameInfo.Height)..];
             _reader.ReadNextStartOfScan();
-            destination = destination[bytesPerPlane..];
         }
 
         _reader.ReadEndOfImage();
@@ -417,12 +394,37 @@ public sealed class JpegLSDecoder
         ThrowHelper.ThrowIfOutsideRange(0, MappingTableCount - 1, mappingTableIndex);
     }
 
+    private int CheckStrideAndDestinationLength(int destinationLength, int stride)
+    {
+        int minimumStride = CalculateMinimumStride();
+
+        if (stride == AutoCalculateStride)
+        {
+            stride = minimumStride;
+        }
+        else
+        {
+            if (stride < minimumStride)
+                ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
+        }
+
+        int notUsedBytesAtEnd = stride - minimumStride;
+        int minimumDestinationScanLength = _reader.CurrentInterleaveMode == InterleaveMode.None
+            ? (stride * _reader.ScanComponentCount * FrameInfo.Height) - notUsedBytesAtEnd
+            : (stride * FrameInfo.Height) - notUsedBytesAtEnd;
+
+        if (destinationLength < minimumDestinationScanLength)
+            ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentSize);
+
+        return stride;
+    }
+
     private int CalculateMinimumStride()
     {
         int componentsInPlaneCount =
             _reader.CurrentInterleaveMode == InterleaveMode.None
             ? 1
-            : FrameInfo.ComponentCount;
+            : _reader.ScanComponentCount;
         return componentsInPlaneCount * FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
     }
 }

@@ -214,6 +214,116 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
+    public void DecodeColorInterleaveNoneWithTooSmallBufferThrows()
+    {
+        DecodeImageWithTooSmallBufferThrows("conformance/t8c0e0.jls");
+    }
+
+    [Fact]
+    public void DecodeColorInterleaveSampleWithTooSmallBufferThrows()
+    {
+        DecodeImageWithTooSmallBufferThrows("conformance/t8c2e0.jls");
+    }
+
+    [Fact]
+    public void DecodeColorInterleaveNoneCustomStrideWithTooSmallBufferThrows()
+    {
+        DecodeImageWithTooSmallBufferThrows("conformance/t8c0e0.jls", 256 + 1, 1 + 1);
+    }
+
+    [Fact]
+    public void DecodeColorInterleaveSampleCustomStrideWithTooSmallBufferThrows()
+    {
+        DecodeImageWithTooSmallBufferThrows("conformance/t8c2e0.jls", (256 * 3) + 1, 1 + 1);
+    }
+
+    [Fact]
+    public void DecodeColorInterleaveNoneWithTooSmallStrideThrows()
+    {
+        byte[] source = Util.ReadFile("conformance/t8c0e0.jls");
+
+        JpegLSDecoder decoder = new(source);
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+
+        const int correctStride = 256;
+        var exception = Assert.Throws<ArgumentException>(() => decoder.Decode(destination, correctStride - 1));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgumentStride, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void DecodeColorInterleaveSampleWithTooSmallStrideThrows()
+    {
+        byte[] source = Util.ReadFile("conformance/t8c2e0.jls");
+
+        JpegLSDecoder decoder = new(source);
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+
+        const int correctStride = 256;
+        var exception = Assert.Throws<ArgumentException>(() => decoder.Decode(destination, correctStride - 1));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgumentStride, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void DecodeColorInterleaveNoneWithStandardStrideWorks()
+    {
+        byte[] source = Util.ReadFile("conformance/t8c0e0.jls");
+
+        JpegLSDecoder decoder = new(source);
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+        int standardStride = decoder.FrameInfo.Width;
+
+        decoder.Decode(destination, standardStride);
+
+        Util.VerifyDecodedBytes(decoder.InterleaveMode, decoder.FrameInfo, destination, standardStride, "conformance/test8.ppm");
+    }
+
+    [Fact]
+    public void DecodeColorInterleaveSampleWithStandardStrideWorks()
+    {
+        byte[] source = Util.ReadFile("conformance/t8c2e0.jls");
+
+        JpegLSDecoder decoder = new(source);
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+        int standardStride = decoder.FrameInfo.Width * 3;
+
+        decoder.Decode(destination, standardStride);
+
+        Util.VerifyDecodedBytes(decoder.InterleaveMode, decoder.FrameInfo, destination, standardStride, "conformance/test8.ppm");
+    }
+
+    [Fact]
+    public void DecodeColorInterleaveNoneWithCustomStrideWorks() 
+    {
+        const int customStride = 256 + 1;
+        byte[] source = Util.ReadFile("conformance/t8c0e0.jls");
+
+        JpegLSDecoder decoder = new(source);
+        byte[] destination = new byte[decoder.GetDestinationSize(customStride)];
+
+        decoder.Decode(destination, customStride);
+
+        Util.VerifyDecodedBytes(decoder.InterleaveMode, decoder.FrameInfo, destination, customStride, "conformance/test8.ppm");
+    }
+
+    [Fact]
+    public void DecodeColorInterleaveSampleWithCustomStrideWorks()
+    {
+        const int customStride = (256 * 3) + 1;
+        byte[] source = Util.ReadFile("conformance/t8c2e0.jls");
+
+        JpegLSDecoder decoder = new(source);
+        byte[] destination = new byte[decoder.GetDestinationSize(customStride)];
+
+        decoder.Decode(destination, customStride);
+
+        Util.VerifyDecodedBytes(decoder.InterleaveMode, decoder.FrameInfo, destination, customStride, "conformance/test8.ppm");
+    }
+
+    [Fact]
     public void ReadSpiffHeader()
     {
         var source = Util.CreateTestSpiffHeader();
@@ -978,5 +1088,18 @@ public class JpegLSDecoderTest
         Array.Copy(array1, insertIndex, result, insertIndex + array2.Length, array1.Length - insertIndex);
 
         return result;
+    }
+
+    private static void DecodeImageWithTooSmallBufferThrows(string path, int stride = 0, int tooSmallByteCount = 1)
+    {
+        byte[] source = Util.ReadFile(path);
+        JpegLSDecoder decoder = new(source);
+
+        byte[] destination = new byte[decoder.GetDestinationSize(stride) - tooSmallByteCount];
+
+        var exception = Assert.Throws<ArgumentException>(() => decoder.Decode(destination, stride));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgumentSize, exception.GetErrorCode());
     }
 }

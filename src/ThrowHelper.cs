@@ -107,7 +107,7 @@ internal static class ThrowHelper
             ErrorCode.ParameterValueNotSupported => "The JPEG-LS stream is encoded with a parameter value that is not supported by this decoder",
             ErrorCode.ColorTransformNotSupported => "The HP color transform is not supported",
             ErrorCode.JpegLSPresetExtendedParameterTypeNotSupported => "Unsupported JPEG-LS stream: JPEG-LS preset parameters segment contains a JPEG-LS Extended (ISO/IEC 14495-2) type",
-            ErrorCode.JpegMarkerStartByteNotFound => "Invalid JPEG-LS stream: first byte is not a JPEG marker start byte (0xFF)",
+            ErrorCode.JpegMarkerStartByteNotFound => "Invalid JPEG-LS stream: the leading start byte (0xFF) for a JPEG marker was not found",
             ErrorCode.StartOfImageMarkerNotFound => "Invalid JPEG-LS stream: first JPEG marker is not a Start Of Image (SOI) marker",
             ErrorCode.InvalidSpiffHeader => "Invalid JPEG-LS stream: invalid SPIFF header",
             ErrorCode.UnknownJpegMarkerFound => "Invalid JPEG-LS stream: an unknown JPEG marker code was found",

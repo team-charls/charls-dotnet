@@ -208,6 +208,175 @@ public class EncodeTest
         Encode(new FrameInfo(2, 2, 16, 4), data, 61, InterleaveMode.Sample);
     }
 
+    [Fact]
+    public void EncodeWithDifferentLosslessValues()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(2, 2, 8, 3),
+            InterleaveMode = InterleaveMode.None };
+
+        byte[] data =
+        [
+            24, 23,
+            22, 21
+        ];
+
+        Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = encodedData;
+
+        encoder.NearLossless = 0;
+        encoder.EncodeComponents(data, 1);
+        encoder.NearLossless = 2;
+        encoder.EncodeComponents(data, 1);
+        encoder.NearLossless = 10;
+        encoder.EncodeComponents(data, 1);
+
+        JpegLSDecoder decoder = new() { Source = encoder.EncodedData };
+        decoder.ReadHeader();
+
+        var destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        CheckOutput(data, destination, decoder, 3, decoder.FrameInfo.Height * decoder.FrameInfo.Width);
+    }
+
+    [Fact]
+    public void EncodeWithDifferentPresetCodingParameters()
+    {
+        JpegLSEncoder encoder = new()
+        {
+            FrameInfo = new FrameInfo(8, 2, 8, 3),
+            InterleaveMode = InterleaveMode.None
+        };
+
+        byte[] data =
+        [
+            24, 23, 22, 21, 20, 19, 18, 17,
+            16, 15, 14, 13, 12, 11, 10, 9
+        ];
+
+        Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = encodedData;
+
+        encoder.PresetCodingParameters = JpegLSPresetCodingParameters.Default;
+        encoder.EncodeComponents(data, 1);
+        encoder.PresetCodingParameters = new JpegLSPresetCodingParameters(25, 10, 20, 22, 64);
+        encoder.EncodeComponents(data, 1);
+        encoder.PresetCodingParameters = new JpegLSPresetCodingParameters(25, 0, 0, 0, 3);
+        encoder.EncodeComponents(data, 1);
+
+        JpegLSDecoder decoder = new() { Source = encoder.EncodedData };
+        decoder.ReadHeader();
+
+        var destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        CheckOutput(data, destination, decoder, 3, decoder.FrameInfo.Height * decoder.FrameInfo.Width);
+    }
+
+    [Fact]
+    public void EncodeWithDifferentInterleaveModesNoneFirst()
+    {
+        JpegLSEncoder encoder = new()
+        {
+            FrameInfo = new FrameInfo(8, 2, 8, 4),
+            InterleaveMode = InterleaveMode.None
+        };
+
+        byte[] component0 =
+        [
+            24, 23, 22, 21, 20, 19, 18, 17,
+            16, 15, 14, 13, 12, 11, 10, 9
+        ];
+
+        byte[] component1And2And3 =
+        [
+            24, 16, 23, 15, 22, 14, 21, 13, 20, 12, 19, 11, 18, 10, 17, 9,
+            24, 16, 23, 15, 22, 14, 21, 13, 20, 12, 19, 11, 18, 10, 17, 9,
+            24, 16, 23, 15, 22, 14, 21, 13, 20, 12, 19, 11, 18, 10, 17, 9
+        ];
+
+        Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = encodedData;
+
+        encoder.InterleaveMode = InterleaveMode.None;
+        encoder.EncodeComponents(component0, 1);
+        encoder.InterleaveMode = InterleaveMode.Sample;
+        encoder.EncodeComponents(component1And2And3, 3);
+        
+        JpegLSDecoder decoder = new() { Source = encoder.EncodedData };
+        decoder.ReadHeader();
+
+        Span<byte> destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        CheckOutput(component0, destination, decoder, 1, 8 * 2);
+        CheckOutput(component1And2And3, destination[(8 * 2)..], decoder, 1, 8 * 2 * 3);
+    }
+
+    [Fact]
+    public void EncodeWithDifferentInterleaveModesSampleFirst()
+    {
+        JpegLSEncoder encoder = new()
+        {
+            FrameInfo = new FrameInfo(8, 2, 8, 4),
+            InterleaveMode = InterleaveMode.None
+        };
+
+        byte[] component0And1And2 =
+        [
+            24, 16, 23, 15, 22, 14, 21, 13, 20, 12, 19, 11, 18, 10, 17, 9,
+            24, 16, 23, 15, 22, 14, 21, 13, 20, 12, 19, 11, 18, 10, 17, 9,
+            24, 16, 23, 15, 22, 14, 21, 13, 20, 12, 19, 11, 18, 10, 17, 9
+        ];
+
+        byte[] component3 =
+        [
+            24, 23, 22, 21, 20, 19, 18, 17,
+            16, 15, 14, 13, 12, 11, 10, 9
+        ];
+
+        Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = encodedData;
+
+        encoder.InterleaveMode = InterleaveMode.Sample;
+        encoder.EncodeComponents(component0And1And2, 3);
+        encoder.InterleaveMode = InterleaveMode.None;
+        encoder.EncodeComponents(component3, 1);
+
+        JpegLSDecoder decoder = new() { Source = encoder.EncodedData };
+        decoder.ReadHeader();
+
+        Span<byte> destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        CheckOutput(component0And1And2, destination, decoder, 1, 8 * 2 * 3);
+        CheckOutput(component3, destination[(8*2*3)..], decoder, 1, 8 * 2);
+    }
+
+    private static void CheckOutput(Span<byte> source, Span<byte> destination, JpegLSDecoder decoder, int componentCount, int componentSize)
+    {
+        for (int component = 0; component < componentCount; ++component)
+        {
+            Span<byte> componentDestination = destination.Slice(component * componentSize, componentSize);
+
+            int nearLossless = decoder.GetNearLossless(component);
+            if (nearLossless == 0)
+            {
+                for (int i = 0; i != source.Length; ++i)
+                {
+                    Assert.Equal(source[i], componentDestination[i]);
+                }
+            }
+            else
+            {
+                for (int i = 0; i != source.Length; ++i)
+                {
+                    Assert.True(Math.Abs(source[i] - componentDestination[i]) <= nearLossless);
+                }
+            }
+        }
+    }
+
     private static void Encode(string filename, int expectedSize, InterleaveMode interleaveMode = InterleaveMode.None,
         ColorTransformation colorTransformation = ColorTransformation.None)
     {
