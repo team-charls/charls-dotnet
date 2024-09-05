@@ -198,6 +198,7 @@ internal sealed class JpegTestStreamWriter
 
     internal void WriteDefineRestartInterval(uint restartInterval, int size)
     {
+        // Segment is documented in C.2.5
         WriteSegmentStart(JpegMarkerCode.DefineRestartInterval, size);
 
         switch (size)
@@ -216,10 +217,24 @@ internal sealed class JpegTestStreamWriter
         }
     }
 
-    internal void WriteDefineNumberOfLines(int height)
+    internal void WriteDefineNumberOfLines(uint height, int size)
     {
-        WriteSegmentStart(JpegMarkerCode.DefineNumberOfLines, 2);
-        WriteUint16(height);
+        // Segment is documented in C.2.6
+        WriteSegmentStart(JpegMarkerCode.DefineNumberOfLines, size);
+        switch (size)
+        {
+            case 2:
+                WriteUint16((int)height);
+                break;
+
+            case 3:
+                WriteUint24(height);
+                break;
+
+            case 4:
+                WriteUint32(height);
+                break;
+        }
     }
 
     internal void WriteColorTransformSegment(ColorTransformation colorTransformation)
