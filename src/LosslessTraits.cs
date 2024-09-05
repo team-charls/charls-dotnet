@@ -30,6 +30,16 @@ internal class LosslessTraits : Traits
         return lhs == rhs;
     }
 
+    internal sealed override bool IsNear(Pair<byte> lhs, Pair<byte> rhs)
+    {
+        return lhs.V1 == rhs.V1 && lhs.V2 == rhs.V2;
+    }
+
+    internal sealed override bool IsNear(Pair<ushort> lhs, Pair<ushort> rhs)
+    {
+        return lhs.V1 == rhs.V1 && lhs.V2 == rhs.V2;
+    }
+
     internal sealed override bool IsNear(Triplet<byte> lhs, Triplet<byte> rhs)
     {
         return lhs.V1 == rhs.V1 && lhs.V2 == rhs.V2 && lhs.V3 == rhs.V3;

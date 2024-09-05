@@ -367,6 +367,9 @@ internal struct ScanDecoder
             case InterleaveMode.Sample:
                 switch (FrameInfo.ComponentCount)
                 {
+                    case 2:
+                        DecodeLines8Bit2ComponentsInterleaveModeSample(destination, stride);
+                        break;
                     case 3:
                         DecodeLines8Bit3ComponentsInterleaveModeSample(destination, stride);
                         break;
@@ -394,6 +397,10 @@ internal struct ScanDecoder
             case InterleaveMode.Sample:
                 switch (FrameInfo.ComponentCount)
                 {
+                    case 2:
+                        DecodeLines16Bit2ComponentsInterleaveModeSample(destination, stride);
+                        break;
+
                     case 3:
                         DecodeLines16Bit3ComponentsInterleaveModeSample(destination, stride);
                         break;
@@ -638,6 +645,57 @@ internal struct ScanDecoder
         }
     }
 
+    private void DecodeLines8Bit2ComponentsInterleaveModeSample(Span<byte> destination, int stride)
+    {
+        int pixelStride = PixelStride;
+        using var rentedArray = ArrayPoolHelper.Rent<Pair<byte>>(pixelStride * 2);
+        Span<Pair<byte>> lineBuffer = rentedArray.Value;
+
+        for (int line = 0; ;)
+        {
+            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+            for (int mcu = 0; ;)
+            {
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[pixelStride..];
+                if ((mcu & 1) == 1)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                // Initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                DecodePairLine(previousLine, currentLine);
+
+                CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
+                destination = destination[stride..];
+            }
+
+            if (line == FrameInfo.Height)
+                break;
+
+            destination = destination[stride..];
+            ProcessRestartMarker();
+
+            // After a restart marker it is required to reset the decoder.
+            lineBuffer.Clear();
+            _scanCodec.InitializeParameters(Traits.Range);
+        }
+    }
+
     private void DecodeLines8Bit3ComponentsInterleaveModeSample(Span<byte> destination, int stride)
     {
         int pixelStride = PixelStride;
@@ -664,6 +722,57 @@ internal struct ScanDecoder
                 currentLine[0] = previousLine[1];
 
                 DecodeTripletLine(previousLine, currentLine);
+
+                CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
+
+                ++mcu;
+                if (mcu == linesInInterval)
+                {
+                    line += mcu;
+                    break;
+                }
+
+                destination = destination[stride..];
+            }
+
+            if (line == FrameInfo.Height)
+                break;
+
+            destination = destination[stride..];
+            ProcessRestartMarker();
+
+            // After a restart marker it is required to reset the decoder.
+            lineBuffer.Clear();
+            _scanCodec.InitializeParameters(Traits.Range);
+        }
+    }
+
+    private void DecodeLines16Bit2ComponentsInterleaveModeSample(Span<byte> destination, int stride)
+    {
+        int pixelStride = PixelStride;
+        using var rentedArray = ArrayPoolHelper.Rent<Pair<ushort>>(pixelStride * 2);
+        Span<Pair<ushort>> lineBuffer = rentedArray.Value;
+
+        for (int line = 0; ;)
+        {
+            int linesInInterval = Math.Min(FrameInfo.Height - line, _restartInterval);
+
+            for (int mcu = 0; ;)
+            {
+                var previousLine = lineBuffer;
+                var currentLine = lineBuffer[pixelStride..];
+                if ((mcu & 1) == 1)
+                {
+                    var temp = previousLine;
+                    previousLine = currentLine;
+                    currentLine = temp;
+                }
+
+                // Initialize edge pixels used for prediction
+                previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                currentLine[0] = previousLine[1];
+
+                DecodePairLine(previousLine, currentLine);
 
                 CopyLineBufferToDestination(currentLine[1..], destination, FrameInfo.Width);
 
@@ -906,6 +1015,62 @@ internal struct ScanDecoder
         }
     }
 
+    private void DecodePairLine(Span<Pair<byte>> previousLine, Span<Pair<byte>> currentLine)
+    {
+        int index = 1;
+        while (index <= FrameInfo.Width)
+        {
+            var ra = currentLine[index - 1];
+            var rc = previousLine[index - 1];
+            var rb = previousLine[index];
+            var rd = previousLine[index + 1];
+
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            if (qs1 == 0 && qs2 == 0)
+            {
+                index += DecodeRunMode(index, previousLine, currentLine);
+            }
+            else
+            {
+                currentLine[index] = new Pair<byte>(
+                    (byte)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1)),
+                    (byte)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2)));
+                ++index;
+            }
+        }
+    }
+
+    private void DecodePairLine(Span<Pair<ushort>> previousLine, Span<Pair<ushort>> currentLine)
+    {
+        int index = 1;
+        while (index <= FrameInfo.Width)
+        {
+            var ra = currentLine[index - 1];
+            var rc = previousLine[index - 1];
+            var rb = previousLine[index];
+            var rd = previousLine[index + 1];
+
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            if (qs1 == 0 && qs2 == 0)
+            {
+                index += DecodeRunMode(index, previousLine, currentLine);
+            }
+            else
+            {
+                currentLine[index] = new Pair<ushort>(
+                    (ushort)DecodeRegular(qs1, ComputePredictedValue(ra.V1, rb.V1, rc.V1)),
+                    (ushort)DecodeRegular(qs2, ComputePredictedValue(ra.V2, rb.V2, rc.V2)));
+                ++index;
+            }
+        }
+    }
+
     private void DecodeTripletLine(Span<Triplet<byte>> previousLine, Span<Triplet<byte>> currentLine)
     {
         int index = 1;
@@ -1105,6 +1270,40 @@ internal struct ScanDecoder
         return endIndex - startIndex + 1;
     }
 
+    private int DecodeRunMode(int startIndex, Span<Pair<byte>> previousLine, Span<Pair<byte>> currentLine)
+    {
+        var ra = currentLine[startIndex - 1];
+
+        int runLength = DecodeRunPixels(ra, currentLine[startIndex..], FrameInfo.Width - (startIndex - 1));
+        int endIndex = startIndex + runLength;
+
+        if (endIndex - 1 == FrameInfo.Width)
+            return endIndex - startIndex;
+
+        // Run interruption
+        var rb = previousLine[endIndex];
+        currentLine[endIndex] = DecodeRunInterruptionPixel(ra, rb);
+        _scanCodec.DecrementRunIndex();
+        return endIndex - startIndex + 1;
+    }
+
+    private int DecodeRunMode(int startIndex, Span<Pair<ushort>> previousLine, Span<Pair<ushort>> currentLine)
+    {
+        var ra = currentLine[startIndex - 1];
+
+        int runLength = DecodeRunPixels(ra, currentLine[startIndex..], FrameInfo.Width - (startIndex - 1));
+        int endIndex = startIndex + runLength;
+
+        if (endIndex - 1 == FrameInfo.Width)
+            return endIndex - startIndex;
+
+        // Run interruption
+        var rb = previousLine[endIndex];
+        currentLine[endIndex] = DecodeRunInterruptionPixel(ra, rb);
+        _scanCodec.DecrementRunIndex();
+        return endIndex - startIndex + 1;
+    }
+
     private int DecodeRunMode(int startIndex, Span<Triplet<byte>> previousLine, Span<Triplet<byte>> currentLine)
     {
         var ra = currentLine[startIndex - 1];
@@ -1209,6 +1408,76 @@ internal struct ScanDecoder
     }
 
     private int DecodeRunPixels(ushort ra, Span<ushort> startPos, int pixelCount)
+    {
+        int index = 0;
+        while (ReadBit() == 1)
+        {
+            int count = Math.Min(1 << ScanCodec.J[_scanCodec.RunIndex], pixelCount - index);
+            index += count;
+            Debug.Assert(index <= pixelCount);
+
+            if (count == (1 << ScanCodec.J[_scanCodec.RunIndex]))
+            {
+                _scanCodec.IncrementRunIndex();
+            }
+
+            if (index == pixelCount)
+                break;
+        }
+
+        if (index != pixelCount)
+        {
+            // Incomplete run.
+            index += (ScanCodec.J[_scanCodec.RunIndex] > 0) ? ReadValue(ScanCodec.J[_scanCodec.RunIndex]) : 0;
+        }
+
+        if (index > pixelCount)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
+
+        for (int i = 0; i < index; ++i)
+        {
+            startPos[i] = ra;
+        }
+
+        return index;
+    }
+
+    private int DecodeRunPixels(Pair<byte> ra, Span<Pair<byte>> startPos, int pixelCount)
+    {
+        int index = 0;
+        while (ReadBit() == 1)
+        {
+            int count = Math.Min(1 << ScanCodec.J[_scanCodec.RunIndex], pixelCount - index);
+            index += count;
+            Debug.Assert(index <= pixelCount);
+
+            if (count == (1 << ScanCodec.J[_scanCodec.RunIndex]))
+            {
+                _scanCodec.IncrementRunIndex();
+            }
+
+            if (index == pixelCount)
+                break;
+        }
+
+        if (index != pixelCount)
+        {
+            // Incomplete run.
+            index += (ScanCodec.J[_scanCodec.RunIndex] > 0) ? ReadValue(ScanCodec.J[_scanCodec.RunIndex]) : 0;
+        }
+
+        if (index > pixelCount)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
+
+        for (int i = 0; i < index; ++i)
+        {
+            startPos[i] = ra;
+        }
+
+        return index;
+    }
+
+    private int DecodeRunPixels(Pair<ushort> ra, Span<Pair<ushort>> startPos, int pixelCount)
     {
         int index = 0;
         while (ReadBit() == 1)
@@ -1398,6 +1667,26 @@ internal struct ScanDecoder
         }
     }
 
+    private Pair<byte> DecodeRunInterruptionPixel(Pair<byte> ra, Pair<byte> rb)
+    {
+        int errorValue1 = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
+        int errorValue2 = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
+
+        return new Pair<byte>(
+            (byte)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)));
+    }
+
+    private Pair<ushort> DecodeRunInterruptionPixel(Pair<ushort> ra, Pair<ushort> rb)
+    {
+        int errorValue1 = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
+        int errorValue2 = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
+
+        return new Pair<ushort>(
+            (ushort)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)));
+    }
+
     private Triplet<byte> DecodeRunInterruptionPixel(Triplet<byte> ra, Triplet<byte> rb)
     {
         int errorValue1 = DecodeRunInterruptionError(ref _scanCodec.RunModeContexts[0]);
@@ -1468,6 +1757,18 @@ internal struct ScanDecoder
     {
         Span<byte> sourceInBytes = MemoryMarshal.Cast<ushort, byte>(source);
         sourceInBytes[..(pixelCount * 2)].CopyTo(destination);
+    }
+
+    private readonly void CopyLineBufferToDestination(Span<Pair<byte>> source, Span<byte> destination, int pixelCount)
+    {
+        Span<byte> sourceInBytes = MemoryMarshal.Cast<Pair<byte>, byte>(source);
+        _copyFromLineBuffer(sourceInBytes, destination, pixelCount);
+    }
+
+    private readonly void CopyLineBufferToDestination(Span<Pair<ushort>> source, Span<byte> destination, int pixelCount)
+    {
+        Span<byte> sourceInBytes = MemoryMarshal.Cast<Pair<ushort>, byte>(source);
+        _copyFromLineBuffer(sourceInBytes, destination, pixelCount);
     }
 
     private readonly void CopyLineBufferToDestination(Span<Triplet<byte>> source, Span<byte> destination, int pixelCount)

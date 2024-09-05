@@ -79,6 +79,16 @@ internal class Traits
         return Math.Abs(lhs - rhs) <= NearLossless;
     }
 
+    internal virtual bool IsNear(Pair<byte> lhs, Pair<byte> rhs)
+    {
+        return Math.Abs(lhs.V1 - rhs.V1) <= NearLossless && Math.Abs(lhs.V2 - rhs.V2) <= NearLossless;
+    }
+
+    internal virtual bool IsNear(Pair<ushort> lhs, Pair<ushort> rhs)
+    {
+        return Math.Abs(lhs.V1 - rhs.V1) <= NearLossless && Math.Abs(lhs.V2 - rhs.V2) <= NearLossless;
+    }
+
     internal virtual bool IsNear(Triplet<byte> lhs, Triplet<byte> rhs)
     {
         return Math.Abs(lhs.V1 - rhs.V1) <= NearLossless && Math.Abs(lhs.V2 - rhs.V2) <= NearLossless &&
