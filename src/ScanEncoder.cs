@@ -194,6 +194,9 @@ internal struct ScanEncoder
             case InterleaveMode.Sample:
                 switch (FrameInfo.ComponentCount)
                 {
+                    case 2:
+                        EncodeLines8Bit2ComponentsInterleaveModeSample(source, stride);
+                        break;
                     case 3:
                         EncodeLines8Bit3ComponentsInterleaveModeSample(source, stride);
                         break;
@@ -221,6 +224,9 @@ internal struct ScanEncoder
             case InterleaveMode.Sample:
                 switch (FrameInfo.ComponentCount)
                 {
+                    case 2:
+                        EncodeLines16Bit2ComponentsInterleaveModeSample(source, stride);
+                        break;
                     case 3:
                         EncodeLines16Bit3ComponentsInterleaveModeSample(source, stride);
                         break;
@@ -391,11 +397,79 @@ internal struct ScanEncoder
         }
     }
 
+    private void EncodeLines8Bit2ComponentsInterleaveModeSample(ReadOnlySpan<byte> source, int stride)
+    {
+        int pixelStride = PixelStride;
+        using var rentedArray = ArrayPoolHelper.Rent<Pair<byte>>(pixelStride * 2);
+        Span<Pair<byte>> lineBuffer = rentedArray.Value;
+
+        for (int line = 0; ;)
+        {
+            var previousLine = lineBuffer;
+            var currentLine = lineBuffer[pixelStride..];
+            bool oddLine = (line & 1) == 1;
+            if (oddLine)
+            {
+                var temp = previousLine;
+                previousLine = currentLine;
+                currentLine = temp;
+            }
+
+            CopySourceToLineBufferInterleaveModeSample(source, currentLine[1..], FrameInfo.Width);
+
+            // Initialize edge pixels used for prediction
+            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+            currentLine[0] = previousLine[1];
+
+            EncodeLine(previousLine, currentLine);
+
+            ++line;
+            if (line == FrameInfo.Height)
+                break;
+
+            source = source[stride..];
+        }
+    }
+
     private void EncodeLines8Bit3ComponentsInterleaveModeSample(ReadOnlySpan<byte> source, int stride)
     {
         int pixelStride = PixelStride;
         using var rentedArray = ArrayPoolHelper.Rent<Triplet<byte>>(pixelStride * 2);
         Span<Triplet<byte>> lineBuffer = rentedArray.Value;
+
+        for (int line = 0; ;)
+        {
+            var previousLine = lineBuffer;
+            var currentLine = lineBuffer[pixelStride..];
+            bool oddLine = (line & 1) == 1;
+            if (oddLine)
+            {
+                var temp = previousLine;
+                previousLine = currentLine;
+                currentLine = temp;
+            }
+
+            CopySourceToLineBufferInterleaveModeSample(source, currentLine[1..], FrameInfo.Width);
+
+            // Initialize edge pixels used for prediction
+            previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+            currentLine[0] = previousLine[1];
+
+            EncodeLine(previousLine, currentLine);
+
+            ++line;
+            if (line == FrameInfo.Height)
+                break;
+
+            source = source[stride..];
+        }
+    }
+
+    private void EncodeLines16Bit2ComponentsInterleaveModeSample(ReadOnlySpan<byte> source, int stride)
+    {
+        int pixelStride = PixelStride;
+        using var rentedArray = ArrayPoolHelper.Rent<Pair<ushort>>(pixelStride * 2);
+        Span<Pair<ushort>> lineBuffer = rentedArray.Value;
 
         for (int line = 0; ;)
         {
@@ -579,6 +653,62 @@ internal struct ScanEncoder
             else
             {
                 currentLine[index] = (ushort)EncodeRegular(qs, currentLine[index], ComputePredictedValue(ra, rb, rc));
+                ++index;
+            }
+        }
+    }
+
+    private void EncodeLine(Span<Pair<byte>> previousLine, Span<Pair<byte>> currentLine)
+    {
+        int index = 1;
+        while (index <= FrameInfo.Width)
+        {
+            var ra = currentLine[index - 1];
+            var rc = previousLine[index - 1];
+            var rb = previousLine[index];
+            var rd = previousLine[index + 1];
+
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            if (qs1 == 0 && qs2 == 0)
+            {
+                index += EncodeRunMode(index, previousLine, currentLine);
+            }
+            else
+            {
+                currentLine[index] = new Pair<byte>(
+                    (byte)EncodeRegular(qs1, currentLine[index].V1, ComputePredictedValue(ra.V1, rb.V1, rc.V1)),
+                    (byte)EncodeRegular(qs2, currentLine[index].V2, ComputePredictedValue(ra.V2, rb.V2, rc.V2)));
+                ++index;
+            }
+        }
+    }
+
+    private void EncodeLine(Span<Pair<ushort>> previousLine, Span<Pair<ushort>> currentLine)
+    {
+        int index = 1;
+        while (index <= FrameInfo.Width)
+        {
+            var ra = currentLine[index - 1];
+            var rc = previousLine[index - 1];
+            var rb = previousLine[index];
+            var rd = previousLine[index + 1];
+
+            int qs1 = ComputeContextId(
+                QuantizeGradient(rd.V1 - rb.V1), QuantizeGradient(rb.V1 - rc.V1), QuantizeGradient(rc.V1 - ra.V1));
+            int qs2 = ComputeContextId(
+                QuantizeGradient(rd.V2 - rb.V2), QuantizeGradient(rb.V2 - rc.V2), QuantizeGradient(rc.V2 - ra.V2));
+            if (qs1 == 0 && qs2 == 0)
+            {
+                index += EncodeRunMode(index, previousLine, currentLine);
+            }
+            else
+            {
+                currentLine[index] = new Pair<ushort>(
+                    (ushort)EncodeRegular(qs1, currentLine[index].V1, ComputePredictedValue(ra.V1, rb.V1, rc.V1)),
+                    (ushort)EncodeRegular(qs2, currentLine[index].V2, ComputePredictedValue(ra.V2, rb.V2, rc.V2)));
                 ++index;
             }
         }
@@ -784,6 +914,60 @@ internal struct ScanEncoder
         return runLength + 1;
     }
 
+    private int EncodeRunMode(int startIndex, Span<Pair<byte>> previousLine, Span<Pair<byte>> currentLine)
+    {
+        int countTypeRemain = FrameInfo.Width - (startIndex - 1);
+        var typePrevX = previousLine[startIndex..];
+        var typeCurX = currentLine[startIndex..];
+        var ra = currentLine[startIndex - 1];
+
+        int runLength = 0;
+        while (Traits.IsNear(typeCurX[runLength], ra))
+        {
+            typeCurX[runLength] = ra;
+            ++runLength;
+
+            if (runLength == countTypeRemain)
+                break;
+        }
+
+        EncodeRunPixels(runLength, runLength == countTypeRemain);
+
+        if (runLength == countTypeRemain)
+            return runLength;
+
+        typeCurX[runLength] = EncodeRunInterruptionPixel(typeCurX[runLength], ra, typePrevX[runLength]);
+        _scanCodec.DecrementRunIndex();
+        return runLength + 1;
+    }
+
+    private int EncodeRunMode(int startIndex, Span<Pair<ushort>> previousLine, Span<Pair<ushort>> currentLine)
+    {
+        int countTypeRemain = FrameInfo.Width - (startIndex - 1);
+        var typePrevX = previousLine[startIndex..];
+        var typeCurX = currentLine[startIndex..];
+        var ra = currentLine[startIndex - 1];
+
+        int runLength = 0;
+        while (Traits.IsNear(typeCurX[runLength], ra))
+        {
+            typeCurX[runLength] = ra;
+            ++runLength;
+
+            if (runLength == countTypeRemain)
+                break;
+        }
+
+        EncodeRunPixels(runLength, runLength == countTypeRemain);
+
+        if (runLength == countTypeRemain)
+            return runLength;
+
+        typeCurX[runLength] = EncodeRunInterruptionPixel(typeCurX[runLength], ra, typePrevX[runLength]);
+        _scanCodec.DecrementRunIndex();
+        return runLength + 1;
+    }
+
     private int EncodeRunMode(int startIndex, Span<Triplet<byte>> previousLine, Span<Triplet<byte>> currentLine)
     {
         int countTypeRemain = FrameInfo.Width - (startIndex - 1);
@@ -907,6 +1091,32 @@ internal struct ScanEncoder
             EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue);
             return Traits.ComputeReconstructedSample(rb, errorValue * Sign(rb - ra));
         }
+    }
+
+    private Pair<byte> EncodeRunInterruptionPixel(Pair<byte> x, Pair<byte> ra, Pair<byte> rb)
+    {
+        int errorValue1 = Traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue1);
+
+        int errorValue2 = Traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue2);
+
+        return new Pair<byte>(
+            (byte)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (byte)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)));
+    }
+
+    private Pair<ushort> EncodeRunInterruptionPixel(Pair<ushort> x, Pair<ushort> ra, Pair<ushort> rb)
+    {
+        int errorValue1 = Traits.ComputeErrorValue(Sign(rb.V1 - ra.V1) * (x.V1 - rb.V1));
+        EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue1);
+
+        int errorValue2 = Traits.ComputeErrorValue(Sign(rb.V2 - ra.V2) * (x.V2 - rb.V2));
+        EncodeRunInterruptionError(ref _scanCodec.RunModeContexts[0], errorValue2);
+
+        return new Pair<ushort>(
+            (ushort)Traits.ComputeReconstructedSample(rb.V1, errorValue1 * Sign(rb.V1 - ra.V1)),
+            (ushort)Traits.ComputeReconstructedSample(rb.V2, errorValue2 * Sign(rb.V2 - ra.V2)));
     }
 
     private Triplet<byte> EncodeRunInterruptionPixel(Triplet<byte> x, Triplet<byte> ra, Triplet<byte> rb)
@@ -1049,6 +1259,18 @@ internal struct ScanEncoder
     private readonly void CopySourceToLineBufferInterleaveModeLine(ReadOnlySpan<byte> source, Span<ushort> destination, int pixelCount)
     {
         var destinationInBytes = MemoryMarshal.Cast<ushort, byte>(destination);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
+    }
+
+    private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Pair<byte>> destination, int pixelCount)
+    {
+        var destinationInBytes = MemoryMarshal.Cast<Pair<byte>, byte>(destination);
+        _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
+    }
+
+    private readonly void CopySourceToLineBufferInterleaveModeSample(ReadOnlySpan<byte> source, Span<Pair<ushort>> destination, int pixelCount)
+    {
+        var destinationInBytes = MemoryMarshal.Cast<Pair<ushort>, byte>(destination);
         _copyToLineBuffer!(source, destinationInBytes, pixelCount, _mask);
     }
 

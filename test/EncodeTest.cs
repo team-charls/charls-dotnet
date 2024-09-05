@@ -30,6 +30,48 @@ public class EncodeTest
     }
 
     [Fact]
+    public void Encode2Components8BitInterleaveNone()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60, 70, 80];
+        Encode(new FrameInfo(2, 2, 8, 2), data, 53, InterleaveMode.None);
+    }
+
+    [Fact]
+    public void Encode2Components8BitInterleaveLine()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60, 70, 80];
+        Encode(new FrameInfo(2, 2, 8, 2), data, 43, InterleaveMode.Line);
+    }
+
+    [Fact]
+    public void Encode2Components8BitInterleaveSample()
+    {
+        byte[] data = [10, 20, 30, 40, 50, 60, 70, 80];
+        Encode(new FrameInfo(2, 2, 8, 2), data, 43, InterleaveMode.Sample);
+    }
+
+    [Fact]
+    public void Encode2Components16BitInterleaveNone()
+    {
+        byte[] data = [10, 1, 20, 1, 30, 1, 40, 1, 50, 1, 60, 1, 70, 1, 80, 1];
+        Encode(new FrameInfo(2, 2, 16, 2), data, 52, InterleaveMode.None);
+    }
+
+    [Fact]
+    public void Encode2Components16BitInterleaveLine()
+    {
+        byte[] data = [10, 1, 20, 1, 30, 1, 40, 1, 50, 1, 60, 1, 70, 1, 80, 1];
+        Encode(new FrameInfo(2, 2, 16, 2), data, 44, InterleaveMode.Line);
+    }
+
+    [Fact]
+    public void Encode2Components16BitInterleaveSample()
+    {
+        byte[] data = [10, 1, 20, 1, 30, 1, 40, 1, 50, 1, 60, 1, 70, 1, 80, 1];
+        Encode(new FrameInfo(2, 2, 16, 2), data, 44, InterleaveMode.Sample);
+    }
+
+    [Fact]
     public void EncodeColor8BitInterleaveNoneLossless()
     {
         Encode("conformance/test8.ppm", 102248);
