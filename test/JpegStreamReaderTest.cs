@@ -327,6 +327,51 @@ public class JpegStreamReaderTest
     }
 
     [Fact]
+    public void ReadHeaderWithToManyComponentsInStartOfFrameSegmentThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 1);
+        writer.WriteStartOfScanSegment(1, 2, 0, InterleaveMode.Sample);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterComponentCount, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadHeaderWithNoComponentsInStartOfFrameSegmentThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 1);
+        writer.WriteStartOfScanSegment(1, 0, 0, InterleaveMode.None);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterComponentCount, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadHeaderWithMoreThenMaxComponentsInStartOfFrameSegmentThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 5);
+        writer.WriteStartOfScanSegment(1, 5, 0, InterleaveMode.Sample);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterComponentCount, exception.GetErrorCode());
+    }
+
+    [Fact]
     public void ReadHeaderWithTooSmallStartOfScanShouldThrow()
     {
         byte[] buffer =

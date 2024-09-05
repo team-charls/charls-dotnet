@@ -9,6 +9,7 @@ internal static class Constants
 
     internal const int MinimumComponentCount = 1;
     internal const int MaximumComponentCount = 255;
+    internal const int MaximumComponentCountInScan = 4;
     internal const int MinimumComponentIndex = 0;
     internal const int MaximumComponentIndex = MaximumComponentCount - 1;
     internal const int MinimumBitsPerSample = 2;

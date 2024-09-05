@@ -255,6 +255,36 @@ internal static class Util
         return true;
     }
 
+    internal static void VerifyDecodedBytes(InterleaveMode interleaveMode, FrameInfo frameInfo,
+    byte[] uncompressedData, int destinationStride, string referenceFilename)
+    {
+        var anymapReference = ReadAnymapReferenceFile(referenceFilename, interleaveMode, frameInfo);
+
+        int planeCount = interleaveMode == InterleaveMode.None ? frameInfo.ComponentCount : 1;
+        int componentsInPlaneCount = interleaveMode == InterleaveMode.None ? 1 : frameInfo.ComponentCount;
+
+        int sourceStride = frameInfo.Width * componentsInPlaneCount;
+        Span<byte> sample = uncompressedData;
+        int referenceSample = 0;
+
+        for (int plane = 0; plane < planeCount; ++plane)
+        {
+            for (int line = 0; line < frameInfo.Height; ++line)
+            {
+                for (int i = 0; i < sourceStride; ++i)
+                {
+                    if (sample[i] != anymapReference.ImageData[referenceSample]) // AreEqual is very slow, pre-test to speed up 50X
+                    {
+                        Assert.Equal(sample[i], anymapReference.ImageData[referenceSample]);
+                    }
+                    ++referenceSample;
+                }
+
+                sample = sample[destinationStride..];
+            }
+        }
+    }
+
     private static byte[] TripletToPlanar(byte[] tripletBuffer, int width, int height)
     {
         byte[] planarBuffer = new byte[tripletBuffer.Length];

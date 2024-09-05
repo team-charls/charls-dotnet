@@ -1793,6 +1793,47 @@ public class JpegLSEncoderTest
         Assert.Equal(ErrorCode.InvalidArgumentColorTransformation, exception.GetErrorCode());
     }
 
+    [Fact]
+    public void EncodeTooManyComponentsInInterleaveModeSampleThrows()
+    {
+        JpegLSEncoder encoder = new()
+        {
+            FrameInfo = new FrameInfo(1, 1, 8, 5),
+            InterleaveMode = InterleaveMode.None
+        };
+
+        byte[] data = [24, 23, 22, 21, 20];
+
+        Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = encodedData;
+        encoder.InterleaveMode = InterleaveMode.Sample;
+
+        var exception = Assert.Throws<ArgumentException>(() => encoder.Encode(data));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgumentInterleaveMode, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void EncodeTooManyComponentsThrows()
+    {
+        JpegLSEncoder encoder = new()
+        {
+            FrameInfo = new FrameInfo(1, 1, 8, 3),
+            InterleaveMode = InterleaveMode.None
+        };
+
+        byte[] data = [24, 23, 22, 21];
+
+        Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = encodedData;
+
+        var exception = Assert.Throws<ArgumentException>(() => encoder.EncodeComponents(data, 4));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidArgument, exception.GetErrorCode());
+    }
+
     private static void EncodeWithCustomPresetCodingParameters(JpegLSPresetCodingParameters pcParameters)
     {
         byte[] source = [0, 1, 1, 1, 0];

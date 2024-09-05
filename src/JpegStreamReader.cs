@@ -25,6 +25,7 @@ internal struct JpegStreamReader
     private int _height;
     private int _bitsPerSample;
     private int _componentCount;
+    private int _readComponentCount;
     private bool _componentWithMappingTableExists;
 
     public JpegStreamReader()
@@ -68,6 +69,10 @@ internal struct JpegStreamReader
     internal SpiffHeader? SpiffHeader { get; private set; }
 
     internal InterleaveMode CurrentInterleaveMode { get; private set; }
+
+    internal int ScanComponentCount { get; private set; }
+
+    internal readonly FrameInfo ScanFrameInfo => new(_width, _height, _bitsPerSample, ScanComponentCount);
 
     internal CompressedDataFormat CompressedDataFormat { get; private set; }
 
@@ -210,8 +215,12 @@ internal struct JpegStreamReader
 
             if (_state == State.BitStreamSection)
             {
+                if (_height == 0)
+                {
+                    FindAndReadDefineNumberOfLinesSegment();
+                }
+
                 CheckWidth();
-                CheckHeight();
                 CheckCodingParameters();
                 return;
             }
@@ -462,7 +471,7 @@ internal struct JpegStreamReader
         if (!Validation.IsBitsPerSampleValid(_bitsPerSample))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterBitsPerSample);
 
-        SetHeight(ReadUint16());
+        SetHeight(ReadUint16(), false);
         SetWidth(ReadUint16());
 
         _componentCount = ReadByte();
@@ -618,7 +627,7 @@ internal struct JpegStreamReader
                 throw ThrowHelper.CreateInvalidDataException(ErrorCode.InvalidParameterJpegLSPresetParameters);
         }
 
-        SetHeight(height);
+        SetHeight(height, false);
         SetWidth(width);
     }
 
@@ -659,16 +668,23 @@ internal struct JpegStreamReader
     {
         CheckMinimalSegmentSize(1);
 
-        int componentCountInScan = ReadByte();
-        if (componentCountInScan != 1 && componentCountInScan != _componentCount)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
+        // ISO 10918-1, B2.3. defines the limits for the number of image components parameter in an SOS.
+        int scanComponentCount = ReadByte();
+        if (scanComponentCount < 1 || scanComponentCount > Constants.MaximumComponentCountInScan ||
+            scanComponentCount > _componentCount - _readComponentCount)
+        {
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterComponentCount);
+        }
 
-        Span<byte> componentIds = stackalloc byte[componentCountInScan];
-        Span<byte> mappingTableIds = stackalloc byte[componentCountInScan];
+        ScanComponentCount = scanComponentCount;
+        _readComponentCount += scanComponentCount;
 
-        CheckSegmentSize(4 + (2 * componentCountInScan));
+        Span<byte> componentIds = stackalloc byte[scanComponentCount];
+        Span<byte> mappingTableIds = stackalloc byte[scanComponentCount];
 
-        for (int i = 0; i != componentCountInScan; ++i)
+        CheckSegmentSize(4 + (2 * scanComponentCount));
+
+        for (int i = 0; i != scanComponentCount; ++i)
         {
             componentIds[i] = ReadByte();
             mappingTableIds[i] = ReadByte();
@@ -679,9 +695,9 @@ internal struct JpegStreamReader
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterNearLossless);
 
         CurrentInterleaveMode = (InterleaveMode)ReadByte(); // Read ILV parameter
-        CheckInterleaveMode(CurrentInterleaveMode, componentCountInScan);
+        CheckInterleaveMode(CurrentInterleaveMode, scanComponentCount);
 
-        for (int i = 0; i != componentCountInScan; ++i)
+        for (int i = 0; i != scanComponentCount; ++i)
         {
             StoreScanInfo(componentIds[i], mappingTableIds[i], (byte)_nearLossless, CurrentInterleaveMode);
         }
@@ -805,15 +821,6 @@ internal struct JpegStreamReader
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterWidth);
     }
 
-    private void CheckHeight()
-    {
-        if (_height != 0)
-            return;
-
-        _height = FindAndReadDefineNumberOfLinesSegment();
-        _dnlMarkerExpected = true;
-    }
-
     private readonly void CheckCodingParameters()
     {
         if (ColorTransformation != ColorTransformation.None && !ColorTransformations.IsPossible(FrameInfo))
@@ -831,12 +838,12 @@ internal struct JpegStreamReader
         _width = value;
     }
 
-    private void SetHeight(int value)
+    private void SetHeight(int value, bool finalUpdate)
     {
-        if (value == 0)
+        if (value == 0 && !finalUpdate)
             return;
 
-        if (_height != 0)
+        if (_height != 0 || value == 0)
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterHeight);
 
         _height = value;
@@ -892,7 +899,7 @@ internal struct JpegStreamReader
         return false;
     }
 
-    private int FindAndReadDefineNumberOfLinesSegment()
+    private void FindAndReadDefineNumberOfLinesSegment()
     {
         var source = Source.Span;
         for (int i = Position; i < source.Length - 1; ++i)
@@ -910,25 +917,20 @@ internal struct JpegStreamReader
 
             int currentPosition = Position;
             Position = i + 2;
-
             ReadSegmentSize();
-            int height = ReadDefineNumberOfLinesSegment();
-
+            SetHeight(ReadDefineNumberOfLinesSegment(), true);
+            _dnlMarkerExpected = true;
             Position = currentPosition;
-            return height;
+            return;
         }
 
-        throw ThrowHelper.CreateInvalidDataException(ErrorCode.DefineNumberOfLinesMarkerNotFound);
+        ThrowHelper.ThrowInvalidDataException(ErrorCode.DefineNumberOfLinesMarkerNotFound);
     }
 
     private int ReadDefineNumberOfLinesSegment()
     {
         CheckSegmentSize(2);
-        int height = ReadUint16();
-        if (height == 0)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterHeight);
-
-        return height;
+        return ReadUint16();
     }
 
     private static bool IsKnownJpegSofMarker(JpegMarkerCode markerCode)
