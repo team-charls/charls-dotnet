@@ -810,19 +810,69 @@ public class JpegStreamReaderTest
     }
 
     [Fact]
-    public void ReadDefineNumberOfLines()
+    public void ReadDefineNumberOfLines16Bit()
     {
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(1, 0, 2, 3);
         writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
         writer.WriteBytes([0, 1, 0xFF, 5]);
-        writer.WriteDefineNumberOfLines(1);
+        writer.WriteDefineNumberOfLines(1, 2);
 
         JpegStreamReader reader = new() { Source = writer.GetBuffer() };
         reader.ReadHeader(true);
 
         Assert.Equal(1, reader.FrameInfo.Height);
+    }
+
+    [Fact]
+    public void ReadDefineNumberOfLines24Bit()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 0, 2, 3);
+        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
+        writer.WriteBytes([0, 1, 0xFF, 5]);
+        writer.WriteDefineNumberOfLines(1, 3);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+        reader.ReadHeader(true);
+
+        Assert.Equal(1, reader.FrameInfo.Height);
+    }
+
+    [Fact]
+    public void ReadDefineNumberOfLines32Bit()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 0, 2, 3);
+        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
+        writer.WriteBytes([0, 1, 0xFF, 5]);
+        writer.WriteDefineNumberOfLines(1, 4);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+        reader.ReadHeader(true);
+
+        Assert.Equal(1, reader.FrameInfo.Height);
+    }
+
+    [Fact]
+    public void ReadDefineNumberOfLines32BitOverFlowThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(1, 0, 2, 3);
+        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
+        writer.WriteBytes([0, 1, 0xFF, 5]);
+        writer.WriteDefineNumberOfLines(uint.MaxValue, 4);
+
+        JpegStreamReader reader = new() { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.ParameterValueNotSupported, exception.GetErrorCode());
     }
 
     [Fact]
@@ -832,7 +882,7 @@ public class JpegStreamReaderTest
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(1, 0, 2, 3);
         writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
-        writer.WriteDefineNumberOfLines(0);
+        writer.WriteDefineNumberOfLines(0, 2);
 
         JpegStreamReader reader = new() { Source = writer.GetBuffer() };
 
@@ -865,7 +915,7 @@ public class JpegStreamReaderTest
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(1, 0, 2, 3);
-        writer.WriteDefineNumberOfLines(1);
+        writer.WriteDefineNumberOfLines(1, 2);
         writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
         writer.WriteMarker(JpegMarkerCode.EndOfImage);
 
@@ -884,8 +934,8 @@ public class JpegStreamReaderTest
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(1, 0, 2, 3);
         writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
-        writer.WriteDefineNumberOfLines(1);
-        writer.WriteDefineNumberOfLines(1);
+        writer.WriteDefineNumberOfLines(1, 2);
+        writer.WriteDefineNumberOfLines(1, 2);
 
         JpegStreamReader reader = new() { Source = writer.GetBuffer() };
 

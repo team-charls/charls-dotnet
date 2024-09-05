@@ -664,6 +664,19 @@ internal struct JpegStreamReader
         };
     }
 
+    private int ReadDefineNumberOfLinesSegment()
+    {
+        // Note: The JPEG-LS standard supports a 2, 3 or 4 byte restart interval (see ISO/IEC 14495-1, C.2.6)
+        //       The original JPEG standard only supports 2 bytes (16 bit big endian).
+        return _segmentDataSize switch
+        {
+            2 => ReadUint16(),
+            3 => ReadUint24(),
+            4 => ReadUint32(),
+            _ => throw ThrowHelper.CreateInvalidDataException(ErrorCode.InvalidMarkerSegmentSize)
+        };
+    }
+
     private void ReadStartOfScanSegment()
     {
         CheckMinimalSegmentSize(1);
@@ -925,12 +938,6 @@ internal struct JpegStreamReader
         }
 
         ThrowHelper.ThrowInvalidDataException(ErrorCode.DefineNumberOfLinesMarkerNotFound);
-    }
-
-    private int ReadDefineNumberOfLinesSegment()
-    {
-        CheckSegmentSize(2);
-        return ReadUint16();
     }
 
     private static bool IsKnownJpegSofMarker(JpegMarkerCode markerCode)
