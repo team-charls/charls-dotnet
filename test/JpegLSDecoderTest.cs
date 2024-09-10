@@ -82,7 +82,7 @@ public class JpegLSDecoderTest
         var buffer = new byte[2000];
         JpegLSDecoder decoder = new() { Source = buffer };
 
-        var exception = Assert.Throws<InvalidOperationException>(() => decoder.InterleaveMode);
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetInterleaveMode());
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
         Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
@@ -159,7 +159,7 @@ public class JpegLSDecoderTest
 
         decoder.Decode(destination);
 
-        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.InterleaveMode, decoder.FrameInfo);
+        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.GetInterleaveMode(), decoder.FrameInfo);
         var referenceImageData = referenceFile.ImageData;
         for (int i = 0; i != destination.Length; ++i)
         {
@@ -177,7 +177,7 @@ public class JpegLSDecoderTest
         byte[] destination = new byte[decoder.GetDestinationSize()];
         decoder.Decode(destination);
 
-        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.InterleaveMode, decoder.FrameInfo);
+        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.GetInterleaveMode(), decoder.FrameInfo);
         var referenceImageData = referenceFile.ImageData;
         for (int i = 0; i != destination.Length; ++i)
         {
@@ -193,7 +193,7 @@ public class JpegLSDecoderTest
 
         var destination = decoder.Decode();
 
-        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.InterleaveMode, decoder.FrameInfo);
+        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.GetInterleaveMode(), decoder.FrameInfo);
         var referenceImageData = referenceFile.ImageData;
         for (int i = 0; i != destination.Length; ++i)
         {
@@ -278,7 +278,7 @@ public class JpegLSDecoderTest
 
         decoder.Decode(destination, standardStride);
 
-        Util.VerifyDecodedBytes(decoder.InterleaveMode, decoder.FrameInfo, destination, standardStride, "conformance/test8.ppm");
+        Util.VerifyDecodedBytes(decoder.GetInterleaveMode(), decoder.FrameInfo, destination, standardStride, "conformance/test8.ppm");
     }
 
     [Fact]
@@ -292,7 +292,7 @@ public class JpegLSDecoderTest
 
         decoder.Decode(destination, standardStride);
 
-        Util.VerifyDecodedBytes(decoder.InterleaveMode, decoder.FrameInfo, destination, standardStride, "conformance/test8.ppm");
+        Util.VerifyDecodedBytes(decoder.GetInterleaveMode(), decoder.FrameInfo, destination, standardStride, "conformance/test8.ppm");
     }
 
     [Fact]
@@ -306,7 +306,7 @@ public class JpegLSDecoderTest
 
         decoder.Decode(destination, customStride);
 
-        Util.VerifyDecodedBytes(decoder.InterleaveMode, decoder.FrameInfo, destination, customStride, "conformance/test8.ppm");
+        Util.VerifyDecodedBytes(decoder.GetInterleaveMode(), decoder.FrameInfo, destination, customStride, "conformance/test8.ppm");
     }
 
     [Fact]
@@ -320,7 +320,7 @@ public class JpegLSDecoderTest
 
         decoder.Decode(destination, customStride);
 
-        Util.VerifyDecodedBytes(decoder.InterleaveMode, decoder.FrameInfo, destination, customStride, "conformance/test8.ppm");
+        Util.VerifyDecodedBytes(decoder.GetInterleaveMode(), decoder.FrameInfo, destination, customStride, "conformance/test8.ppm");
     }
 
     [Fact]
@@ -476,7 +476,7 @@ public class JpegLSDecoderTest
         source = ArrayInsert(position, source, extraBeginBytes);
 
         JpegLSDecoder decoder = new(source);
-        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.InterleaveMode, decoder.FrameInfo);
+        var referenceFile = Util.ReadAnymapReferenceFile("conformance/test8.ppm", decoder.GetInterleaveMode(), decoder.FrameInfo);
         Util.TestCompliance(source, referenceFile.ImageData, false);
     }
 

@@ -279,6 +279,9 @@ public class EncodeTest
         decoder.Decode(destination);
 
         CheckOutput(data, destination, decoder, 3, decoder.FrameInfo.Height * decoder.FrameInfo.Width);
+        Assert.Equal(0, decoder.GetNearLossless());
+        Assert.Equal(2, decoder.GetNearLossless(1));
+        Assert.Equal(10, decoder.GetNearLossless(2));
     }
 
     [Fact]
@@ -353,6 +356,10 @@ public class EncodeTest
 
         CheckOutput(component0, destination, decoder, 1, 8 * 2);
         CheckOutput(component1And2And3, destination[(8 * 2)..], decoder, 1, 8 * 2 * 3);
+        Assert.Equal(InterleaveMode.None, decoder.GetInterleaveMode());
+        Assert.Equal(InterleaveMode.Sample, decoder.GetInterleaveMode(1));
+        Assert.Equal(InterleaveMode.Sample, decoder.GetInterleaveMode(2));
+        Assert.Equal(InterleaveMode.Sample, decoder.GetInterleaveMode(3));
     }
 
     [Fact]
@@ -393,6 +400,10 @@ public class EncodeTest
 
         CheckOutput(component0And1And2, destination, decoder, 1, 8 * 2 * 3);
         CheckOutput(component3, destination[(8*2*3)..], decoder, 1, 8 * 2);
+        Assert.Equal(InterleaveMode.Sample, decoder.GetInterleaveMode());
+        Assert.Equal(InterleaveMode.Sample, decoder.GetInterleaveMode(1));
+        Assert.Equal(InterleaveMode.Sample, decoder.GetInterleaveMode(2));
+        Assert.Equal(InterleaveMode.None, decoder.GetInterleaveMode(3));
     }
 
     private static void CheckOutput(Span<byte> source, Span<byte> destination, JpegLSDecoder decoder, int componentCount, int componentSize)

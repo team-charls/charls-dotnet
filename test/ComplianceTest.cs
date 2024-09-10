@@ -205,7 +205,7 @@ public class ComplianceTest
 
         JpegLSDecoder decoder = new(encodedSource);
 
-        var referenceFile = Util.ReadAnymapReferenceFile(rawFilename, decoder.InterleaveMode, decoder.FrameInfo);
+        var referenceFile = Util.ReadAnymapReferenceFile(rawFilename, decoder.GetInterleaveMode(), decoder.FrameInfo);
 
         Util.TestCompliance(encodedSource, referenceFile.ImageData, checkEncode);
     }

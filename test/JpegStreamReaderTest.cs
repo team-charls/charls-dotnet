@@ -815,12 +815,13 @@ public class JpegStreamReaderTest
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(1, 0, 2, 3);
-        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
-        writer.WriteBytes([0, 1, 0xFF, 5]);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         writer.WriteDefineNumberOfLines(1, 2);
+        writer.WriteStartOfScanSegment(1, 1, 0, InterleaveMode.None);
 
         JpegStreamReader reader = new() { Source = writer.GetBuffer() };
         reader.ReadHeader(true);
+        reader.ReadNextStartOfScan();
 
         Assert.Equal(1, reader.FrameInfo.Height);
     }
@@ -831,12 +832,13 @@ public class JpegStreamReaderTest
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(1, 0, 2, 3);
-        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
-        writer.WriteBytes([0, 1, 0xFF, 5]);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         writer.WriteDefineNumberOfLines(1, 3);
+        writer.WriteStartOfScanSegment(1, 1, 0, InterleaveMode.None);
 
         JpegStreamReader reader = new() { Source = writer.GetBuffer() };
         reader.ReadHeader(true);
+        reader.ReadNextStartOfScan();
 
         Assert.Equal(1, reader.FrameInfo.Height);
     }
@@ -847,12 +849,13 @@ public class JpegStreamReaderTest
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
         writer.WriteStartOfFrameSegment(1, 0, 2, 3);
-        writer.WriteStartOfScanSegment(0, 3, 0, InterleaveMode.Sample);
-        writer.WriteBytes([0, 1, 0xFF, 5]);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
         writer.WriteDefineNumberOfLines(1, 4);
+        writer.WriteStartOfScanSegment(1, 1, 0, InterleaveMode.None);
 
         JpegStreamReader reader = new() { Source = writer.GetBuffer() };
         reader.ReadHeader(true);
+        reader.ReadNextStartOfScan();
 
         Assert.Equal(1, reader.FrameInfo.Height);
     }
