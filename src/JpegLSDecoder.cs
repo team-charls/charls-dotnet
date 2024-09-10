@@ -120,23 +120,6 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
-    /// Gets the interleave mode that was used to encode the scan(s).
-    /// </summary>
-    /// <remarks>
-    /// Property should be obtained after calling <see cref="ReadHeader"/>".
-    /// </remarks>
-    /// <returns>The interleave mode.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
-    public InterleaveMode InterleaveMode
-    {
-        get
-        {
-            CheckStateHeaderRead();
-            return _reader.GetInterleaveMode(0);
-        }
-    }
-
-    /// <summary>
     /// Gets the preset coding parameters.
     /// </summary>
     /// <value>
@@ -186,7 +169,7 @@ public sealed class JpegLSDecoder
     }
 
     /// <summary>
-    /// Gets the near lossless parameter used to encode the JPEG-LS stream.
+    /// Gets the near lossless parameter used to encode the component.
     /// </summary>
     /// <remarks>
     /// Value should be obtained after calling <see cref="ReadHeader"/>".
@@ -201,6 +184,21 @@ public sealed class JpegLSDecoder
         CheckStateHeaderRead();
         ThrowHelper.ThrowIfOutsideRange(0, _reader.ComponentCount - 1, componentIndex);
         return _reader.GetNearLossless(componentIndex);
+    }
+
+    /// <summary>
+    /// Gets the interleave mode that was used to encode the component.
+    /// </summary>
+    /// <remarks>
+    /// Value should be obtained after calling <see cref="ReadHeader"/>".
+    /// </remarks>
+    /// <param name="componentIndex">The index of the component to retrieve the interleave mode for.</param>
+    /// <returns>The interleave mode.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when this property is used before <see cref="ReadHeader(bool)"/>.</exception>
+    public InterleaveMode GetInterleaveMode(int componentIndex = 0)
+    {
+        CheckStateHeaderRead();
+        return _reader.GetInterleaveMode(componentIndex);
     }
 
     /// <summary>
@@ -219,14 +217,14 @@ public sealed class JpegLSDecoder
             return FrameInfo.ComponentCount * FrameInfo.Height * FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
         }
 
-        switch (InterleaveMode)
+        switch (GetInterleaveMode())
         {
             case InterleaveMode.Line:
             case InterleaveMode.Sample:
                 return stride * FrameInfo.Height;
 
             default:
-                Debug.Assert(InterleaveMode == InterleaveMode.None);
+                Debug.Assert(GetInterleaveMode() == InterleaveMode.None);
                 return stride * FrameInfo.ComponentCount * FrameInfo.Height;
         }
     }
@@ -409,7 +407,7 @@ public sealed class JpegLSDecoder
         }
 
         int notUsedBytesAtEnd = stride - minimumStride;
-        int minimumDestinationScanLength = _reader.CurrentInterleaveMode == InterleaveMode.None
+        int minimumDestinationScanLength = _reader.ScanInterleaveMode == InterleaveMode.None
             ? (stride * _reader.ScanComponentCount * FrameInfo.Height) - notUsedBytesAtEnd
             : (stride * FrameInfo.Height) - notUsedBytesAtEnd;
 
@@ -422,7 +420,7 @@ public sealed class JpegLSDecoder
     private int CalculateMinimumStride()
     {
         int componentsInPlaneCount =
-            _reader.CurrentInterleaveMode == InterleaveMode.None
+            _reader.ScanInterleaveMode == InterleaveMode.None
             ? 1
             : _reader.ScanComponentCount;
         return componentsInPlaneCount * FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);

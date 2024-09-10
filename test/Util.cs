@@ -122,7 +122,7 @@ internal static class Util
         Assert.Equal(sourceFrameInfo.Height, frameInfo.Height);
         Assert.Equal(sourceFrameInfo.BitsPerSample, frameInfo.BitsPerSample);
         Assert.Equal(sourceFrameInfo.ComponentCount, frameInfo.ComponentCount);
-        Assert.Equal(interleaveMode, decoder.InterleaveMode);
+        Assert.Equal(interleaveMode, decoder.GetInterleaveMode());
         Assert.Equal(colorTransformation, decoder.ColorTransformation);
 
         var destination = new byte[decoder.GetDestinationSize()];
@@ -235,7 +235,7 @@ internal static class Util
         {
             Destination = ourEncodedBytes,
             FrameInfo = decoder.FrameInfo,
-            InterleaveMode = decoder.InterleaveMode,
+            InterleaveMode = decoder.GetInterleaveMode(),
             NearLossless = decoder.GetNearLossless(),
             PresetCodingParameters = decoder.PresetCodingParameters
         };

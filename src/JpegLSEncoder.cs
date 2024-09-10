@@ -308,7 +308,7 @@ public sealed class JpegLSEncoder
         ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured);
         ThrowHelper.ThrowArgumentExceptionIfFalse(sourceComponentCount <= FrameInfo.ComponentCount - _encodedComponentCount, nameof(sourceComponentCount));
         CheckInterleaveModeAgainstComponentCount(sourceComponentCount);
-        stride = CheckStrideAndSourceLength(source.Length, stride, sourceComponentCount);
+        int scanStride = CheckStrideAndSourceLength(source.Length, stride, sourceComponentCount);
 
         int maximumSampleValue = CalculateMaximumSampleValue(FrameInfo.BitsPerSample);
         if (!_userPresetCodingParameters!.TryMakeExplicit(maximumSampleValue, NearLossless, out var explicitCodingParameters))
@@ -325,11 +325,11 @@ public sealed class JpegLSEncoder
 
         if (InterleaveMode == InterleaveMode.None)
         {
-            int byteCountComponent = stride * FrameInfo.Height;
+            int byteCountComponent = scanStride * FrameInfo.Height;
             for (int component = 0; ;)
             {
                 _writer.WriteStartOfScanSegment(1, NearLossless, InterleaveMode);
-                EncodeScan(source, stride, 1, explicitCodingParameters);
+                EncodeScan(source, scanStride, 1, explicitCodingParameters);
 
                 ++component;
                 if (component == sourceComponentCount)
@@ -342,7 +342,7 @@ public sealed class JpegLSEncoder
         else
         {
             _writer.WriteStartOfScanSegment(sourceComponentCount, NearLossless, InterleaveMode);
-            EncodeScan(source, stride, sourceComponentCount, explicitCodingParameters);
+            EncodeScan(source, scanStride, sourceComponentCount, explicitCodingParameters);
         }
 
         _encodedComponentCount += sourceComponentCount;
