@@ -202,6 +202,11 @@ public enum ErrorCode
     /// </summary>
     InvalidParameterMappingTableContinuation = 38,
 
+    /// <summary>
+    /// This error is returned when the stream contains an invalid sampling factor.
+    /// </summary>
+    InvalidParameterSamplingFactor = 39,
+
     // Logic errors:
 
     /// <summary>
