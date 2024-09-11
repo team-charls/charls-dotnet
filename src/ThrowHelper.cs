@@ -136,6 +136,7 @@ internal static class ThrowHelper
             ErrorCode.InvalidParameterColorTransformation => "Invalid JPEG-LS stream: Color transformation segment contains invalid values or frame info mismatch",
             ErrorCode.InvalidParameterMappingTableId => "Invalid JPEG-LS stream: mapping table ID outside valid range or duplicate",
             ErrorCode.InvalidParameterMappingTableContinuation => "Invalid JPEG-LS stream: mapping table continuation without matching mapping table specification",
+            ErrorCode.InvalidParameterSamplingFactor => "Invalid JPEG-LS stream: sampling factor outside range [1, 4] or overall sum(h*v) > 10",
             ErrorCode.InvalidOperation => "Method call is invalid for the current state",
             ErrorCode.InvalidArgument => "Invalid argument",
             ErrorCode.InvalidArgumentHeight => "The height argument is outside the supported range [1, 2147483647]",

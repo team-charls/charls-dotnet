@@ -253,8 +253,11 @@ public class EncodeTest
     [Fact]
     public void EncodeWithDifferentLosslessValues()
     {
-        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(2, 2, 8, 3),
-            InterleaveMode = InterleaveMode.None };
+        JpegLSEncoder encoder = new()
+        {
+            FrameInfo = new FrameInfo(2, 2, 8, 3),
+            InterleaveMode = InterleaveMode.None
+        };
 
         byte[] data =
         [
@@ -347,7 +350,7 @@ public class EncodeTest
         encoder.EncodeComponents(component0, 1);
         encoder.InterleaveMode = InterleaveMode.Sample;
         encoder.EncodeComponents(component1And2And3, 3);
-        
+
         JpegLSDecoder decoder = new() { Source = encoder.EncodedData };
         decoder.ReadHeader();
 
@@ -399,11 +402,41 @@ public class EncodeTest
         decoder.Decode(destination);
 
         CheckOutput(component0And1And2, destination, decoder, 1, 8 * 2 * 3);
-        CheckOutput(component3, destination[(8*2*3)..], decoder, 1, 8 * 2);
+        CheckOutput(component3, destination[(8 * 2 * 3)..], decoder, 1, 8 * 2);
         Assert.Equal(InterleaveMode.Sample, decoder.GetInterleaveMode());
         Assert.Equal(InterleaveMode.Sample, decoder.GetInterleaveMode(1));
         Assert.Equal(InterleaveMode.Sample, decoder.GetInterleaveMode(2));
         Assert.Equal(InterleaveMode.None, decoder.GetInterleaveMode(3));
+    }
+
+    [Fact]
+    public void EncodeSubSamplingInterleaveNone()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(2, 2, 8, 3), InterleaveMode = InterleaveMode.None };
+
+        Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = encodedData;
+
+        byte[] component0 = [24, 23, 22, 21];
+        byte[] component1 = [25];
+        byte[] component2 = [26, 27];
+
+        encoder.SetSamplingFactor(0, 2, 2);
+        encoder.SetSamplingFactor(1, 1, 1);
+        encoder.SetSamplingFactor(2, 2, 1);
+        encoder.EncodeComponents(component0, 1);
+        encoder.EncodeComponents(component1, 1);
+        encoder.EncodeComponents(component2, 1);
+
+        JpegLSDecoder decoder = new() { Source = encoder.EncodedData };
+        decoder.ReadHeader();
+
+        Span<byte> destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        CheckOutput(component0, destination, decoder, 1, 2 * 2);
+        CheckOutput(component1, destination[(2 * 2)..], decoder, 1, 1 * 1);
+        CheckOutput(component2, destination[(2 * 2 * 2)..], decoder, 1, 2 * 1);
     }
 
     private static void CheckOutput(Span<byte> source, Span<byte> destination, JpegLSDecoder decoder, int componentCount, int componentSize)
