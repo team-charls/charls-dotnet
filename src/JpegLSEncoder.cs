@@ -27,6 +27,9 @@ public sealed class JpegLSEncoder
     private JpegLSPresetCodingParameters? _userPresetCodingParameters = new();
     private State _state = State.Initial;
     private int _encodedComponentCount;
+    private byte[]? _samplingFactors;
+    private int _horizontalSamplingMax;
+    private int _verticalSamplingMax;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JpegLSEncoder"/> class.
@@ -248,6 +251,23 @@ public sealed class JpegLSEncoder
     private bool IsFrameInfoConfigured => FrameInfo.Height != 0;
 
     /// <summary>
+    /// Configures the sampling factor when encoding a component.
+    /// </summary>
+    /// <param name="componentIndex">The index of the component to set the mapping table ID for.</param>
+    /// <param name="horizontalFactor">The horizontal subsampling factor.</param>
+    /// <param name="verticalFactor">The vertical subsampling factor.</param>
+    public void SetSamplingFactor(int componentIndex, int horizontalFactor, int verticalFactor)
+    {
+        ThrowHelper.ThrowIfOutsideRange(Constants.MinimumComponentIndex, Constants.MaximumComponentIndex, componentIndex);
+        ThrowHelper.ThrowIfOutsideRange(0, 4, horizontalFactor);
+        ThrowHelper.ThrowIfOutsideRange(0, 4, verticalFactor);
+
+        // Usage of sampling factors is rare: use lazy initialization.
+        _samplingFactors ??= new byte[Constants.MaximumComponentCount];
+        _samplingFactors[componentIndex] = (byte)((horizontalFactor << 4) | verticalFactor);
+    }
+
+    /// <summary>
     /// Configures the mapping table ID the encoder should reference when encoding a component.
     /// The referenced mapping table can be included in the stream or provided in another JPEG-LS abbreviated format stream.
     /// </summary>
@@ -298,7 +318,6 @@ public sealed class JpegLSEncoder
         ThrowHelper.ThrowInvalidOperationIfFalse(IsFrameInfoConfigured);
         ThrowHelper.ThrowArgumentExceptionIfFalse(sourceComponentCount <= FrameInfo.ComponentCount - _encodedComponentCount, nameof(sourceComponentCount));
         CheckInterleaveModeAgainstComponentCount(sourceComponentCount);
-        int scanStride = CheckStrideAndSourceLength(source.Length, stride, sourceComponentCount);
 
         int maximumSampleValue = CalculateMaximumSampleValue(FrameInfo.BitsPerSample);
         if (!_userPresetCodingParameters!.TryMakeExplicit(maximumSampleValue, NearLossless, out var explicitCodingParameters))
@@ -306,6 +325,7 @@ public sealed class JpegLSEncoder
 
         if (_encodedComponentCount == 0)
         {
+            DetermineMaxSamplingFactors();
             TransitionToTablesAndMiscellaneousState();
             WriteColorTransformSegment();
             WriteStartOfFrameSegment();
@@ -315,24 +335,28 @@ public sealed class JpegLSEncoder
 
         if (InterleaveMode == InterleaveMode.None)
         {
-            int byteCountComponent = scanStride * FrameInfo.Height;
             for (int component = 0; ;)
             {
+                int scanWidth = GetScanWidth(_encodedComponentCount + component);
+                int scanHeight = GetScanHeight(_encodedComponentCount + component);
+                int scanStride = CheckStrideAndSourceLengthInterleaveModeNone(source.Length, stride, scanWidth, scanHeight);
                 _writer.WriteStartOfScanSegment(1, NearLossless, InterleaveMode);
-                EncodeScan(source, scanStride, 1, explicitCodingParameters);
+                EncodeScan(source, scanStride, scanWidth, scanHeight, 1, explicitCodingParameters);
 
                 ++component;
                 if (component == sourceComponentCount)
                     break;
 
                 // Synchronize the source stream (EncodeScan works on a local copy)
+                int byteCountComponent = scanStride * scanHeight;
                 source = source[byteCountComponent..];
             }
         }
         else
         {
+            int scanStride = CheckStrideAndSourceLength(source.Length, stride, sourceComponentCount);
             _writer.WriteStartOfScanSegment(sourceComponentCount, NearLossless, InterleaveMode);
-            EncodeScan(source, scanStride, sourceComponentCount, explicitCodingParameters);
+            EncodeScan(source, scanStride, FrameInfo.Width, FrameInfo.Height, sourceComponentCount, explicitCodingParameters);
         }
 
         _encodedComponentCount += sourceComponentCount;
@@ -526,10 +550,10 @@ public sealed class JpegLSEncoder
         return encoder.EncodedData;
     }
 
-    private void EncodeScan(ReadOnlySpan<byte> source, int stride, int componentCount, JpegLSPresetCodingParameters codingParameters)
+    private void EncodeScan(ReadOnlySpan<byte> source, int stride, int scanWidth, int scanHeight, int componentCount, JpegLSPresetCodingParameters codingParameters)
     {
         _scanEncoder = new ScanEncoder(
-            new FrameInfo(FrameInfo.Width, FrameInfo.Height, FrameInfo.BitsPerSample, componentCount),
+            new FrameInfo(scanWidth, scanHeight, FrameInfo.BitsPerSample, componentCount),
             codingParameters,
             new CodingParameters
             {
@@ -592,7 +616,7 @@ public sealed class JpegLSEncoder
 
     private void WriteStartOfFrameSegment()
     {
-        if (_writer.WriteStartOfFrameSegment(FrameInfo))
+        if (_writer.WriteStartOfFrameSegment(FrameInfo, _samplingFactors))
         {
             // Image dimensions are oversized and need to be written to a JPEG-LS preset parameters (LSE) segment.
             _writer.WriteJpegLSPresetParametersSegment(FrameInfo.Height, FrameInfo.Width);
@@ -652,6 +676,28 @@ public sealed class JpegLSEncoder
         return stride;
     }
 
+    private int CheckStrideAndSourceLengthInterleaveModeNone(int sourceLength, int stride, int scanWidth, int scanHeight)
+    {
+        int minimumStride = scanWidth * BitToByteCount(FrameInfo.BitsPerSample);
+        if (stride == AutoCalculateStride)
+        {
+            stride = minimumStride;
+        }
+        else
+        {
+            if (stride < minimumStride)
+                ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentStride);
+        }
+
+        int notUsedBytesAtEnd = stride - minimumStride;
+        int minimumSourceLength = (stride * scanHeight) - notUsedBytesAtEnd;
+
+        if (sourceLength < minimumSourceLength)
+            ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentSize);
+
+        return stride;
+    }
+
     private int CalculateMinimumStride(int sourceComponentCount)
     {
         int stride = FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
@@ -659,6 +705,54 @@ public sealed class JpegLSEncoder
             return stride;
 
         return stride * sourceComponentCount;
+    }
+
+    private void DetermineMaxSamplingFactors()
+    {
+        if (_samplingFactors == null)
+            return;
+
+        _horizontalSamplingMax = 1;
+        _verticalSamplingMax = 1;
+        for (int i = 0; i < FrameInfo.ComponentCount; ++i)
+        {
+            _horizontalSamplingMax = Math.Max(_horizontalSamplingMax, GetHorizontalSamplingFactor(i));
+            _verticalSamplingMax = Math.Max(_verticalSamplingMax, GetVerticalSamplingFactor(i));
+        }
+    }
+
+    private int GetScanWidth(int componentIndex)
+    {
+        if (_samplingFactors == null)
+            return FrameInfo.Width;
+
+        return FrameInfo.Width * GetHorizontalSamplingFactor(componentIndex) / _horizontalSamplingMax;
+    }
+
+    private int GetScanHeight(int componentIndex)
+    {
+        if (_samplingFactors == null)
+            return FrameInfo.Height;
+
+        return FrameInfo.Height * GetVerticalSamplingFactor(componentIndex) / _verticalSamplingMax;
+    }
+
+    private int GetHorizontalSamplingFactor(int componentIndex)
+    {
+        byte samplingFactor = _samplingFactors![componentIndex];
+        if (samplingFactor == 0)
+            return 1;
+
+        return samplingFactor >> 4;
+    }
+
+    private int GetVerticalSamplingFactor(int componentIndex)
+    {
+        byte samplingFactor = _samplingFactors![componentIndex];
+        if (samplingFactor == 0)
+            return 1;
+
+        return samplingFactor & 0xF;
     }
 
     private static ReadOnlySpan<byte> ToUtf8(string text)
