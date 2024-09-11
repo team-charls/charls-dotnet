@@ -129,7 +129,7 @@ internal struct JpegStreamWriter
         WriteUint32(width);      // Xe: number of columns in the image.
     }
 
-    internal bool WriteStartOfFrameSegment(FrameInfo frameInfo)
+    internal bool WriteStartOfFrameSegment(FrameInfo frameInfo, byte[]? samplingFactors)
     {
         // Create a Frame Header as defined in ISO/IEC 14495-1, C.2.2 and T.81, B.2.2
         int dataSize = 6 + (frameInfo.ComponentCount * 3);
@@ -145,12 +145,12 @@ internal struct JpegStreamWriter
 
         // Use by default 1 as the start component identifier to remain compatible with the
         // code sample of ISO/IEC 14495-1, H.4 and the JPEG-LS ISO conformance sample files.
-        for (int componentId = 1; componentId <= frameInfo.ComponentCount; ++componentId)
+        for (int i = 0; i < frameInfo.ComponentCount; i++)
         {
             // Component Specification parameters
-            WriteByte((byte)componentId); // Ci = Component identifier
-            WriteByte(0x11);              // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
-            WriteByte(0);                 // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
+            WriteByte((byte)(i + 1));                         // Ci = Component identifier
+            WriteByte(GetSamplingFactor(samplingFactors, i)); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
+            WriteByte(0);                                     // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
         }
 
         return oversizedImage;
@@ -294,5 +294,16 @@ internal struct JpegStreamWriter
         Debug.Assert(value >= 0);
         BinaryPrimitives.WriteUInt32BigEndian(Destination.Span[_position..], (uint)value);
         _position += sizeof(uint);
+    }
+
+    private static byte GetSamplingFactor(byte[]? samplingFactors, int componentIndex)
+    {
+        const byte defaultNoSamplingFactor = 0x11;
+
+        if (samplingFactors == null)
+            return defaultNoSamplingFactor;
+
+        byte samplingFactor = samplingFactors[componentIndex];
+        return samplingFactor == 0 ? defaultNoSamplingFactor : samplingFactor;
     }
 }
