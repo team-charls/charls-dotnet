@@ -354,9 +354,11 @@ public sealed class JpegLSEncoder
         }
         else
         {
-            int scanStride = CheckStrideAndSourceLength(source.Length, stride, sourceComponentCount);
+            int scanWidth = GetScanWidth(_encodedComponentCount);
+            int scanHeight = GetScanHeight(_encodedComponentCount);
+            int scanStride = CheckStrideAndSourceLength(source.Length, stride, scanWidth, scanHeight, sourceComponentCount);
             _writer.WriteStartOfScanSegment(sourceComponentCount, NearLossless, InterleaveMode);
-            EncodeScan(source, scanStride, FrameInfo.Width, FrameInfo.Height, sourceComponentCount, explicitCodingParameters);
+            EncodeScan(source, scanStride, scanWidth, scanHeight, sourceComponentCount, explicitCodingParameters);
         }
 
         _encodedComponentCount += sourceComponentCount;
@@ -651,9 +653,9 @@ public sealed class JpegLSEncoder
             ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentInterleaveMode);
     }
 
-    private int CheckStrideAndSourceLength(int sourceLength, int stride, int sourceComponentCount)
+    private int CheckStrideAndSourceLength(int sourceLength, int stride, int scanWidth, int scanHeight, int sourceComponentCount)
     {
-        int minimumStride = CalculateMinimumStride(sourceComponentCount);
+        int minimumStride = CalculateMinimumStride(scanWidth, sourceComponentCount);
 
         if (stride == AutoCalculateStride)
         {
@@ -667,8 +669,8 @@ public sealed class JpegLSEncoder
 
         int notUsedBytesAtEnd = stride - minimumStride;
         int minimumSourceLength = InterleaveMode == InterleaveMode.None
-            ? (stride * sourceComponentCount * FrameInfo.Height) - notUsedBytesAtEnd
-            : (stride * FrameInfo.Height) - notUsedBytesAtEnd;
+            ? (stride * sourceComponentCount * scanHeight) - notUsedBytesAtEnd
+            : (stride * scanHeight) - notUsedBytesAtEnd;
 
         if (sourceLength < minimumSourceLength)
             ThrowHelper.ThrowArgumentException(ErrorCode.InvalidArgumentSize);
@@ -698,13 +700,20 @@ public sealed class JpegLSEncoder
         return stride;
     }
 
-    private int CalculateMinimumStride(int sourceComponentCount)
+    private int CalculateMinimumStride(int scanWidth, int sourceComponentCount)
     {
-        int stride = FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
-        if (_interleaveMode == InterleaveMode.None)
-            return stride;
+        switch (_interleaveMode)
+        {
+            case InterleaveMode.None:
+                return FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
 
-        return stride * sourceComponentCount;
+            case InterleaveMode.Line:
+                return FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample) * sourceComponentCount;
+
+            default:
+                Debug.Assert(_interleaveMode == InterleaveMode.Sample);
+                return scanWidth * BitToByteCount(FrameInfo.BitsPerSample) * sourceComponentCount;
+        }
     }
 
     private void DetermineMaxSamplingFactors()
