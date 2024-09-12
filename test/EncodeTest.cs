@@ -439,6 +439,34 @@ public class EncodeTest
         CheckOutput(component2, destination[(2 * 2 * 2)..], decoder, 1, 2 * 1);
     }
 
+    [Fact]
+    public void EncodeSubSamplingInterleaveSample()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(2, 2, 8, 3), InterleaveMode = InterleaveMode.None };
+
+        Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = encodedData;
+
+        byte[] component0 = [24, 23, 22, 21];
+        byte[] component1And2 = [25, 26];
+
+        encoder.SetSamplingFactor(0, 2, 2);
+        encoder.SetSamplingFactor(1, 1, 1);
+        encoder.SetSamplingFactor(2, 1, 1);
+        encoder.EncodeComponents(component0, 1);
+        encoder.InterleaveMode = InterleaveMode.Sample;
+        encoder.EncodeComponents(component1And2, 2);
+
+        JpegLSDecoder decoder = new() { Source = encoder.EncodedData };
+        decoder.ReadHeader();
+
+        Span<byte> destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        CheckOutput(component0, destination, decoder, 1, 2 * 2);
+        CheckOutput(component1And2, destination[(2 * 2)..], decoder, 1, 1 * 2);
+    }
+
     private static void CheckOutput(Span<byte> source, Span<byte> destination, JpegLSDecoder decoder, int componentCount, int componentSize)
     {
         for (int component = 0; component < componentCount; ++component)
