@@ -28,6 +28,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{A9E9
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Convert", "samples\Convert\Convert.csproj", "{601E8408-2608-403C-B1E6-E78244506CAB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibFuzzerDecode", "fuzzing\lib-fuzzer-decode\LibFuzzerDecode.csproj", "{9C4EBEC9-617E-4113-8391-C8BC15CE44AA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,6 +52,10 @@ Global
 		{601E8408-2608-403C-B1E6-E78244506CAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{601E8408-2608-403C-B1E6-E78244506CAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{601E8408-2608-403C-B1E6-E78244506CAB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C4EBEC9-617E-4113-8391-C8BC15CE44AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C4EBEC9-617E-4113-8391-C8BC15CE44AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C4EBEC9-617E-4113-8391-C8BC15CE44AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C4EBEC9-617E-4113-8391-C8BC15CE44AA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

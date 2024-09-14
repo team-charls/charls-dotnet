@@ -4,7 +4,7 @@
     <DataCollectors>
       <DataCollector friendlyName="XPlat code coverage">
         <Configuration>
-          <Exclude>[CharLS.Managed.Benchmark]*,[Convert]*</Exclude> <!-- [Assembly-Filter]Type-Filter -->
+          <Exclude>[LibFuzzerDecode]*,[CharLS.Managed.Benchmark]*,[Convert]*</Exclude> <!-- [Assembly-Filter]Type-Filter -->
         </Configuration>
       </DataCollector>
     </DataCollectors>

@@ -20,28 +20,6 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
-    public void ReadHeaderWithoutSource()
-    {
-        JpegLSDecoder decoder = new();
-
-        var exception = Assert.Throws<InvalidOperationException>(() => decoder.ReadHeader());
-
-        Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
-    }
-
-    [Fact]
-    public void DestinationSizeWithoutReadingHeader()
-    {
-        JpegLSDecoder decoder = new();
-
-        var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetDestinationSize());
-
-        Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
-    }
-
-    [Fact]
     public void ReadHeaderWithoutSourceThrows()
     {
         JpegLSDecoder decoder = new();
@@ -53,7 +31,18 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
-    public void ReadHeaderFromNonJpegLSData()
+    public void DestinationSizeWithoutReadingHeaderThrows()
+    {
+        JpegLSDecoder decoder = new();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => decoder.GetDestinationSize());
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidOperation, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadHeaderFromNonJpegLSDataThrows()
     {
         var buffer = new byte[100];
         JpegLSDecoder decoder = new() { Source = buffer };
@@ -77,7 +66,7 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
-    public void InterleaveModeWithoutReadHeader()
+    public void InterleaveModeWithoutReadHeaderThrows()
     {
         var buffer = new byte[2000];
         JpegLSDecoder decoder = new() { Source = buffer };
@@ -89,7 +78,7 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
-    public void GetNearLosslessWithoutReadHeader()
+    public void GetNearLosslessWithoutReadHeaderThrows()
     {
         var buffer = new byte[2000];
         JpegLSDecoder decoder = new() { Source = buffer };
@@ -101,7 +90,7 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
-    public void PresetCodingParametersWithoutReadHeader()
+    public void PresetCodingParametersWithoutReadHeaderThrows()
     {
         var buffer = new byte[2000];
         JpegLSDecoder decoder = new() { Source = buffer };
@@ -165,6 +154,33 @@ public class JpegLSDecoderTest
         {
             Assert.Equal(referenceImageData[i], destination[i]);
         }
+    }
+
+    [Fact]
+    public void DecodeFuzzyInputNoValidBitsAtTheEndThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("test-images/fuzzy-input-no-valid-bits-at-the-end.jls"));
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidData, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void DecodeDestinationSizeOverflowThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(ushort.MaxValue, ushort.MaxValue, 2, 1);
+        writer.WriteStartOfScanSegment(1, 1, 0, InterleaveMode.None);
+        JpegLSDecoder decoder = new(writer.GetBuffer());
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.GetDestinationSize());
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.ParameterValueNotSupported, exception.GetErrorCode());
     }
 
     [Fact]
@@ -296,7 +312,7 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
-    public void DecodeColorInterleaveNoneWithCustomStrideWorks() 
+    public void DecodeColorInterleaveNoneWithCustomStrideWorks()
     {
         const int customStride = 256 + 1;
         byte[] source = Util.ReadFile("conformance/t8c0e0.jls");

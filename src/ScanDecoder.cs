@@ -298,7 +298,7 @@ internal struct ScanDecoder
         {
             if (_position >= _endPosition)
             {
-                if (_validBits == 0)
+                if (_validBits <= 0)
                 {
                     // Decoding process expects at least some bits to be added to the cache.
                     ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);

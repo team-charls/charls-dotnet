@@ -8,13 +8,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 
-- New property JpegLSDecoder.CompressedDataFormat to retrieve the compressed data format of 
+- New property JpegLSDecoder.CompressedDataFormat to retrieve the compressed data format of
 the JPEG-LS file. JPEG-LS defines 3 formats: 1 interchange (most common) and 2 abbreviated.
 
 ### Changed
 
 - Internal improvements.
 - Improved lossless encoding speed by speedup ratio of 1.2.
+
+### Fixed
+
+- Forever loop when reading bits from invalid JPEG-LS files in the JpegLSDecoder (found by fuzzing).
+- JpegLSDecoder.GetDestinationSize could return negative size instead of throwing InvalidDataException.
 
 ## [0.8.0 - 2024-8-23]
 

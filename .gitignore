@@ -8,6 +8,9 @@ TestResults/
 *.opensdf
 *.sdf
 
+# Ignore fuzzing test output
+test-cases/
+
 # Ignore files created by Visual Studio
 .vs/
 .vscode/
