@@ -440,6 +440,32 @@ public class EncodeTest
     }
 
     [Fact]
+    public void EncodeSubSamplingInterleaveLine()
+    {
+        JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(2, 2, 8, 3), InterleaveMode = InterleaveMode.None };
+
+        Memory<byte> encodedData = new byte[encoder.EstimatedDestinationSize];
+        encoder.Destination = encodedData;
+
+        byte[] components = [24, 25, 26, 23, 0, 0, 22, 0, 0, 21, 0, 0];
+
+        encoder.SetSamplingFactor(0, 2, 2);
+        encoder.SetSamplingFactor(1, 1, 1);
+        encoder.SetSamplingFactor(2, 1, 1);
+        encoder.InterleaveMode = InterleaveMode.Line;
+        encoder.Encode(components);
+
+        JpegLSDecoder decoder = new() { Source = encoder.EncodedData };
+        decoder.ReadHeader();
+
+        Span<byte> destination = new byte[decoder.GetDestinationSize()];
+        decoder.Decode(destination);
+
+        //CheckOutput(component0, destination, decoder, 1, 2 * 2);
+        //CheckOutput(component1And2, destination[(2 * 2)..], decoder, 1, 1 * 2);
+    }
+
+    [Fact]
     public void EncodeSubSamplingInterleaveSample()
     {
         JpegLSEncoder encoder = new() { FrameInfo = new FrameInfo(2, 2, 8, 3), InterleaveMode = InterleaveMode.None };

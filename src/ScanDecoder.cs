@@ -1207,8 +1207,8 @@ internal struct ScanDecoder
     {
         int sign = BitWiseSign(qs);
         ref var context = ref _scanCodec.RegularModeContext[ApplySign(qs, sign)];
+        int correctedPrediction = Traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
         int k = context.ComputeGolombCodingParameterChecked();
-        int predictedValue = Traits.CorrectPrediction(predicted + ApplySign(context.C, sign));
 
         int errorValue;
         var golombCodeMatch = GolombCodeTable[k].Get(PeekByte());
@@ -1233,7 +1233,7 @@ internal struct ScanDecoder
 
         context.UpdateVariablesAndBias(errorValue, _scanCodec.NearLossless, _scanCodec.ResetThreshold);
         errorValue = ApplySign(errorValue, sign);
-        return Traits.ComputeReconstructedSample(predictedValue, errorValue);
+        return Traits.ComputeReconstructedSample(correctedPrediction, errorValue);
     }
 
     private int DecodeRunMode(int startIndex, Span<byte> previousLine, Span<byte> currentLine)
@@ -1741,7 +1741,7 @@ internal struct ScanDecoder
 
     private int DecodeRunInterruptionError(ref RunModeContext context)
     {
-        int k = context.ComputeGolombCodingParameter();
+        int k = context.ComputeGolombCodingParameterChecked();
         int eMappedErrorValue = DecodeMappedErrorValue(k, _scanCodec.Limit - ScanCodec.J[_scanCodec.RunIndex] - 1, _scanCodec.QuantizedBitsPerSample);
         int errorValue = context.ComputeErrorValue(eMappedErrorValue + context.RunInterruptionType, k);
         context.UpdateVariables(errorValue, eMappedErrorValue, (byte)_scanCodec.PresetCodingParameters.ResetValue);

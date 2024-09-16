@@ -13,5 +13,6 @@ public class RunModeContextTest
         runModeContext.UpdateVariables(3, 27, 0);
 
         Assert.Equal(3, runModeContext.ComputeGolombCodingParameter());
+        Assert.Equal(3, runModeContext.ComputeGolombCodingParameterChecked());
     }
 }
