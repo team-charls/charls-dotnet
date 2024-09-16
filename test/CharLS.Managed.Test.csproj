@@ -120,6 +120,10 @@
     <None Update="test-images/fuzzy-input-no-valid-bits-at-the-end.jls">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="test-images/fuzzy-input-bad-run-mode-golomb-code.jls">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+
   </ItemGroup>
 
 </Project>
