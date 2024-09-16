@@ -16,6 +16,9 @@ internal sealed class Program
                 byte[] input = readOnlyInput.ToArray();
                 var decoder = new JpegLSDecoder(input, false);
                 decoder.ReadHeader();
+                if (decoder.CompressedDataFormat == CompressedDataFormat.AbbreviatedTableSpecification)
+                    return;
+
                 int size = decoder.GetDestinationSize();
                 if (size > 8192 * 8192 * 3)
                     return;
