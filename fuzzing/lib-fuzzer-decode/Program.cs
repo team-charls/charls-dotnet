@@ -15,6 +15,9 @@ internal static class Program
             {
                 JpegLSDecoder decoder = new(readOnlyInput.ToArray(), false);
                 decoder.ReadHeader();
+                if (decoder.CompressedDataFormat == CompressedDataFormat.AbbreviatedTableSpecification)
+                    return;
+
                 int size = decoder.GetDestinationSize();
                 if (size > 8192 * 8192 * 3)
                     return;
