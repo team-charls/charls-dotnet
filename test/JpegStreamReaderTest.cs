@@ -708,7 +708,7 @@ public class JpegStreamReaderTest
         tableDataExpected[tableSize - 1] = 8;
 
         writer.WriteJpegLSPresetParametersSegment(1, 1, tableDataExpected);
-        _ = writer.WriteStartOfFrameSegment(new FrameInfo(1, 1, 2, 1));
+        _ = writer.WriteStartOfFrameSegment(new FrameInfo(1, 1, 2, 1), null);
         writer.WriteStartOfScanSegment(1, 0, InterleaveMode.None);
 
         var reader = new JpegStreamReader { Source = source };
