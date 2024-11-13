@@ -211,7 +211,7 @@ public enum ErrorCode
     /// <summary>
     /// This error is returned when the stream contains an invalid sampling factor.
     /// </summary>
-    InvalidParameterSamplingFactor = 39,
+    InvalidParameterSamplingFactor = 40,
 
     // Logic errors:
 

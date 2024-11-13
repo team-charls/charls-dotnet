@@ -52,7 +52,7 @@ internal struct ScanDecoder
 
     private readonly int PixelStride => FrameInfo.Width + 2;
 
-    internal int DecodeScan(ReadOnlyMemory<byte> source, Span<byte> destination, int stride)
+    internal int DecodeScan(ReadOnlyMemory<byte> source, Span<byte> destination, int stride, Span<int> widths, Span<int> heights)
     {
         Initialize(source);
 
@@ -61,11 +61,11 @@ internal struct ScanDecoder
 
         if (FrameInfo.BitsPerSample <= 8)
         {
-            DecodeLines8Bit(destination, stride);
+            DecodeLines8Bit(destination, stride, widths, heights);
         }
         else
         {
-            DecodeLines16Bit(destination, stride);
+            DecodeLines16Bit(destination, stride, widths);
         }
 
         EndScan();
@@ -352,7 +352,7 @@ internal struct ScanDecoder
         return true;
     }
 
-    private void DecodeLines8Bit(Span<byte> destination, int stride)
+    private void DecodeLines8Bit(Span<byte> destination, int stride, Span<int> widths, Span<int> heights)
     {
         switch (CodingParameters.InterleaveMode)
         {
@@ -361,7 +361,7 @@ internal struct ScanDecoder
                 break;
 
             case InterleaveMode.Line:
-                DecodeLines8BitInterleaveModeLine(destination, stride);
+                DecodeLines8BitInterleaveModeLine(destination, stride, widths, heights);
                 break;
 
             case InterleaveMode.Sample:
@@ -382,7 +382,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines16Bit(Span<byte> destination, int stride)
+    private void DecodeLines16Bit(Span<byte> destination, int stride, Span<int> widths)
     {
         switch (CodingParameters.InterleaveMode)
         {
@@ -391,7 +391,7 @@ internal struct ScanDecoder
                 break;
 
             case InterleaveMode.Line:
-                DecodeLines16BitInterleaveModeLine(destination, stride);
+                DecodeLines16BitInterleaveModeLine(destination, stride, widths);
                 break;
 
             case InterleaveMode.Sample:
@@ -438,7 +438,7 @@ internal struct ScanDecoder
                 previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
                 currentLine[0] = previousLine[1];
 
-                DecodeSampleLine(previousLine, currentLine);
+                DecodeSampleLine(previousLine, currentLine, FrameInfo.Width);
 
                 CopyLineBufferToDestinationInterleaveNone(currentLine[1..], destination, FrameInfo.Width);
 
@@ -489,7 +489,7 @@ internal struct ScanDecoder
                 previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
                 currentLine[0] = previousLine[1];
 
-                DecodeSampleLine(previousLine, currentLine);
+                DecodeSampleLine(previousLine, currentLine, FrameInfo.Width);
 
                 CopyLineBufferToDestinationInterleaveNone(currentLine[1..], destination, FrameInfo.Width);
 
@@ -515,7 +515,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines8BitInterleaveModeLine(Span<byte> destination, int stride)
+    private void DecodeLines8BitInterleaveModeLine(Span<byte> destination, int stride, Span<int> widths, Span<int> heights)
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = FrameInfo.ComponentCount;
@@ -544,10 +544,13 @@ internal struct ScanDecoder
                     _scanCodec.RunIndex = runIndex[component];
 
                     // Initialize edge pixels used for prediction
-                    previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
+                    previousLine[widths[component] + 1] = previousLine[widths[component]];
                     currentLine[0] = previousLine[1];
 
-                    DecodeSampleLine(previousLine, currentLine);
+                    if (line + mcu < heights[component])
+                    {
+                        DecodeSampleLine(previousLine, currentLine, widths[component]);
+                    }
 
                     runIndex[component] = _scanCodec.RunIndex;
                     currentLine = currentLine[pixelStride..];
@@ -580,7 +583,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeLines16BitInterleaveModeLine(Span<byte> destination, int stride)
+    private void DecodeLines16BitInterleaveModeLine(Span<byte> destination, int stride, Span<int> widths)
     {
         int pixelStride = FrameInfo.Width + 2;
         int componentCount = FrameInfo.ComponentCount;
@@ -612,7 +615,7 @@ internal struct ScanDecoder
                     previousLine[FrameInfo.Width + 1] = previousLine[FrameInfo.Width];
                     currentLine[0] = previousLine[1];
 
-                    DecodeSampleLine(previousLine, currentLine);
+                    DecodeSampleLine(previousLine, currentLine, widths[component]);
 
                     runIndex[component] = _scanCodec.RunIndex;
                     currentLine = currentLine[pixelStride..];
@@ -957,13 +960,13 @@ internal struct ScanDecoder
         return _scanCodec.QuantizationLut[(_scanCodec.QuantizationLut.Length / 2) + di];
     }
 
-    private void DecodeSampleLine(Span<byte> previousLine, Span<byte> currentLine)
+    private void DecodeSampleLine(Span<byte> previousLine, Span<byte> currentLine, int width)
     {
         int index = 1;
         int rb = previousLine[0];
         int rd = previousLine[index];
 
-        while (index <= FrameInfo.Width)
+        while (index <= width)
         {
             int ra = currentLine[index - 1];
             int rc = rb;
@@ -974,7 +977,7 @@ internal struct ScanDecoder
                 QuantizeGradient(rd - rb), QuantizeGradient(rb - rc), QuantizeGradient(rc - ra));
             if (qs == 0)
             {
-                index += DecodeRunMode(index, previousLine, currentLine);
+                index += DecodeRunMode(index, previousLine, currentLine, width);
                 rb = previousLine[index - 1];
                 rd = previousLine[index];
             }
@@ -986,13 +989,13 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeSampleLine(Span<ushort> previousLine, Span<ushort> currentLine)
+    private void DecodeSampleLine(Span<ushort> previousLine, Span<ushort> currentLine, int width)
     {
         int index = 1;
         int rb = previousLine[0];
         int rd = previousLine[index];
 
-        while (index <= FrameInfo.Width)
+        while (index <= width)
         {
             int ra = currentLine[index - 1];
             int rc = rb;
@@ -1236,14 +1239,14 @@ internal struct ScanDecoder
         return Traits.ComputeReconstructedSample(correctedPrediction, errorValue);
     }
 
-    private int DecodeRunMode(int startIndex, Span<byte> previousLine, Span<byte> currentLine)
+    private int DecodeRunMode(int startIndex, Span<byte> previousLine, Span<byte> currentLine, int width)
     {
         var ra = currentLine[startIndex - 1];
 
-        int runLength = DecodeRunPixels(ra, currentLine[startIndex..], FrameInfo.Width - (startIndex - 1));
+        int runLength = DecodeRunPixels(ra, currentLine[startIndex..], width - (startIndex - 1));
         int endIndex = startIndex + runLength;
 
-        if (endIndex - 1 == FrameInfo.Width)
+        if (endIndex - 1 == width)
             return endIndex - startIndex;
 
         // Run interruption
