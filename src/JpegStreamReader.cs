@@ -30,6 +30,8 @@ internal struct JpegStreamReader
     private int _verticalSamplingMax = 1;
     private bool _dnlMarkerExpected;
     private bool _componentWithMappingTableExists;
+    private int[]? _widths;
+    private int[]? _heights;
 
     public JpegStreamReader()
         : this(null!)
@@ -98,6 +100,10 @@ internal struct JpegStreamReader
             return (uint)CalculateMaximumSampleValue(_bitsPerSample);
         }
     }
+
+    internal readonly int[] Widths => _widths!;
+
+    internal readonly int[] Heights => _heights!;
 
     private readonly int SegmentBytesToRead => _segmentStartPosition + _segmentDataSize - Position;
 
@@ -494,7 +500,27 @@ internal struct JpegStreamReader
             SkipByte(); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
         }
 
+        ComputeWidths();
+        ComputeHeights();
         _state = State.ScanSection;
+    }
+
+    private void ComputeWidths()
+    {
+        _widths = new int[_componentCount];
+        for (int i = 0; i < _componentCount; i++)
+        {
+            _widths[i] = GetScanWidth(i);
+        }
+    }
+
+    private void ComputeHeights()
+    {
+        _heights = new int[_componentCount];
+        for (int i = 0; i < _componentCount; i++)
+        {
+            _heights[i] = GetScanHeight(i);
+        }
     }
 
     private void ReadApplicationDataSegment(JpegMarkerCode markerCode)
