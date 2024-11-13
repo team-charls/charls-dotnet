@@ -20,7 +20,6 @@ public sealed class JpegLSEncoder
 
     private JpegStreamWriter _writer;
     private ScanEncoder _scanEncoder;
-    private FrameInfo _frameInfo;
     private int _nearLossless;
     private InterleaveMode _interleaveMode;
     private ColorTransformation _colorTransformation;
@@ -93,18 +92,7 @@ public sealed class JpegLSEncoder
     /// <value>
     /// The frame information of the image.
     /// </value>
-    /// <exception cref="ArgumentException">Thrown when the passed FrameInfo is invalid.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when the passed FrameInfo instance is null.</exception>
-    public FrameInfo FrameInfo
-    {
-        get => _frameInfo;
-
-        set
-        {
-            ArgumentNullException.ThrowIfNull(value);
-            _frameInfo = value;
-        }
-    }
+    public FrameInfo FrameInfo { get; set; }
 
     /// <summary>
     /// Gets or sets the near lossless parameter to be used to encode the JPEG-LS stream.
