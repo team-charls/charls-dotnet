@@ -375,7 +375,7 @@ public sealed class JpegLSDecoder
         {
             int scanStride = CheckStrideAndDestinationLength(destination.Length, stride);
             _scanDecoder = new ScanDecoder(_reader.ScanFrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
-            int bytesRead = _scanDecoder.DecodeScan(_reader.RemainingSource(), destination, scanStride);
+            int bytesRead = _scanDecoder.DecodeScan(_reader.RemainingSource(), destination, scanStride, _reader.Widths, _reader.Heights);
             _reader.AdvancePosition(bytesRead);
 
             component += _reader.ScanComponentCount;

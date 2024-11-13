@@ -47,6 +47,26 @@ public class ComplianceTest
         DecodeEncodeFile("conformance/t8c2e3.jls", "conformance/test8.ppm");
     }
 
+    ////[Fact]
+    ////public void DecodeEncodeColor8BitInterleaveLineLosslessSubSampled()
+    ////{
+    ////    // ISO 14495-1: official test image 7
+    ////    //DecodeEncodeFile("conformance/t8sse0.jls", "conformance/test8.ppm");
+
+    ////    var encodedSource = Util.ReadFile("conformance/t8sse0.jls");
+
+    ////    JpegLSDecoder decoder = new(encodedSource);
+
+    ////    var destination = new byte[decoder.GetDestinationSize()];
+    ////    decoder.Decode(destination);
+
+    ////    //JpegLSDecoder decoder = new(encodedSource);
+
+    ////    //var referenceFile = Util.ReadAnymapReferenceFile(rawFilename, decoder.GetInterleaveMode(), decoder.FrameInfo);
+
+    ////    //Util.TestCompliance(encodedSource, referenceFile.ImageData, checkEncode);
+    ////}
+
     [Fact]
     public void DecodeEncodeColor8BitInterleaveNoneLosslessNonDefault()
     {
