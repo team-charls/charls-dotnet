@@ -113,7 +113,7 @@ internal sealed class PortableAnymapFile
                 byte b = (byte)current;
                 bytes.Add(b);
             }
-            return Encoding.ASCII.GetString(bytes.ToArray());
+            return Encoding.ASCII.GetString([.. bytes]);
         }
 
         // Read works differently than the `Read()` method of a 
