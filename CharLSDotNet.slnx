@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/Samples/">
+    <Project Path="samples/Convert/Convert.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path=".globalconfig" />
+    <File Path="CHANGELOG.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="exclusion.dic" />
+    <File Path="global.json" />
+    <File Path="LICENSE.md" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="benchmark/CharLS.Managed.Benchmark.csproj" />
+  <Project Path="fuzzing/lib-fuzzer-decode/LibFuzzerDecode.csproj" />
+  <Project Path="src/CharLS.Managed.csproj" />
+  <Project Path="test/CharLS.Managed.Test.csproj" />
+</Solution>
