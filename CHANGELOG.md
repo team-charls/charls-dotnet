@@ -15,6 +15,8 @@ the JPEG-LS file. JPEG-LS defines 3 formats: 1 interchange (most common) and 2 a
 
 - Internal improvements.
 - Improved lossless encoding speed by speedup ratio of 1.2.
+- Converted .sln format to .slnx format.
+- Updated Nuget package dependencies.
 
 ### Fixed
 

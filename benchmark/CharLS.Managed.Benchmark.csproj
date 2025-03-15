@@ -14,8 +14,9 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <!--
       CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'
+      CA1515: Consider making public types internal
       -->
-    <NoWarn>$(NoWarn),1591</NoWarn>
+    <NoWarn>$(NoWarn),1591,CA1515</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
