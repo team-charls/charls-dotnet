@@ -20,11 +20,6 @@ public sealed class JpegLSEncoder
 
     private JpegStreamWriter _writer;
     private ScanEncoder _scanEncoder;
-    private int _nearLossless;
-    private InterleaveMode _interleaveMode;
-    private ColorTransformation _colorTransformation;
-    private EncodingOptions _encodingOptions;
-    private JpegLSPresetCodingParameters? _userPresetCodingParameters = new();
     private State _state = State.Initial;
     private int _encodedComponentCount;
 
@@ -102,13 +97,16 @@ public sealed class JpegLSEncoder
     /// <exception cref="ArgumentException">Thrown when the passed value is invalid.</exception>
     public int NearLossless
     {
-        get => _nearLossless;
+        get;
 
         set
         {
             ThrowHelper.ThrowIfOutsideRange(
-                Constants.MinimumNearLossless, Constants.MaximumNearLossless, value, ErrorCode.InvalidArgumentNearLossless);
-            _nearLossless = value;
+                Constants.MinimumNearLossless,
+                Constants.MaximumNearLossless,
+                value,
+                ErrorCode.InvalidArgumentNearLossless);
+            field = value;
         }
     }
 
@@ -121,12 +119,12 @@ public sealed class JpegLSEncoder
     /// <exception cref="ArgumentException">Thrown when the passed value is invalid for the defined image.</exception>
     public InterleaveMode InterleaveMode
     {
-        get => _interleaveMode;
+        get;
 
         set
         {
             ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(value.IsValid(), ErrorCode.InvalidArgumentInterleaveMode, nameof(value));
-            _interleaveMode = value;
+            field = value;
         }
     }
 
@@ -139,12 +137,15 @@ public sealed class JpegLSEncoder
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the passed enum value is invalid.</exception>
     public EncodingOptions EncodingOptions
     {
-        get => _encodingOptions;
+        get;
 
         set
         {
-            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(value.IsValid(), ErrorCode.InvalidArgumentEncodingOptions, nameof(value));
-            _encodingOptions = value;
+            ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(
+                value.IsValid(),
+                ErrorCode.InvalidArgumentEncodingOptions,
+                nameof(value));
+            field = value;
         }
     }
 
@@ -157,15 +158,17 @@ public sealed class JpegLSEncoder
     /// <exception cref="ArgumentNullException">value.</exception>
     public JpegLSPresetCodingParameters? PresetCodingParameters
     {
-        get => _userPresetCodingParameters;
+        get;
 
         set
         {
             ArgumentNullException.ThrowIfNull(value);
 
-            _userPresetCodingParameters = value;
+            field = value;
         }
     }
+
+    = new();
 
     /// <summary>
     /// Gets or sets the HP color transformation the encoder should use
@@ -178,14 +181,14 @@ public sealed class JpegLSEncoder
     /// <exception cref="ArgumentOutOfRangeException">value.</exception>
     public ColorTransformation ColorTransformation
     {
-        get => _colorTransformation;
+        get;
 
         set
         {
             ThrowHelper.ThrowArgumentOutOfRangeExceptionIfFalse(
                 value.IsValid(), ErrorCode.InvalidArgumentColorTransformation);
 
-            _colorTransformation = value;
+            field = value;
         }
     }
 
@@ -301,7 +304,7 @@ public sealed class JpegLSEncoder
         int scanStride = CheckStrideAndSourceLength(source.Length, stride, sourceComponentCount);
 
         int maximumSampleValue = CalculateMaximumSampleValue(FrameInfo.BitsPerSample);
-        if (!_userPresetCodingParameters!.TryMakeExplicit(maximumSampleValue, NearLossless, out var explicitCodingParameters))
+        if (!PresetCodingParameters!.TryMakeExplicit(maximumSampleValue, NearLossless, out var explicitCodingParameters))
             throw ThrowHelper.CreateArgumentException(ErrorCode.InvalidArgumentPresetCodingParameters);
 
         if (_encodedComponentCount == 0)
@@ -601,7 +604,7 @@ public sealed class JpegLSEncoder
 
     private void WriteJpegLSPresetParametersSegment(int maximumSampleValue, JpegLSPresetCodingParameters presetCodingParameters)
     {
-        if (!_userPresetCodingParameters!.IsDefault(maximumSampleValue, NearLossless) ||
+        if (!PresetCodingParameters!.IsDefault(maximumSampleValue, NearLossless) ||
             (EncodingOptions.HasFlag(EncodingOptions.IncludePCParametersJai) && FrameInfo.BitsPerSample > 12))
         {
             // Write the actual used values to the stream, not zero's.
@@ -655,7 +658,7 @@ public sealed class JpegLSEncoder
     private int CalculateMinimumStride(int sourceComponentCount)
     {
         int stride = FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample);
-        if (_interleaveMode == InterleaveMode.None)
+        if (InterleaveMode == InterleaveMode.None)
             return stride;
 
         return stride * sourceComponentCount;

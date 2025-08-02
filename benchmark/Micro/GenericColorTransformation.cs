@@ -109,7 +109,7 @@ public class ColorTransformation
     public void TransformHP1Explicit()
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(_source);
-        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(_destination);
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(new Span<byte>(_destination));
 
         for (int i = 0; i < PixelCount; ++i)
         {
@@ -122,7 +122,7 @@ public class ColorTransformation
     public void TransformHP1ExplicitIntParameters()
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(_source);
-        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(_destination);
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(new Span<byte>(_destination));
 
         for (int i = 0; i < PixelCount; ++i)
         {
@@ -135,7 +135,7 @@ public class ColorTransformation
     public void TransformHP1ExplicitIntParametersReturnTripletByte()
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, TripletByte>(_source);
-        var destinationTriplet = MemoryMarshal.Cast<byte, TripletByte>(_destination);
+        var destinationTriplet = MemoryMarshal.Cast<byte, TripletByte>(new Span<byte>(_destination));
 
         for (int i = 0; i < PixelCount; ++i)
         {
@@ -195,7 +195,7 @@ public class ColorTransformation
     public void TransformHP1Generic()
     {
         var sourceTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(_source);
-        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(_destination);
+        var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(new Span<byte>(_destination));
 
         for (int i = 0; i < PixelCount; ++i)
         {
