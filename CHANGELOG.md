@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 - New property JpegLSDecoder.CompressedDataFormat to retrieve the compressed data format of
 the JPEG-LS file. JPEG-LS defines 3 formats: 1 interchange (most common) and 2 abbreviated.
-- Added support for AOT compilation in .NET 8 and later.
+- Added support for AOT compilation in .NET 8.0 and later.
 
 ### Changed
 
