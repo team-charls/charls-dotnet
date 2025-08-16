@@ -68,3 +68,11 @@ dotnet_diagnostic.IDE0046.severity = none
 # IDE0010: Add missing swtich cases
 # Rational: Conflicts with code coverage.
 dotnet_diagnostic.IDE0010.severity = none
+
+# IDE0011: Add braces
+# Rational: Cannot handle that mixed usage of single line, multi line and non for throwing exceptions.
+dotnet_diagnostic.IDE0011.severity = none
+
+# IDE0011: Remove unnecessary parentheses
+# Rational: dotnet_style_parentheses_in_arithmetic_binary_operators doesn't always work
+dotnet_diagnostic.IDE0047.severity = none

@@ -1,7 +1,6 @@
 // Copyright (c) Team CharLS.
 // SPDX-License-Identifier: BSD-3-Clause
 
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
 using CharLS.Managed;
@@ -84,7 +83,7 @@ catch (ArgumentException e)
 // chose for the in-memory representation of the bitmap data.
 // PNG 8bits/grayscale is loaded as PixelFormat32bppARGB
 // JPG/TIFF 8bits/grayscale are loaded as PixelFormat8bppIndexed
-bool TryGetFrameInfoAndPixelFormat(Image sourceImage, [NotNullWhen(true)] out FrameInfo frameInfo, out PixelFormat filePixelFormat)
+static bool TryGetFrameInfoAndPixelFormat(Image sourceImage, out FrameInfo frameInfo, out PixelFormat filePixelFormat)
 {
     var pixelFormat = sourceImage.PixelFormat;
     var flags = sourceImage.Flags;
@@ -117,18 +116,18 @@ bool TryGetFrameInfoAndPixelFormat(Image sourceImage, [NotNullWhen(true)] out Fr
     return filePixelFormat != default;
 }
 
-string GetOutputPath(string inputPathArg)
+static string GetOutputPath(string inputPathArg)
 {
     return Path.ChangeExtension(inputPathArg, ".jls");
 }
 
-void Save(string path, ReadOnlySpan<byte> encodedData)
+static void Save(string path, ReadOnlySpan<byte> encodedData)
 {
     using FileStream output = new(path, FileMode.OpenOrCreate);
     output.Write(encodedData);
 }
 
-bool TryParseArguments(IReadOnlyList<string> args, out string inputPathArg)
+static bool TryParseArguments(IReadOnlyList<string> args, out string inputPathArg)
 {
     if (args.Count != 1)
     {
@@ -140,7 +139,7 @@ bool TryParseArguments(IReadOnlyList<string> args, out string inputPathArg)
     return true;
 }
 
-void ConvertBgrToRgb(Span<byte> pixels, int width, int height, int stride)
+static void ConvertBgrToRgb(Span<byte> pixels, int width, int height, int stride)
 {
     const int bytesPerRgbPixel = 3;
 
@@ -158,7 +157,7 @@ void ConvertBgrToRgb(Span<byte> pixels, int width, int height, int stride)
     }
 }
 
-SpiffColorSpace MapComponentCountToSpiffColorSpace(int componentCount)
+static SpiffColorSpace MapComponentCountToSpiffColorSpace(int componentCount)
 {
     return componentCount switch
     {

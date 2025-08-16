@@ -25,7 +25,7 @@ public class TraitsTest
         {
             var errorValue = traits.ModuloRange(i);
             const int range = 24 + 1;
-            Assert.True(errorValue is >= (-range / 2) and <= (((range + 1) / 2) - 1));
+            Assert.True(errorValue is >= -range / 2 and <= ((range + 1) / 2) - 1);
         }
     }
 }

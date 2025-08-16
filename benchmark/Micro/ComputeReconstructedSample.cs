@@ -7,11 +7,11 @@ namespace CharLS.Managed.Benchmark.Micro;
 
 public class ComputeReconstructedSample
 {
-    private Traits _traits = default!;
-    private Traits _traitsLossy = default!;
-    private Traits _losslessTraits = default!;
-    private Traits _losslessTraits8 = default!;
-    private Traits _losslessTraits16 = default!;
+    private Traits _traits = null!;
+    private Traits _traitsLossy = null!;
+    private Traits _losslessTraits = null!;
+    private Traits _losslessTraits8 = null!;
+    private Traits _losslessTraits16 = null!;
     private int _predictedValue;
     private int _errorValue;
 
