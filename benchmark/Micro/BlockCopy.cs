@@ -9,8 +9,8 @@ namespace CharLS.Managed.Benchmark.Micro;
 
 public class BlockCopy
 {
-    private byte[] _source = default!;
-    private byte[] _destination = default!;
+    private byte[] _source = null!;
+    private byte[] _destination = null!;
 
     [Params(65536)]
     public int BufferCount { get; set; }

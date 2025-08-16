@@ -40,8 +40,8 @@ internal struct TripletByte
 
 public class ColorTransformation
 {
-    private byte[] _source = default!;
-    private byte[] _destination = default!;
+    private byte[] _source = null!;
+    private byte[] _destination = null!;
 
     [Params(2000)]
     public int PixelCount { get; set; }
@@ -81,7 +81,7 @@ public class ColorTransformation
         const int range = 1 << (sizeof(byte) * 8);
 
         return
-            (((byte)(red - green + (range / 2))) << 16) |
+            ((byte)(red - green + (range / 2)) << 16) |
             ((byte)green << 8) |
             (byte)(blue - green + (range / 2));
     }
@@ -164,15 +164,15 @@ public class ColorTransformation
     [Benchmark]
     public unsafe void TransformHP1ExplicitIntParametersWithPointers()
     {
-        fixed (byte* bptr = _source, pd = _destination)
+        fixed (byte* source = _source, pd = _destination)
         {
-            var sourcePTr = (Triplet<byte>*)bptr;
+            var sourcePtr = (Triplet<byte>*)source;
             var destinationPtr = (Triplet<byte>*)pd;
-            Triplet<byte>* endPtr = sourcePTr + PixelCount;
+            Triplet<byte>* endPtr = sourcePtr + PixelCount;
 
-            for (; sourcePTr != endPtr; sourcePTr++, destinationPtr++)
+            for (; sourcePtr != endPtr; sourcePtr++, destinationPtr++)
             {
-                *destinationPtr = TransformHP1IntParameters(sourcePTr->V1, sourcePTr->V2, sourcePTr->V3);
+                *destinationPtr = TransformHP1IntParameters(sourcePtr->V1, sourcePtr->V2, sourcePtr->V3);
             }
         }
     }

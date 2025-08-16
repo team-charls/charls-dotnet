@@ -8,8 +8,8 @@ namespace CharLS.Managed.Benchmark.Micro;
 
 public class Abs
 {
-    private int[] _source = default!;
-    private int[] _destination = default!;
+    private int[] _source = null!;
+    private int[] _destination = null!;
 
     [Params(65536)]
     public int BufferCount { get; set; }
@@ -70,7 +70,7 @@ public class Abs
     {
         for (int i = 0; i != _source.Length; i++)
         {
-            if (_source![i] < 5000 || _source[i]> 5000)
+            if (_source[i] is < 5000 or > 5000)
             {
                 _destination[i] = _source[i];
             }
