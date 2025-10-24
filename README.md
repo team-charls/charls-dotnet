@@ -12,7 +12,7 @@ JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard for conti
 
 ## Features
 
-* .NET 8.0 class library.
+* .NET 9.0, .NET 8.0 class library.
 * Support for the .NET platforms: Windows, Linux and macOS.
 
 ## Performance
@@ -86,7 +86,7 @@ A sample application is included in the GitHub repository that demonstrates how 
  git clone https://github.com/team-charls/charls-dotnet.git
 ```
 
-* Use the .NET 8.0 CLI or Visual Studio 2022 (v17.11 or newer) to build the solution file CharLSDotNet.sln.  
+* Use the .NET 9.0 CLI or Visual Studio 2022 (v17.14 or newer) to build the solution file CharLSDotNet.slnx.  
  For example: `dotnet build && dotnet test && dotnet publish` to build the NuGet package.  
  Building can be done on all supported .NET SDK platforms: Windows, Linux or macOS
 
