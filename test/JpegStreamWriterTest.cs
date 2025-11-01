@@ -285,7 +285,7 @@ public class JpegStreamWriterTest
         JpegStreamWriter writer = new() { Destination = buffer };
 
         bool oversizedImage =
-            writer.WriteStartOfFrameSegment(new FrameInfo(100, ushort.MaxValue, bitsPerSample, componentCount));
+            writer.WriteStartOfFrameSegment(new FrameInfo(100, ushort.MaxValue, bitsPerSample, componentCount), null);
 
         Assert.False(oversizedImage);
         Assert.Equal(19, writer.BytesWritten);
@@ -324,7 +324,7 @@ public class JpegStreamWriterTest
         JpegStreamWriter writer = new() { Destination = buffer };
 
         bool oversizedImage =
-            writer.WriteStartOfFrameSegment(new FrameInfo(ushort.MaxValue + 1, 100 , bitsPerSample, componentCount));
+            writer.WriteStartOfFrameSegment(new FrameInfo(ushort.MaxValue + 1, 100 , bitsPerSample, componentCount), null);
 
         Assert.True(oversizedImage);
         Assert.Equal(19, writer.BytesWritten);
@@ -363,7 +363,7 @@ public class JpegStreamWriterTest
         JpegStreamWriter writer = new() { Destination = buffer };
 
         bool oversizedImage =
-            writer.WriteStartOfFrameSegment(new FrameInfo(100, ushort.MaxValue + 1, bitsPerSample, componentCount));
+            writer.WriteStartOfFrameSegment(new FrameInfo(100, ushort.MaxValue + 1, bitsPerSample, componentCount), null);
 
         Assert.True(oversizedImage);
         Assert.Equal(19, writer.BytesWritten);
@@ -400,7 +400,7 @@ public class JpegStreamWriterTest
         var buffer = new byte[13];
         JpegStreamWriter writer = new() { Destination = buffer };
 
-        _ = writer.WriteStartOfFrameSegment(new FrameInfo(1, 1, bitsPerSample, componentCount));
+        _ = writer.WriteStartOfFrameSegment(new FrameInfo(1, 1, bitsPerSample, componentCount), null);
 
         Assert.Equal(buffer.Length, writer.BytesWritten);
         Assert.Equal(bitsPerSample, buffer[4]);
@@ -413,7 +413,7 @@ public class JpegStreamWriterTest
         var buffer = new byte[775];
         JpegStreamWriter writer = new() { Destination = buffer };
 
-        _ = writer.WriteStartOfFrameSegment(new FrameInfo(ushort.MaxValue, ushort.MaxValue, 16, byte.MaxValue));
+        _ = writer.WriteStartOfFrameSegment(new FrameInfo(ushort.MaxValue, ushort.MaxValue, 16, byte.MaxValue), null);
 
         Assert.Equal(buffer.Length, writer.BytesWritten);
         Assert.Equal(16, buffer[4]);
