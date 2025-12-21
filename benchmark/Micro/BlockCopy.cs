@@ -12,8 +12,7 @@ public class BlockCopy
     private byte[] _source = null!;
     private byte[] _destination = null!;
 
-    [Params(65536)]
-    public int BufferCount { get; set; }
+    public int BufferCount { get; set; } = 65536;
 
     [GlobalSetup]
     public void Init()

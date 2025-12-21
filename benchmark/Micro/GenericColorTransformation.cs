@@ -43,8 +43,7 @@ public class ColorTransformation
     private byte[] _source = null!;
     private byte[] _destination = null!;
 
-    [Params(2000)]
-    public int PixelCount { get; set; }
+    public int PixelCount { get; set; } = 2000;
 
     internal static Triplet<byte> TransformHP1(byte red, byte green, byte blue)
     {
