@@ -11,8 +11,7 @@ public class Abs
     private int[] _source = null!;
     private int[] _destination = null!;
 
-    [Params(65536)]
-    public int BufferCount { get; set; }
+    public int BufferCount { get; set; } = 65536;
 
     [GlobalSetup]
     public void Init()
