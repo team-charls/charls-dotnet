@@ -701,7 +701,7 @@ public sealed class JpegLSEncoder
                 return FrameInfo.Width * BitToByteCount(FrameInfo.BitsPerSample) * sourceComponentCount;
 
             default:
-                Debug.Assert(_interleaveMode == InterleaveMode.Sample);
+                Debug.Assert(InterleaveMode == InterleaveMode.Sample);
                 return scanWidth * BitToByteCount(FrameInfo.BitsPerSample) * sourceComponentCount;
         }
     }
