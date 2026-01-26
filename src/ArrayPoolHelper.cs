@@ -19,12 +19,12 @@ internal static class ArrayPoolHelper
     }
 
 #if DEBUG
-    internal struct ArrayFromPool<T> : IDisposable
+    internal ref struct ArrayFromPool<T> : IDisposable
     {
         private bool _disposed;
 
 #else
-    internal readonly struct ArrayFromPool<T> : IDisposable
+    internal readonly ref struct ArrayFromPool<T> : IDisposable
     {
 #endif
         internal ArrayFromPool(int minimumLength)
@@ -39,7 +39,7 @@ internal static class ArrayPoolHelper
         {
             ArrayPool<T>.Shared.Return(Value);
 #if DEBUG
-            Debug.Assert(!_disposed);
+            Debug.Assert(!_disposed); // Should only dispose once (performance)
             _disposed = true;
 #endif
         }
