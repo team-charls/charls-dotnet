@@ -16,8 +16,8 @@ internal struct JpegStreamReader
     private readonly object _eventSender;
     private readonly List<ComponentInfo> _componentInfos;
     private readonly List<MappingTableEntry> _mappingTables = [];
+
     private State _state;
-    private bool _dnlMarkerExpected;
     private int _nearLossless;
     private int _segmentDataSize;
     private int _segmentStartPosition;
@@ -26,7 +26,12 @@ internal struct JpegStreamReader
     private int _bitsPerSample;
     private int _componentCount;
     private int _readComponentCount;
+    private int _horizontalSamplingMax = 1;
+    private int _verticalSamplingMax = 1;
+    private bool _dnlMarkerExpected;
     private bool _componentWithMappingTableExists;
+    private int[]? _widths;
+    private int[]? _heights;
 
     public JpegStreamReader()
         : this(null!)
@@ -72,7 +77,8 @@ internal struct JpegStreamReader
 
     internal int ScanComponentCount { get; private set; }
 
-    internal readonly FrameInfo ScanFrameInfo => new(_width, _height, _bitsPerSample, ScanComponentCount);
+    internal readonly FrameInfo ScanFrameInfo =>
+        new(GetScanWidth(_readComponentCount - ScanComponentCount), GetScanHeight(_readComponentCount - ScanComponentCount), _bitsPerSample, ScanComponentCount);
 
     internal CompressedDataFormat CompressedDataFormat { get; private set; }
 
@@ -94,6 +100,10 @@ internal struct JpegStreamReader
             return (uint)CalculateMaximumSampleValue(_bitsPerSample);
         }
     }
+
+    internal readonly int[] Widths => _widths!;
+
+    internal readonly int[] Heights => _heights!;
 
     private readonly int SegmentBytesToRead => _segmentStartPosition + _segmentDataSize - Position;
 
@@ -483,15 +493,34 @@ internal struct JpegStreamReader
         for (int i = 0; i != _componentCount; i++)
         {
             // Component specification parameters
-            AddComponent(ReadByte()); // Ci = Component identifier
+            byte componentIdentifier = ReadByte(); // Ci = Component identifier
             byte horizontalVerticalSamplingFactor = ReadByte(); // Hi + Vi = Horizontal sampling factor + Vertical sampling factor
-            if (horizontalVerticalSamplingFactor != 0x11)
-                ThrowHelper.ThrowInvalidDataException(ErrorCode.ParameterValueNotSupported);
+            AddComponent(componentIdentifier, horizontalVerticalSamplingFactor);
 
             SkipByte(); // Tqi = Quantization table destination selector (reserved for JPEG-LS, should be set to 0)
         }
 
+        ComputeWidths();
+        ComputeHeights();
         _state = State.ScanSection;
+    }
+
+    private void ComputeWidths()
+    {
+        _widths = new int[_componentCount];
+        for (int i = 0; i < _componentCount; i++)
+        {
+            _widths[i] = GetScanWidth(i);
+        }
+    }
+
+    private void ComputeHeights()
+    {
+        _heights = new int[_componentCount];
+        for (int i = 0; i < _componentCount; i++)
+        {
+            _heights[i] = GetScanHeight(i);
+        }
     }
 
     private void ReadApplicationDataSegment(JpegMarkerCode markerCode)
@@ -820,12 +849,27 @@ internal struct JpegStreamReader
             ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidMarkerSegmentSize);
     }
 
-    private readonly void AddComponent(byte componentId)
+    private void AddComponent(byte componentId, byte horizontalVerticalSamplingFactor)
     {
         if (_componentInfos.Exists(scan => scan.Id == componentId))
             ThrowHelper.ThrowInvalidDataException(ErrorCode.DuplicateComponentIdInStartOfFrameSegment);
 
-        _componentInfos.Add(new ComponentInfo(componentId));
+        byte horizontalSamplingFactor = (byte)(horizontalVerticalSamplingFactor >> 4);
+        byte verticalSamplingFactor = (byte)(horizontalVerticalSamplingFactor & 0xF);
+        if (horizontalSamplingFactor < 1 || horizontalSamplingFactor > 4 || verticalSamplingFactor < 1 || verticalSamplingFactor > 4)
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterSamplingFactor);
+
+        _componentInfos.Add(new ComponentInfo(componentId, horizontalSamplingFactor, verticalSamplingFactor));
+
+        if (horizontalSamplingFactor > _horizontalSamplingMax)
+        {
+            _horizontalSamplingMax = horizontalSamplingFactor;
+        }
+
+        if (verticalSamplingFactor > _verticalSamplingMax)
+        {
+            _verticalSamplingMax = verticalSamplingFactor;
+        }
     }
 
     private readonly void CheckWidth()
@@ -862,6 +906,24 @@ internal struct JpegStreamReader
         _height = value;
     }
 
+    private readonly int GetScanWidth(int componentIndex)
+    {
+        int horizontalSamplingFactor = _componentInfos[componentIndex].HorizontalSamplingFactor;
+        if (_horizontalSamplingMax == horizontalSamplingFactor)
+            return _width;
+
+        return _width * horizontalSamplingFactor / _horizontalSamplingMax;
+    }
+
+    private readonly int GetScanHeight(int componentIndex)
+    {
+        int verticalSamplingFactor = _componentInfos[componentIndex].VerticalSamplingFactor;
+        if (_verticalSamplingMax == verticalSamplingFactor)
+            return _height;
+
+        return _height * verticalSamplingFactor / _verticalSamplingMax;
+    }
+
     private void StoreComponentInfo(byte componentId, byte tableId, int nearLossless, InterleaveMode interleaveMode)
     {
         // Ignore when info is default, prevent search and ID mismatch issues.
@@ -877,7 +939,7 @@ internal struct JpegStreamReader
             _componentWithMappingTableExists = true;
         }
 
-        _componentInfos[index] = new ComponentInfo(componentId, tableId, nearLossless, interleaveMode);
+        _componentInfos[index] = new ComponentInfo(_componentInfos[index], tableId, nearLossless, interleaveMode);
     }
 
     private static void CheckInterleaveMode(InterleaveMode mode, int componentCountInScan)
@@ -966,14 +1028,25 @@ internal struct JpegStreamReader
 
     private readonly struct ComponentInfo
     {
+        internal readonly byte Id;
+        internal readonly byte HorizontalSamplingFactor;
+        internal readonly byte VerticalSamplingFactor;
+        internal readonly byte MappingTableId;
         internal readonly int NearLossless;
         internal readonly InterleaveMode InterleaveMode;
-        internal readonly byte Id;
-        internal readonly byte MappingTableId;
 
-        internal ComponentInfo(byte id, byte mappingTableId = 0, int nearLossless = 0, InterleaveMode interleaveMode = InterleaveMode.None)
+        internal ComponentInfo(byte id, byte horizontalSamplingFactor, byte verticalSamplingFactor)
         {
             Id = id;
+            HorizontalSamplingFactor = horizontalSamplingFactor;
+            VerticalSamplingFactor = verticalSamplingFactor;
+        }
+
+        internal ComponentInfo(ComponentInfo componentInfo, byte mappingTableId, int nearLossless, InterleaveMode interleaveMode)
+        {
+            Id = componentInfo.Id;
+            HorizontalSamplingFactor = componentInfo.HorizontalSamplingFactor;
+            VerticalSamplingFactor = componentInfo.VerticalSamplingFactor;
             MappingTableId = mappingTableId;
             NearLossless = nearLossless;
             InterleaveMode = interleaveMode;
