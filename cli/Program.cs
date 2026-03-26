@@ -8,10 +8,10 @@ using CharLS.Managed.Support;
 
 Argument<string> fileArgument = new("file")
 {
-    Description = "The PGM or PPM file to encode to JPEG-LS"
+    Description = "The binary PGM (P5) or PPM (P6) file to encode to JPEG-LS"
 };
 
-Command encodeCommand = new("encode", "Encode a PGM or PPM file to a JPEG-LS (.jls) file")
+Command encodeCommand = new("encode", "Encode a binary PGM (P5) or PPM (P6) file to a JPEG-LS (.jls) file")
 {
     fileArgument
 };
