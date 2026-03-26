@@ -15,8 +15,7 @@ Argument<string> inputFilenameArgument = new("input")
 Argument<string?> outputFilenameArgument = new("output")
 {
     Description = "The output JPEG-LS file path. If not specified, the output file is created with the same name as the input file and a .jls extension",
-    Arity = ArgumentArity.ZeroOrOne,
-    DefaultValueFactory = _ => null
+    Arity = ArgumentArity.ZeroOrOne
 };
 
 Command encodeCommand = new("encode", "Encode a binary PGM (P5) or PPM (P6) file to a JPEG-LS (.jls) file")
