@@ -1,0 +1,34 @@
+<!--
+  SPDX-FileCopyrightText: © 2026 Team CharLS
+  SPDX-License-Identifier: BSD-3-Clause
+-->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>CharLS.Managed.Cli</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\src\CharLS.Managed.KeyPair.snk</AssemblyOriginatorKeyFile>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <!--
+      CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'
+      CA1515: Consider making public types internal
+      -->
+    <NoWarn>$(NoWarn),1591,CA1515</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\support\PortableAnymapFile.cs" Link="PortableAnymapFile.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\CharLS.Managed.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+</Project>

@@ -16,6 +16,7 @@
     <File Path="README.md" />
   </Folder>
   <Project Path="benchmark/CharLS.Managed.Benchmark.csproj" />
+  <Project Path="cli/CharLS.Managed.Cli.csproj" />
   <Project Path="fuzzing/lib-fuzzer-decode/LibFuzzerDecode.csproj" />
   <Project Path="src/CharLS.Managed.csproj" />
   <Project Path="test/CharLS.Managed.Test.csproj" />

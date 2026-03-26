@@ -3,7 +3,7 @@
 
 using System.Text;
 
-namespace CharLS.Managed.Test;
+namespace CharLS.Managed.Support;
 
 internal sealed class PortableAnymapFile
 {

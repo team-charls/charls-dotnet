@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using System.Runtime.InteropServices;
+using CharLS.Managed.Support;
 
 namespace CharLS.Managed.Test;
 
