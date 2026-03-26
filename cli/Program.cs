@@ -6,16 +6,25 @@ using System.CommandLine;
 using CharLS.Managed;
 using CharLS.Managed.Support;
 
-Argument<string> fileArgument = new("file")
+Argument<string> inputFilenameArgument = new("input")
 {
-    Description = "The binary PGM (P5) or PPM (P6) file to encode to JPEG-LS"
+    Description = "The binary PGM (P5) or PPM (P6) file to encode to JPEG-LS (required)",
+    Arity = ArgumentArity.ExactlyOne
+};
+
+Argument<string?> outputFilenameArgument = new("output")
+{
+    Description = "The output JPEG-LS file path. If not specified, the output file is created with the same name as the input file and a .jls extension",
+    Arity = ArgumentArity.ZeroOrOne,
+    DefaultValueFactory = _ => null
 };
 
 Command encodeCommand = new("encode", "Encode a binary PGM (P5) or PPM (P6) file to a JPEG-LS (.jls) file")
 {
-    fileArgument
+    inputFilenameArgument,
+    outputFilenameArgument
 };
-encodeCommand.SetAction(parseResult => Encode(parseResult.GetValue(fileArgument)!));
+encodeCommand.SetAction(parseResult => Encode(parseResult.GetValue(inputFilenameArgument)!, parseResult.GetValue(outputFilenameArgument)));
 
 RootCommand rootCommand = new("CharLS managed command line app")
 {
@@ -25,17 +34,17 @@ RootCommand rootCommand = new("CharLS managed command line app")
 return rootCommand.Parse(args).Invoke();
 
 
-static int Encode(string filename)
+static int Encode(string inputFilename, string? outputFilename)
 {
-    if (!File.Exists(filename))
+    if (!File.Exists(inputFilename))
     {
-        Console.Error.WriteLine($"Error: file not found: {filename}");
+        Console.Error.WriteLine($"Error: file not found: {inputFilename}");
         return 1;
     }
 
     try
     {
-        PortableAnymapFile anymap = new(filename);
+        PortableAnymapFile anymap = new(inputFilename);
 
         var interleaveMode = anymap.ComponentCount == 1 ? InterleaveMode.None : InterleaveMode.Sample;
         JpegLSEncoder encoder = new(anymap.Width, anymap.Height, anymap.BitsPerSample, anymap.ComponentCount, interleaveMode);
@@ -43,11 +52,11 @@ static int Encode(string filename)
         encoder.WriteStandardSpiffHeader(anymap.ComponentCount == 1 ? SpiffColorSpace.Grayscale : SpiffColorSpace.Rgb);
         encoder.Encode(anymap.ImageData);
 
-        string outputPath = Path.ChangeExtension(filename, ".jls");
+        string outputPath = outputFilename ?? Path.ChangeExtension(inputFilename, ".jls");
         using FileStream output = new(outputPath, FileMode.Create, FileAccess.Write);
         output.Write(encoder.EncodedData.Span);
 
-        Console.WriteLine($"Encoded {Path.GetFileName(filename)} -> {Path.GetFileName(outputPath)}");
+        Console.WriteLine($"Encoded {Path.GetFileName(inputFilename)} -> {Path.GetFileName(outputPath)}");
         return 0;
     }
     catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)   
