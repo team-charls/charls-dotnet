@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <Using Remove="System.Net.Http" />
+    <Compile Include="..\support\PortableAnymapFile.cs" Link="PortableAnymapFile.cs" />
     <Using Include="Xunit" />
   </ItemGroup>
 
