@@ -50,7 +50,7 @@ static int Encode(string filename)
         Console.WriteLine($"Encoded {Path.GetFileName(filename)} -> {Path.GetFileName(outputPath)}");
         return 0;
     }
-    catch (Exception e) when (e is IOException or UnauthorizedAccessException)   
+    catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)   
     {
         Console.Error.WriteLine($"Error: {e.Message}");
         return 1;
