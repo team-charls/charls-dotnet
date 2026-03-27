@@ -27,4 +27,9 @@
     <ProjectReference Include="..\src\CharLS.Managed.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="benchmark_8bit.pgm" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="benchmark_16bit.pgm" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

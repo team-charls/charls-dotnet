@@ -11,22 +11,26 @@ public class EncodeMonochrome
     private byte[]? _destination;
     private PortableAnymapFile? _referenceFile;
 
+    [Params("benchmark_8bit.pgm", "benchmark_16bit.pgm")]
+    public string Filename { get; set; } = null!;
+
     [GlobalSetup]
     public void GlobalSetup()
     {
-        _referenceFile = new PortableAnymapFile("d:/benchmark-test-image.pgm");
+        _referenceFile = new PortableAnymapFile(Path.Combine(AppContext.BaseDirectory, Filename));
 
         _source = _referenceFile.ImageData;
 
-        var encoder = new JpegLSEncoder(
-            _referenceFile.Width, _referenceFile.Height, _referenceFile.BitsPerSample, _referenceFile.ComponentCount);
+        JpegLSEncoder encoder = new(
+            _referenceFile.Width, _referenceFile.Height, _referenceFile.BitsPerSample, _referenceFile.ComponentCount,
+            InterleaveMode.None, false);
         _destination = new byte[encoder.EstimatedDestinationSize];
     }
 
     [Benchmark]
     public void EncodeLossless()
     {
-        var encoder = new JpegLSEncoder(
+        JpegLSEncoder encoder = new(
             _referenceFile!.Width, _referenceFile.Height, _referenceFile.BitsPerSample, _referenceFile.ComponentCount, InterleaveMode.None, false)
         {
             Destination = _destination
@@ -38,7 +42,7 @@ public class EncodeMonochrome
     [Benchmark]
     public void EncodeLossy()
     {
-        var encoder = new JpegLSEncoder(
+        JpegLSEncoder encoder = new(
             _referenceFile!.Width, _referenceFile.Height, _referenceFile.BitsPerSample, _referenceFile.ComponentCount, InterleaveMode.None, false)
         {
             Destination = _destination,
