@@ -22,7 +22,8 @@ public class EncodeMonochrome
         _source = _referenceFile.ImageData;
 
         JpegLSEncoder encoder = new(
-            _referenceFile.Width, _referenceFile.Height, _referenceFile.BitsPerSample, _referenceFile.ComponentCount);
+            _referenceFile.Width, _referenceFile.Height, _referenceFile.BitsPerSample, _referenceFile.ComponentCount,
+            InterleaveMode.None, false);
         _destination = new byte[encoder.EstimatedDestinationSize];
     }
 
