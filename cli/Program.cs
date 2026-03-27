@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 using System.CommandLine;
+using System.Diagnostics;
 
 using CharLS.Managed;
 using CharLS.Managed.Support;
@@ -44,10 +45,37 @@ Command decodeCommand = new("decode", "Decode a JPEG-LS (.jls) file to a binary 
 };
 decodeCommand.SetAction(parseResult => Decode(parseResult.GetValue(decodeInputFilenameArgument)!, parseResult.GetValue(decodeOutputFilenameArgument)));
 
+Argument<string> benchmarkInputFilenameArgument = new("input")
+{
+    Description = "The JPEG-LS (.jls) file to benchmark decode performance (required)",
+    Arity = ArgumentArity.ExactlyOne
+};
+
+var benchmarkIterationsOption = new Option<int>("--iterations")
+{
+    Description = "Number of times to decode for benchmarking (default: 10)",
+    Arity = ArgumentArity.ZeroOrOne
+};
+var benchmarkIterationsShortOption = new Option<int>("-n")
+{
+    Arity = ArgumentArity.ZeroOrOne
+};
+
+Command benchmarkCommand = new("benchmark", "Benchmark JPEG-LS decode performance")
+{
+    benchmarkInputFilenameArgument,
+    benchmarkIterationsOption,
+    benchmarkIterationsShortOption
+};
+benchmarkCommand.SetAction(parseResult => Benchmark(
+    parseResult.GetValue(benchmarkInputFilenameArgument)!,
+    parseResult.GetValue(benchmarkIterationsOption) != 0 ? parseResult.GetValue(benchmarkIterationsOption) : (parseResult.GetValue(benchmarkIterationsShortOption) != 0 ? parseResult.GetValue(benchmarkIterationsShortOption) : 10)));
+
 RootCommand rootCommand = new("CharLS managed command line app")
 {
     encodeCommand,
-    decodeCommand
+    decodeCommand,
+    benchmarkCommand
 };
 
 return rootCommand.Parse(args).Invoke();
@@ -106,6 +134,48 @@ static int Decode(string inputFilename, string? outputFilename)
         PortableAnymapFile.Write(outputPath, frameInfo.Width, frameInfo.Height, frameInfo.BitsPerSample, frameInfo.ComponentCount, decodedData);
 
         Console.WriteLine($"Decoded {Path.GetFileName(inputFilename)} -> {Path.GetFileName(outputPath)}");
+        return 0;
+    }
+    catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+    {
+        Console.Error.WriteLine($"Error: {e.Message}");
+        return 1;
+    }
+}
+
+
+static int Benchmark(string inputFilename, int iterations)
+{
+    if (!File.Exists(inputFilename))
+    {
+        Console.Error.WriteLine($"Error: file not found: {inputFilename}");
+        return 1;
+    }
+
+    try
+    {
+        byte[] encodedData = File.ReadAllBytes(inputFilename);
+        JpegLSDecoder decoder = new(encodedData);
+
+        // Warm-up
+        int size = decoder.GetDestinationSize();
+        byte[] destination = new byte[size];
+        decoder.Decode(destination);
+
+        var stopwatch = new Stopwatch();
+        long totalTicks = 0;
+        for (int i = 0; i < iterations; ++i)
+        {
+            stopwatch.Restart();
+            decoder = new JpegLSDecoder(encodedData); // ensure fresh state
+            decoder.Decode(destination);
+            stopwatch.Stop();
+            totalTicks += stopwatch.ElapsedTicks;
+        }
+
+        double avgMs = totalTicks * 1000.0 / iterations / Stopwatch.Frequency;
+        Console.WriteLine($"Decoded {Path.GetFileName(inputFilename)} {iterations} times. Average: {avgMs:F3} ms");
+
         return 0;
     }
     catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
