@@ -6,13 +6,13 @@ using System.CommandLine;
 using CharLS.Managed;
 using CharLS.Managed.Support;
 
-Argument<string> inputFilenameArgument = new("input")
+Argument<string> encodeInputFilenameArgument = new("input")
 {
     Description = "The binary PGM (P5) or PPM (P6) file to encode to JPEG-LS (required)",
     Arity = ArgumentArity.ExactlyOne
 };
 
-Argument<string?> outputFilenameArgument = new("output")
+Argument<string?> encodeOutputFilenameArgument = new("output")
 {
     Description = "The output JPEG-LS file path. If not specified, the output file is created with the same name as the input file and a .jls extension",
     Arity = ArgumentArity.ZeroOrOne
@@ -20,14 +20,34 @@ Argument<string?> outputFilenameArgument = new("output")
 
 Command encodeCommand = new("encode", "Encode a binary PGM (P5) or PPM (P6) file to a JPEG-LS (.jls) file")
 {
-    inputFilenameArgument,
-    outputFilenameArgument
+    encodeInputFilenameArgument,
+    encodeOutputFilenameArgument
 };
-encodeCommand.SetAction(parseResult => Encode(parseResult.GetValue(inputFilenameArgument)!, parseResult.GetValue(outputFilenameArgument)));
+encodeCommand.SetAction(parseResult => Encode(parseResult.GetValue(encodeInputFilenameArgument)!, parseResult.GetValue(encodeOutputFilenameArgument)));
+
+Argument<string> decodeInputFilenameArgument = new("input")
+{
+    Description = "The JPEG-LS (.jls) file to decode to a binary PGM (P5) or PPM (P6) file (required)",
+    Arity = ArgumentArity.ExactlyOne
+};
+
+Argument<string?> decodeOutputFilenameArgument = new("output")
+{
+    Description = "The output Netpbm file path. If not specified, the output file is created with the same name as the input file and a .pgm or .ppm extension",
+    Arity = ArgumentArity.ZeroOrOne
+};
+
+Command decodeCommand = new("decode", "Decode a JPEG-LS (.jls) file to a binary PGM (P5) or PPM (P6) file")
+{
+    decodeInputFilenameArgument,
+    decodeOutputFilenameArgument
+};
+decodeCommand.SetAction(parseResult => Decode(parseResult.GetValue(decodeInputFilenameArgument)!, parseResult.GetValue(decodeOutputFilenameArgument)));
 
 RootCommand rootCommand = new("CharLS managed command line app")
 {
-    encodeCommand
+    encodeCommand,
+    decodeCommand
 };
 
 return rootCommand.Parse(args).Invoke();
@@ -58,7 +78,37 @@ static int Encode(string inputFilename, string? outputFilename)
         Console.WriteLine($"Encoded {Path.GetFileName(inputFilename)} -> {Path.GetFileName(outputPath)}");
         return 0;
     }
-    catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)   
+    catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+    {
+        Console.Error.WriteLine($"Error: {e.Message}");
+        return 1;
+    }
+}
+
+
+static int Decode(string inputFilename, string? outputFilename)
+{
+    if (!File.Exists(inputFilename))
+    {
+        Console.Error.WriteLine($"Error: file not found: {inputFilename}");
+        return 1;
+    }
+
+    try
+    {
+        byte[] encodedData = File.ReadAllBytes(inputFilename);
+        JpegLSDecoder decoder = new(encodedData);
+
+        FrameInfo frameInfo = decoder.FrameInfo;
+        byte[] decodedData = decoder.Decode();
+
+        string outputPath = outputFilename ?? Path.ChangeExtension(inputFilename, frameInfo.ComponentCount == 1 ? ".pgm" : ".ppm");
+        PortableAnymapFile.Write(outputPath, frameInfo.Width, frameInfo.Height, frameInfo.BitsPerSample, frameInfo.ComponentCount, decodedData);
+
+        Console.WriteLine($"Decoded {Path.GetFileName(inputFilename)} -> {Path.GetFileName(outputPath)}");
+        return 0;
+    }
+    catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
     {
         Console.Error.WriteLine($"Error: {e.Message}");
         return 1;

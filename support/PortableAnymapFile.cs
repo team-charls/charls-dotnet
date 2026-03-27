@@ -43,6 +43,33 @@ internal sealed class PortableAnymapFile
         ImageData = imageData;
     }
 
+    internal static void Write(string filename, int width, int height, int bitsPerSample, int componentCount, ReadOnlySpan<byte> imageData)
+    {
+        if (componentCount is not 1 and not 3)
+            throw new InvalidDataException("Only grayscale and RGB images are supported for netpbm output");
+
+        int bytesPerSample = (bitsPerSample + 7) / 8;
+        int expectedDataSize = checked(width * height * bytesPerSample * componentCount);
+        if (imageData.Length != expectedDataSize)
+            throw new InvalidDataException("Incorrect image data size");
+
+        int maxValue = (1 << bitsPerSample) - 1;
+        string header = $"P{(componentCount == 1 ? 5 : 6)}\n{width} {height}\n{maxValue}\n";
+
+        using FileStream output = new(filename, FileMode.Create, FileAccess.Write);
+        output.Write(Encoding.ASCII.GetBytes(header));
+
+        if (bytesPerSample == 2)
+        {
+            byte[] outputData = [.. imageData];
+            ConvertToBigEndian(outputData);
+            output.Write(outputData);
+            return;
+        }
+
+        output.Write(imageData);
+    }
+
     private static List<int> ReadHeader(Stream pnmFile)
     {
         List<int> result = [];
@@ -87,6 +114,11 @@ internal sealed class PortableAnymapFile
         {
             (imageBytes[i], imageBytes[i + 1]) = (imageBytes[i + 1], imageBytes[i]);
         }
+    }
+
+    private static void ConvertToBigEndian(byte[] imageBytes)
+    {
+        ConvertToLittleEndian(imageBytes);
     }
 
     private sealed class UnbufferedStreamReader(Stream stream) : TextReader
