@@ -1,14 +1,14 @@
 <Project>
   <ItemGroup>
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="SharpFuzz" Version="2.3.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
-    <PackageVersion Include="xunit.v3" Version="3.2.2" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="xunit.v3" Version="4.0.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />
-    <PackageVersion Include="System.Drawing.Common" Version="10.0.11" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.11" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+    <PackageVersion Include="System.Drawing.Common" Version="10.0.12" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.12" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.0" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.0" />
   </ItemGroup>
 </Project>
