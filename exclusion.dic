@@ -1,5 +1,7 @@
 Anymap
+buildtransitive
 Cmyk
+contentfiles
 coverallsapp
 glimit
 globaltool
@@ -13,7 +15,11 @@ palletised
 qbpp
 reportgenerator
 reporttypes
+snupkg
+stylecop
 targetdir
+testconfig
+Timestamper
 Unmap
 xunit
 Ycbcr
