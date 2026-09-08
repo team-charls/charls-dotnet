@@ -30,7 +30,7 @@ jobs:
       run: dotnet build --no-restore -c Release
 
     - name: Test
-      run: dotnet test --no-build -c Release --verbosity normal --collect:"XPlat Code Coverage;Format=lcov,cobertura" --logger trx --results-directory coverage --settings .github/workflows/coverlet.runsettings
+      run: dotnet test --no-build -c Release --verbosity normal --coverage --coverage-output-format cobertura --report-trx --results-directory coverage
 
     - name: Code Coverage Summary Report
       uses: irongut/CodeCoverageSummary@v1.3.0
