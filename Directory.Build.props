@@ -19,6 +19,8 @@
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
 
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+
     <!-- Version information -->
     <Version>0.8.1</Version>
     <AssemblyVersion>0.8.0.0</AssemblyVersion>
