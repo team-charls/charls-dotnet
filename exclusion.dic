@@ -1,8 +1,10 @@
 Anymap
+ARGB
 buildtransitive
 Cmyk
 contentfiles
 coverallsapp
+cscharls
 glimit
 globaltool
 golomb
@@ -10,11 +12,14 @@ Golomb
 Infos
 irongut
 marocchino
+multibyte
+Netpbm
 opto
 palletised
 qbpp
 reportgenerator
 reporttypes
+Ryzen
 snupkg
 stylecop
 targetdir
