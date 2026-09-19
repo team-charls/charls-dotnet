@@ -5,7 +5,7 @@ using SharpFuzz;
 
 namespace CharLS.Managed.LibFuzzerDecode;
 
-internal sealed class Program
+internal static class Program
 {
     public static void Main()
     {
@@ -13,8 +13,7 @@ internal sealed class Program
         {
             try
             {
-                byte[] input = readOnlyInput.ToArray();
-                var decoder = new JpegLSDecoder(input, false);
+                JpegLSDecoder decoder = new(readOnlyInput.ToArray(), false);
                 decoder.ReadHeader();
                 int size = decoder.GetDestinationSize();
                 if (size > 8192 * 8192 * 3)

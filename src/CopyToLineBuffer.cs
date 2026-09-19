@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace CharLS.Managed;
 
-internal class CopyToLineBuffer
+internal static class CopyToLineBuffer
 {
     internal delegate void Method(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount, int mask);
 

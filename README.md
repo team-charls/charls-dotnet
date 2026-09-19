@@ -12,7 +12,7 @@ JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard for conti
 
 ## Features
 
-* .NET 9.0, .NET 8.0 class library.
+* .NET 10.0, .NET 9.0, .NET 8.0 class library.
 * Support for the .NET platforms: Windows, Linux and macOS.
 
 ## Performance
@@ -21,7 +21,7 @@ A couple of benchmarks have been executed to assist to decide which codec to use
 The following codecs were measured:
 
 |Codec         |Version|Release date|Description|
-|------------  |-------|------------|----------------------------------------------|
+|--------------|-------|------------|----------------------------------------------|
 |CharLS.Managed| 0.8.0 |2024-08-23  |C# implementation                             |
 |CharLS.Native | 3.2.0 |2023-09-24  |C# wrapper around C++ implementation          |
 |cscharls      | 0.1.1 |2017-04-24  |C# implementation                             |
@@ -30,7 +30,7 @@ The following codecs were measured:
 and the following test images were used:
 
 |Image name    |Width  |Height|Bits per sample|Components|Description               |
-|------------  |------:|-----:|--------------:|---------:|--------------------------|
+|--------------|------:|-----:|--------------:|---------:|--------------------------|
 |Tulips        |    512|   512|              8|         1|Monochrome image of tulips|
 |MG1           |   3064|  4664|             12|         1|Monochrome medical image  |
 |Delta E       |   3072|  2048|              8|         3|Artificial RGB image      |
@@ -86,14 +86,14 @@ A sample application is included in the GitHub repository that demonstrates how 
  git clone https://github.com/team-charls/charls-dotnet.git
 ```
 
-* Use the .NET 9.0 CLI or Visual Studio 2022 (v17.14 or newer) to build the solution file CharLSDotNet.slnx.  
+* Use the .NET 10.0 CLI or Visual Studio 2026 (v18.10 or newer) to build the solution file CharLSDotNet.slnx.  
  For example: `dotnet build && dotnet test && dotnet publish` to build the NuGet package.  
  Building can be done on all supported .NET SDK platforms: Windows, Linux or macOS
 
 ### Code signing the assembly and the NuGet package
 
 Building the NuGet package with a signed assembly DLL and NuGet package can only be done
-on the Window platform with Visual Studio 2022 or with Build tools for Visual Studio 2022.
+on the Window platform with Visual Studio 2026 or with Build tools for Visual Studio 2026.
 To support code signing with a code signing certificate, stored on a smart card, a
 Windows command file is available: `create-signed-nuget-package.cmd`.
 Instructions:
