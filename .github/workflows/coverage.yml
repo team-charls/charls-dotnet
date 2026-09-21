@@ -42,7 +42,8 @@ jobs:
 
     - name: Add Coverage PR Comment
       uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
-      if: github.event_name == 'pull_request'
+      # Dependabot PRs get a read-only GITHUB_TOKEN, which cannot create PR comments.
+      if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
       with:
         recreate: true
         path: code-coverage-results.md
