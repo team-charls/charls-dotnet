@@ -161,8 +161,6 @@ public sealed class JpegLSPresetCodingParametersTest
             if (result.T2 > result.MaxValue || result.T2 < result.T1)
                 result.T2 = result.T1;
             result.T3 = (factor * (21 - 4)) + 4 + (7 * near);
-            if (result.T3 > result.MaxValue || result.T3 < result.T2)
-                result.T3 = result.T2;
         }
         else
         {
@@ -180,9 +178,10 @@ public sealed class JpegLSPresetCodingParametersTest
             result.T3 = (21 / factor) + (7 * near);
             if (result.T3 < 4)
                 result.T3 = 4;
-            if (result.T3 > result.MaxValue || result.T3 < result.T2)
-                result.T3 = result.T2;
         }
+
+        if (result.T3 > result.MaxValue || result.T3 < result.T2)
+            result.T3 = result.T2;
 
         return result;
     }

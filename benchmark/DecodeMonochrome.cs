@@ -27,7 +27,7 @@ public class DecodeMonochrome
         _sourceLossless = encoder.EncodedData.ToArray();
 
         // Create lossy JPEG-LS encoded data from the reference file.
-        encoder = new(
+        encoder = new JpegLSEncoder(
             referenceFile.Width, referenceFile.Height, referenceFile.BitsPerSample, referenceFile.ComponentCount, InterleaveMode.None, false);
         encoder.Destination = new byte[encoder.EstimatedDestinationSize];
         encoder.NearLossless = 3;

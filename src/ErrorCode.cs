@@ -168,39 +168,45 @@ public enum ErrorCode
     InvalidParameterBitsPerSample = 31,
 
     /// <summary>
-    /// This error is returned when the stream contains a component count parameter outside the range [1,255].
+    /// This error is returned when the stream contains a component count parameter in the SOF equal to zero.
     /// </summary>
-    InvalidParameterComponentCount = 32,
+    InvalidParameterComponentCountSof = 32,
+
+    /// <summary>
+    /// This error is returned when the stream contains a component count parameter
+    /// in the SOS is outside the range [1,4] or larger than the count in the SOF.
+    /// </summary>
+    InvalidParameterComponentCountSos = 33,
 
     /// <summary>
     /// This error is returned when the stream contains an interleave mode (ILV) parameter outside the range [0, 2].
     /// </summary>
-    InvalidParameterInterleaveMode = 33,
+    InvalidParameterInterleaveMode = 34,
 
     /// <summary>
     /// This error is returned when the stream contains a near-lossless (NEAR) parameter outside the range [0, min(255, MAXVAL/2)].
     /// </summary>
-    InvalidParameterNearLossless = 34,
+    InvalidParameterNearLossless = 35,
 
     /// <summary>
     /// This error is returned when the stream contains an invalid JPEG-LS preset parameters segment.
     /// </summary>
-    InvalidParameterJpegLSPresetParameters = 35,
+    InvalidParameterJpegLSPresetParameters = 36,
 
     /// <summary>
     /// This error is returned when the stream contains an invalid color transformation segment or one that doesn't match with frame info.
     /// </summary>
-    InvalidParameterColorTransformation = 36,
+    InvalidParameterColorTransformation = 37,
 
     /// <summary>
     /// This error is returned when the stream contains a mapping table with an invalid ID.
     /// </summary>
-    InvalidParameterMappingTableId = 37,
+    InvalidParameterMappingTableId = 38,
 
     /// <summary>
     /// This error is returned when the stream contains an invalid mapping table continuation.
     /// </summary>
-    InvalidParameterMappingTableContinuation = 38,
+    InvalidParameterMappingTableContinuation = 39,
 
     // Logic errors:
 

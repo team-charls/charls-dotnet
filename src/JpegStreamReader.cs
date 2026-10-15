@@ -476,7 +476,7 @@ internal struct JpegStreamReader
 
         _componentCount = ReadByte();
         if (_componentCount == 0)
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterComponentCount);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterComponentCountSof);
 
         CheckSegmentSize(6 + (_componentCount * 3));
 
@@ -681,12 +681,11 @@ internal struct JpegStreamReader
     {
         CheckMinimalSegmentSize(1);
 
-        // ISO 10918-1, B2.3. defines the limits for the number of image components parameter in an SOS.
         int scanComponentCount = ReadByte();
         if (scanComponentCount < 1 || scanComponentCount > Constants.MaximumComponentCountInScan ||
             scanComponentCount > _componentCount - _readComponentCount)
         {
-            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterComponentCount);
+            ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidParameterComponentCountSos);
         }
 
         ScanComponentCount = scanComponentCount;

@@ -150,13 +150,13 @@ public class ColorTransformation
         var destinationTriplet = MemoryMarshal.Cast<byte, Triplet<byte>>(_destination);
 
         var s = sourceTriplet.GetPinnableReference();
-        var d = destinationTriplet.GetPinnableReference();
+        _ = destinationTriplet.GetPinnableReference();
 
         for (int i = 0; i < PixelCount; ++i)
         {
-            d = TransformHP1IntParameters(s.V1, s.V2, s.V3);
+            var d = TransformHP1IntParameters(s.V1, s.V2, s.V3);
             s = Unsafe.Add(ref s, 1);
-            d = Unsafe.Add(ref d, 1);
+            _ = Unsafe.Add(ref d, 1);
         }
     }
 
