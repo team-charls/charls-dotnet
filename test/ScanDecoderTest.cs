@@ -31,6 +31,11 @@ internal sealed class TestScanDecoder
     {
         return _scanDecoder.PeekByte();
     }
+
+    public int ReadUnaryCode()
+    {
+        return _scanDecoder.ReadUnaryCode();
+    }
 }
 
 public class ScanDecoderTest
@@ -41,11 +46,11 @@ public class ScanDecoderTest
     public void ReadBit()
     {
         byte[] source = [0, 0, Constants.JpegMarkerStartByte, 0xD8];
-        var frameInfo = new FrameInfo(1, 1, 8, 1);
+        FrameInfo frameInfo = new(1, 1, 8, 1);
         _ = DefaultParameters.TryMakeExplicit(255, 0, out var cp);
-        var codingParameters = new CodingParameters();
+        CodingParameters codingParameters = new();
 
-        var scanDecoder = new TestScanDecoder(frameInfo, cp!, codingParameters);
+        TestScanDecoder scanDecoder = new(frameInfo, cp!, codingParameters);
         scanDecoder.TestInitialize(source);
 
         for (int i = 0; i < 2 * 8; i++)
@@ -61,11 +66,11 @@ public class ScanDecoderTest
     public void ReadBitWithRefill()
     {
         byte[] source = [0, 0, 0, 0, 0, 0, 0, 0, 0, Constants.JpegMarkerStartByte, 0xD8];
-        var frameInfo = new FrameInfo(1, 1, 8, 1);
+        FrameInfo frameInfo = new(1, 1, 8, 1);
         _ = DefaultParameters.TryMakeExplicit(255, 0, out var cp);
-        var codingParameters = new CodingParameters();
+        CodingParameters codingParameters = new();
 
-        var scanDecoder = new TestScanDecoder(frameInfo, cp!, codingParameters);
+        TestScanDecoder scanDecoder = new(frameInfo, cp!, codingParameters);
         scanDecoder.TestInitialize(source);
 
         for (int i = 0; i < 9 * 8; i++)
@@ -81,11 +86,11 @@ public class ScanDecoderTest
     public void PeekByte()
     {
         byte[] source = [7, 8, Constants.JpegMarkerStartByte, 0xD8];
-        var frameInfo = new FrameInfo(1, 1, 8, 1);
+        FrameInfo frameInfo = new(1, 1, 8, 1);
         _ = DefaultParameters.TryMakeExplicit(255, 0, out var cp);
-        var codingParameters = new CodingParameters();
+        CodingParameters codingParameters = new();
 
-        var scanDecoder = new TestScanDecoder(frameInfo, cp!, codingParameters);
+        TestScanDecoder scanDecoder = new(frameInfo, cp!, codingParameters);
         scanDecoder.TestInitialize(source);
 
         int peekByte1 = scanDecoder.TestPeekByte();
@@ -102,5 +107,22 @@ public class ScanDecoderTest
 
         Assert.Equal(7, peekByte1);
         Assert.Equal(8, peekByte2);
+    }
+
+    [Fact]
+    public void ReadUnaryCodeWithPrefixLargerThanBufferThrowsInvalidData()
+    {
+        FrameInfo frameInfo = new(1, 1, 8, 1);
+        CodingParameters codingParameters = new();
+        _ = DefaultParameters.TryMakeExplicit(255, 0, out var cp);
+
+        byte[] source = [0];
+        TestScanDecoder scanDecoder = new(frameInfo, cp!, codingParameters);
+        scanDecoder.TestInitialize(source);
+
+        var exception = Assert.Throws<InvalidDataException>(() => _ = scanDecoder.ReadUnaryCode());
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidData, exception.GetErrorCode());
     }
 }

@@ -327,18 +327,17 @@ public class JpegStreamReaderTest
     }
 
     [Fact]
-    public void ReadHeaderWithToManyComponentsInStartOfFrameSegmentThrows()
+    public void ReadHeaderWithToNoComponentsInStartOfFrameSegmentThrows()
     {
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
-        writer.WriteStartOfFrameSegment(512, 512, 8, 1);
-        writer.WriteStartOfScanSegment(1, 2, 0, InterleaveMode.Sample);
+        writer.WriteStartOfFrameSegment(512, 512, 8, 0);
         var reader = new JpegStreamReader { Source = writer.GetBuffer() };
 
         var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidParameterComponentCount, exception.GetErrorCode());
+        Assert.Equal(ErrorCode.InvalidParameterComponentCountSof, exception.GetErrorCode());
     }
 
     [Fact]
@@ -353,11 +352,11 @@ public class JpegStreamReaderTest
         var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidParameterComponentCount, exception.GetErrorCode());
+        Assert.Equal(ErrorCode.InvalidParameterComponentCountSos, exception.GetErrorCode());
     }
 
     [Fact]
-    public void ReadHeaderWithMoreThenMaxComponentsInStartOfFrameSegmentThrows()
+    public void ReadHeaderWithMoreThenMaxComponentsInStartOfScanSegmentThrows()
     {
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();
@@ -368,7 +367,42 @@ public class JpegStreamReaderTest
         var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
 
         Assert.False(string.IsNullOrEmpty(exception.Message));
-        Assert.Equal(ErrorCode.InvalidParameterComponentCount, exception.GetErrorCode());
+        Assert.Equal(ErrorCode.InvalidParameterComponentCountSos, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadHeaderWithToManyComponentsInStartOfScanSegmentThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 1);
+        writer.WriteStartOfScanSegment(1, 2, 0, InterleaveMode.Sample);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadHeader(false));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterComponentCountSos, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void ReadSosWithMoreThanMaxComponentsSofSosThrows()
+    {
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteStartOfFrameSegment(512, 512, 8, 3);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+        writer.WriteStartOfScanSegment(0, 1, 0, InterleaveMode.None);
+        writer.WriteStartOfScanSegment(0, 2, 0, InterleaveMode.None);
+        var reader = new JpegStreamReader { Source = writer.GetBuffer() };
+
+        reader.ReadHeader(false);
+        reader.ReadNextStartOfScan();
+
+        var exception = Assert.Throws<InvalidDataException>(() => reader.ReadNextStartOfScan());
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidParameterComponentCountSos, exception.GetErrorCode());
     }
 
     [Fact]

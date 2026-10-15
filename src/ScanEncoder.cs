@@ -77,11 +77,7 @@ internal struct ScanEncoder
         Debug.Assert((bits | ((1U << bitCount) - 1U)) == ((1U << bitCount) - 1U)); // Not used bits must be set to zero.
 
         _freeBitCount -= bitCount;
-        if (_freeBitCount >= 0)
-        {
-            _bitBuffer |= bits << _freeBitCount;
-        }
-        else
+        if (_freeBitCount < 0)
         {
             // Add as many bits in the remaining space as possible and flush.
             _bitBuffer |= bits >> -_freeBitCount;
@@ -95,8 +91,9 @@ internal struct ScanEncoder
             }
 
             Debug.Assert(_freeBitCount >= 0);
-            _bitBuffer |= bits << _freeBitCount;
         }
+
+        _bitBuffer |= bits << _freeBitCount;
     }
 
     internal void Flush()

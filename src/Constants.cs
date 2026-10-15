@@ -9,6 +9,8 @@ internal static class Constants
 
     internal const int MinimumComponentCount = 1;
     internal const int MaximumComponentCount = 255;
+
+    // ISO/IEC 10918-1, B2.3. defines the limit for the max number of the components parameter in an SOS.
     internal const int MaximumComponentCountInScan = 4;
     internal const int MinimumComponentIndex = 0;
     internal const int MaximumComponentIndex = MaximumComponentCount - 1;
@@ -28,8 +30,8 @@ internal static class Constants
     internal const int AutoCalculateStride = 0;
     internal const byte JpegMarkerStartByte = 0xFF;
 
-    // ISO/IEC 14495-1, section 4.8.1 defines the SPIFF version numbers to be used for the SPIFF header in combination with
-    // JPEG-LS.
+    // ISO/IEC 14495-1, section 4.8.1 defines the SPIFF version numbers to be
+    // used for the SPIFF header in combination with JPEG-LS.
     internal const byte SpiffMajorRevisionNumber = 2;
     internal const byte SpiffMinorRevisionNumber = 0;
 
