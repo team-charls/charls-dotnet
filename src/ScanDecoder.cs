@@ -957,7 +957,7 @@ internal struct ScanDecoder
         return _scanCodec.QuantizationLut[(_scanCodec.QuantizationLut.Length / 2) + di];
     }
 
-    private void DecodeSampleLine(Span<byte> previousLine, Span<byte> currentLine)
+    private void DecodeSampleLine(ReadOnlySpan<byte> previousLine, Span<byte> currentLine)
     {
         int index = 1;
         int rb = previousLine[0];
@@ -986,7 +986,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeSampleLine(Span<ushort> previousLine, Span<ushort> currentLine)
+    private void DecodeSampleLine(ReadOnlySpan<ushort> previousLine, Span<ushort> currentLine)
     {
         int index = 1;
         int rb = previousLine[0];
@@ -1015,7 +1015,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodePairLine(Span<Pair<byte>> previousLine, Span<Pair<byte>> currentLine)
+    private void DecodePairLine(ReadOnlySpan<Pair<byte>> previousLine, Span<Pair<byte>> currentLine)
     {
         int index = 1;
         while (index <= FrameInfo.Width)
@@ -1043,7 +1043,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodePairLine(Span<Pair<ushort>> previousLine, Span<Pair<ushort>> currentLine)
+    private void DecodePairLine(ReadOnlySpan<Pair<ushort>> previousLine, Span<Pair<ushort>> currentLine)
     {
         int index = 1;
         while (index <= FrameInfo.Width)
@@ -1071,7 +1071,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeTripletLine(Span<Triplet<byte>> previousLine, Span<Triplet<byte>> currentLine)
+    private void DecodeTripletLine(ReadOnlySpan<Triplet<byte>> previousLine, Span<Triplet<byte>> currentLine)
     {
         int index = 1;
         while (index <= FrameInfo.Width)
@@ -1102,7 +1102,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeTripletLine(Span<Triplet<ushort>> previousLine, Span<Triplet<ushort>> currentLine)
+    private void DecodeTripletLine(ReadOnlySpan<Triplet<ushort>> previousLine, Span<Triplet<ushort>> currentLine)
     {
         int index = 1;
         while (index <= FrameInfo.Width)
@@ -1133,7 +1133,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeQuadLine(Span<Quad<byte>> previousLine, Span<Quad<byte>> currentLine)
+    private void DecodeQuadLine(ReadOnlySpan<Quad<byte>> previousLine, Span<Quad<byte>> currentLine)
     {
         int index = 1;
         while (index <= FrameInfo.Width)
@@ -1168,7 +1168,7 @@ internal struct ScanDecoder
         }
     }
 
-    private void DecodeQuadLine(Span<Quad<ushort>> previousLine, Span<Quad<ushort>> currentLine)
+    private void DecodeQuadLine(ReadOnlySpan<Quad<ushort>> previousLine, Span<Quad<ushort>> currentLine)
     {
         int index = 1;
         while (index <= FrameInfo.Width)
@@ -1236,7 +1236,7 @@ internal struct ScanDecoder
         return Traits.ComputeReconstructedSample(predictedValue, errorValue);
     }
 
-    private int DecodeRunMode(int startIndex, Span<byte> previousLine, Span<byte> currentLine)
+    private int DecodeRunMode(int startIndex, ReadOnlySpan<byte> previousLine, Span<byte> currentLine)
     {
         var ra = currentLine[startIndex - 1];
 
@@ -1253,7 +1253,7 @@ internal struct ScanDecoder
         return endIndex - startIndex + 1;
     }
 
-    private int DecodeRunMode(int startIndex, Span<ushort> previousLine, Span<ushort> currentLine)
+    private int DecodeRunMode(int startIndex, ReadOnlySpan<ushort> previousLine, Span<ushort> currentLine)
     {
         var ra = currentLine[startIndex - 1];
 
@@ -1270,7 +1270,7 @@ internal struct ScanDecoder
         return endIndex - startIndex + 1;
     }
 
-    private int DecodeRunMode(int startIndex, Span<Pair<byte>> previousLine, Span<Pair<byte>> currentLine)
+    private int DecodeRunMode(int startIndex, ReadOnlySpan<Pair<byte>> previousLine, Span<Pair<byte>> currentLine)
     {
         var ra = currentLine[startIndex - 1];
 
@@ -1287,7 +1287,7 @@ internal struct ScanDecoder
         return endIndex - startIndex + 1;
     }
 
-    private int DecodeRunMode(int startIndex, Span<Pair<ushort>> previousLine, Span<Pair<ushort>> currentLine)
+    private int DecodeRunMode(int startIndex, ReadOnlySpan<Pair<ushort>> previousLine, Span<Pair<ushort>> currentLine)
     {
         var ra = currentLine[startIndex - 1];
 
@@ -1304,7 +1304,7 @@ internal struct ScanDecoder
         return endIndex - startIndex + 1;
     }
 
-    private int DecodeRunMode(int startIndex, Span<Triplet<byte>> previousLine, Span<Triplet<byte>> currentLine)
+    private int DecodeRunMode(int startIndex, ReadOnlySpan<Triplet<byte>> previousLine, Span<Triplet<byte>> currentLine)
     {
         var ra = currentLine[startIndex - 1];
 
@@ -1321,7 +1321,7 @@ internal struct ScanDecoder
         return endIndex - startIndex + 1;
     }
 
-    private int DecodeRunMode(int startIndex, Span<Triplet<ushort>> previousLine, Span<Triplet<ushort>> currentLine)
+    private int DecodeRunMode(int startIndex, ReadOnlySpan<Triplet<ushort>> previousLine, Span<Triplet<ushort>> currentLine)
     {
         var ra = currentLine[startIndex - 1];
 
@@ -1338,7 +1338,7 @@ internal struct ScanDecoder
         return endIndex - startIndex + 1;
     }
 
-    private int DecodeRunMode(int startIndex, Span<Quad<byte>> previousLine, Span<Quad<byte>> currentLine)
+    private int DecodeRunMode(int startIndex, ReadOnlySpan<Quad<byte>> previousLine, Span<Quad<byte>> currentLine)
     {
         var ra = currentLine[startIndex - 1];
 
@@ -1355,7 +1355,7 @@ internal struct ScanDecoder
         return endIndex - startIndex + 1;
     }
 
-    private int DecodeRunMode(int startIndex, Span<Quad<ushort>> previousLine, Span<Quad<ushort>> currentLine)
+    private int DecodeRunMode(int startIndex, ReadOnlySpan<Quad<ushort>> previousLine, Span<Quad<ushort>> currentLine)
     {
         var ra = currentLine[startIndex - 1];
 
@@ -1795,7 +1795,7 @@ internal struct ScanDecoder
         _copyFromLineBuffer(sourceInBytes, destination, pixelCount);
     }
 
-    private readonly void CopyLineBufferToDestinationInterleaveLine(Span<byte> source, Span<byte> destination, int pixelCount)
+    private readonly void CopyLineBufferToDestinationInterleaveLine(ReadOnlySpan<byte> source, Span<byte> destination, int pixelCount)
     {
         _copyFromLineBuffer(source, destination, pixelCount);
     }

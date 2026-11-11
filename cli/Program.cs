@@ -71,12 +71,13 @@ benchmarkCommand.SetAction(parseResult => Benchmark(
     parseResult.GetValue(benchmarkInputFilenameArgument)!,
     parseResult.GetValue(benchmarkIterationsOption) != 0 ? parseResult.GetValue(benchmarkIterationsOption) : (parseResult.GetValue(benchmarkIterationsShortOption) != 0 ? parseResult.GetValue(benchmarkIterationsShortOption) : 10)));
 
-RootCommand rootCommand = new("CharLS managed command line app")
-{
+RootCommand rootCommand =
+[
+    with("CharLS managed command line app"),
     encodeCommand,
     decodeCommand,
     benchmarkCommand
-};
+];
 
 return rootCommand.Parse(args).Invoke();
 
