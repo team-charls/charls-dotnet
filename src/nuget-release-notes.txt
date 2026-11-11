@@ -1,2 +1,2 @@
-0.8.0
- - Initial release.
+0.9.0
+ - Full release can be found in the git repository

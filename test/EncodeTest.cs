@@ -406,7 +406,7 @@ public class EncodeTest
         Assert.Equal(InterleaveMode.None, decoder.GetInterleaveMode(3));
     }
 
-    private static void CheckOutput(Span<byte> source, Span<byte> destination, JpegLSDecoder decoder, int componentCount, int componentSize)
+    private static void CheckOutput(ReadOnlySpan<byte> source, Span<byte> destination, JpegLSDecoder decoder, int componentCount, int componentSize)
     {
         for (int component = 0; component < componentCount; ++component)
         {

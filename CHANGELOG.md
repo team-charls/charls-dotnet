@@ -4,14 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.8.0 - Unreleased]
 
 ### Added
 
 - New property JpegLSDecoder.CompressedDataFormat to retrieve the compressed data format of
 the JPEG-LS file. JPEG-LS defines 3 formats: 1 interchange (most common) and 2 abbreviated.
-- Added support for AOT compilation in .NET 8.0 and later.
-- Added support for .NET 10.0
+- Added support for AOT compilation in .NET 10.0 and later.
+- Added support for .NET 10
+- Added support for .NET 11
+
+### Removed
+
+- Support for .NET 8
+- Support for .NET 9
 
 ### Changed
 

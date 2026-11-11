@@ -17,6 +17,10 @@ dotnet_diagnostic.SA1009.severity = none
 # Rational: follow the style of the .NET core libraries.
 dotnet_diagnostic.SA1101.severity = none
 
+# SA1143: Conditional expressions must be formatted consistently
+# Rational: follow the style of the .NET core libraries.
+dotnet_diagnostic.SA1143.severity = none
+
 # SA1204 (StyleCop): Static members should appear before non-static members
 # Rational: static methods are often helpers that are more logical to put at the end.
 dotnet_diagnostic.SA1204.severity = none
@@ -32,6 +36,10 @@ dotnet_diagnostic.SA1405.severity = none
 # SA1413: Use trailing comma in multi-line initializers
 # Rational: by style guide don't use trailing comma when not needed.
 dotnet_diagnostic.SA1413.severity = none
+
+# SA1504: All accessors should be single-line or multi-line
+# Rational: get can be short and setters can check.
+dotnet_diagnostic.SA1504.severity = none
 
 # SA1503: Braces should not be omitted
 # Rational: no braces are allowed for if + throw (no aut checking possible)
