@@ -1,7 +1,7 @@
 <Project>
   <ItemGroup>
     <PackageVersion Include="SharpFuzz" Version="2.3.0" />
-    <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
+    <PackageVersion Include="StyleCop.Analyzers" Version="1.3.180" />
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
