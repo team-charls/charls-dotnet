@@ -2,22 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
+The format is based on [Keep a Changelog](http://keepachangelog.com/) and
+this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [0.8.0 - Unreleased]
+## [0.9.0 - 2026-11-14]
 
 ### Added
 
-- New property JpegLSDecoder.CompressedDataFormat to retrieve the compressed data format of
-the JPEG-LS file. JPEG-LS defines 3 formats: 1 interchange (most common) and 2 abbreviated.
-- Added support for AOT compilation in .NET 10.0 and later.
+- New property JpegLSDecoder.CompressedDataFormat to retrieve the compressed
+data format of the JPEG-LS file. JPEG-LS defines 3 formats: 1 interchange
+(most common) and 2 abbreviated.
+- Added support for AOT compilation in .NET 10 and later.
 - Added support for .NET 10
 - Added support for .NET 11
-
-### Removed
-
-- Support for .NET 8
-- Support for .NET 9
 
 ### Changed
 
@@ -29,8 +26,10 @@ the JPEG-LS file. JPEG-LS defines 3 formats: 1 interchange (most common) and 2 a
 
 ### Fixed
 
-- Forever loop when reading bits from invalid JPEG-LS files in the JpegLSDecoder (found by fuzzing).
-- JpegLSDecoder.GetDestinationSize could return negative size instead of throwing InvalidDataException.
+- Forever loop when reading bits from invalid JPEG-LS files in the
+JpegLSDecoder (found by fuzzing).
+- JpegLSDecoder.GetDestinationSize could return negative size instead of
+throwing InvalidDataException.
 
 ## [0.8.0 - 2024-8-23]
 

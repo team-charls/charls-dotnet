@@ -1,7 +1,8 @@
 # CharLS.Managed .NET
 
 CharLS .NET is a C# JPEG-LS library implementation.  
-JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard for continuous-tone images.
+JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard
+for continuous-tone images.
 
 ## Features
 
@@ -10,7 +11,8 @@ JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard for conti
 
 ## How to use
 
-CharLS.Native can be added to your C# project using the dotnet command line or the NuGet Package Manager in Visual Studio.
+CharLS.Native can be added to your C# project using the dotnet command line
+or the NuGet Package Manager in Visual Studio.
 
 ### Install using the dotnet command line
 
