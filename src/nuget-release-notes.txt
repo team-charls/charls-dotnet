@@ -1,2 +1,2 @@
 0.9.0
- - Full release can be found in the git repository
+ - Full release notes can be found in the Git repository

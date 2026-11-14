@@ -8,7 +8,8 @@
 [![NuGet](https://img.shields.io/nuget/v/CharLS.Managed.svg)](https://www.nuget.org/packages/CharLS.Managed)
 
 CharLS .NET is a C# JPEG-LS library implementation.  
-JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard for continuous-tone images.
+JPEG-LS (ISO-14495-1) is a lossless/near-lossless compression standard
+for continuous-tone images.
 
 ## Features
 
@@ -54,8 +55,8 @@ WebAssembly engine: Chrome V8 12.8.374.21
 
 ## Arm64 Platform
 
-Characteristics of the test environment: Snapdragon Compute Platform, .NET 8.0.8 (Arm64 RyuJIT AdvSIMD)  
-WebAssembly engine: Chrome V8 12.8.374.21
+Characteristics of the test environment: Snapdragon Compute Platform,
+.NET 8.0.8 (Arm64 RyuJIT AdvSIMD) WebAssembly engine: Chrome V8 12.8.374.21
 
 |Operation      |NEAR|ILV   |CharLS.Managed|CharLS.Native|cscharls |charls-js|
 |---------------|---:|------|-------------:|------------:|--------:|--------:|
@@ -66,7 +67,8 @@ WebAssembly engine: Chrome V8 12.8.374.21
 
 ## How to use
 
-CharLS.Managed can be added to your C# project using the dotnet command line or the NuGet Package Manager in Visual Studio.
+CharLS.Managed can be added to your C# project using the dotnet command line
+or the NuGet Package Manager in Visual Studio.
 
 ### Install using the dotnet command line
 
@@ -76,7 +78,8 @@ dotnet add package CharLS.Managed
 
 ### How to use the C# classes in the NuGet package
 
-A sample application is included in the GitHub repository that demonstrates how to convert common image types like .bmp, .png and .jpg to .jls (JPEG-LS).
+A sample application is included in the GitHub repository that demonstrates
+how to convert common image types like .bmp, .png and .jpg to .jls (JPEG-LS).
 
 ## General steps to build this repository
 
@@ -86,8 +89,14 @@ A sample application is included in the GitHub repository that demonstrates how 
  git clone https://github.com/team-charls/charls-dotnet.git
 ```
 
-* Use the .NET 10.0 CLI or Visual Studio 2026 (v18.10 or newer) to build the solution file CharLSDotNet.slnx.  
- For example: `dotnet build && dotnet test && dotnet publish` to build the NuGet package.  
+* Use the .NET 11 CLI or Visual Studio 2026 (v18.12 or newer) to build the
+solution file CharLSDotNet.slnx. For example:  
+
+ ```bash
+ dotnet build && dotnet test && dotnet publish
+ ```
+
+ to build the NuGet package.  
  Building can be done on all supported .NET SDK platforms: Windows, Linux or macOS
 
 ### Code signing the assembly and the NuGet package
@@ -101,12 +110,14 @@ Instructions:
 * Open a Visual Studio Developer Command Prompt
 * Go the root of the cloned repository
 * Ensure the code signing certificate is available
-* Execute the command `create-signed-nuget-package.cmd certificate-thumb-print time-stamp-url`  
- The certificate thumbprint and time stamp URL arguments are depending on the used code signing certificate.
+* Execute the command `create-signed-nuget-package.cmd certificate-thumb-print certificate-thumb-print256 time-stamp-url`  
+ The certificate thumbprint(256) and time stamp URL arguments are depending on the
+ used code signing certificate.
 
 All assembly DLLs and the NuGet package itself will be signed.
 
 ## About the JPEG-LS image compression standard
 
-More information about JPEG-LS can be found in the [README](https://github.com/team-charls/charls/blob/master/README.md)
+More information about JPEG-LS can be found in the
+[README](https://github.com/team-charls/charls/blob/master/README.md)
 from the C++ CharLS project.
