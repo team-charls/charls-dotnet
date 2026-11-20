@@ -169,6 +169,33 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
+    public void DecodeFuzzyInputBadRunModeGolombCodeThrows()
+    {
+        JpegLSDecoder decoder = new(ReadAllBytes("test-images/fuzzy-input-bad-run-mode-golomb-code.jls"));
+        byte[] destination = new byte[decoder.GetDestinationSize()];
+
+        var exception = Assert.Throws<InvalidDataException>(() => decoder.Decode(destination));
+
+        Assert.False(string.IsNullOrEmpty(exception.Message));
+        Assert.Equal(ErrorCode.InvalidData, exception.GetErrorCode());
+    }
+
+    [Fact]
+    public void GetDestinationSizeReturnsZeroForAbbreviatedTableSpecification()
+    {
+        byte[] tableData = new byte[255];
+        JpegTestStreamWriter writer = new();
+        writer.WriteStartOfImage();
+        writer.WriteJpegLSPresetParametersSegment(1, 1, tableData, false);
+        writer.WriteMarker(JpegMarkerCode.EndOfImage);
+        JpegLSDecoder decoder = new(writer.GetBuffer());
+
+        int size = decoder.GetDestinationSize();
+
+        Assert.Equal(0, size);
+    }
+
+    [Fact]
     public void DecodeDestinationSizeOverflowThrows()
     {
         JpegTestStreamWriter writer = new();
@@ -635,7 +662,7 @@ public class JpegLSDecoderTest
     }
 
     [Fact]
-    public void OversizeImageDimensionWithInvalidNumberOfBytesThrows() // NOLINT
+    public void OversizeImageDimensionWithInvalidNumberOfBytesThrows()
     {
         JpegTestStreamWriter writer = new();
         writer.WriteStartOfImage();

@@ -205,12 +205,14 @@ public sealed class JpegLSDecoder
     /// Gets the required size of the destination buffer.
     /// </summary>
     /// <param name="stride">The stride to use; byte count to the next pixel row. Pass 0 (AutoCalculateStride) for the default.</param>
-    /// <returns>The size of the destination buffer in bytes.</returns>
+    /// <returns>The size of the destination buffer in bytes or 0 for abbreviated table specification format.</returns>
     /// <exception cref="InvalidDataException">When the required destination size doesn't fit in an int.</exception>
     /// <exception cref="InvalidOperationException">Thrown when this method is called before <see cref="ReadHeader(bool)"/>.</exception>
     public int GetDestinationSize(int stride = AutoCalculateStride)
     {
         CheckStateHeaderRead();
+        if (CompressedDataFormat == CompressedDataFormat.AbbreviatedTableSpecification)
+            return 0;
 
         checked
         {
@@ -373,7 +375,7 @@ public sealed class JpegLSDecoder
         {
             int scanStride = CheckStrideAndDestinationLength(destination.Length, stride);
             _scanDecoder = new ScanDecoder(_reader.ScanFrameInfo, _reader.GetValidatedPresetCodingParameters(), _reader.GetCodingParameters());
-            int bytesRead = _scanDecoder.DecodeScan(_reader.RemainingSource(), destination, scanStride);
+            int bytesRead = _scanDecoder.DecodeScan(_reader.RemainingSource(), destination, scanStride, _reader.Widths, _reader.Heights);
             _reader.AdvancePosition(bytesRead);
 
             component += _reader.ScanComponentCount;

@@ -18,10 +18,25 @@ internal struct RunModeContext
 
     internal int RunInterruptionType { get; }
 
+    internal readonly int ComputeGolombCodingParameterChecked()
+    {
+        uint temp = (uint)(_a + ((_n >> 1) * RunInterruptionType));
+        uint nTest = _n;
+        int k = 0;
+        for (; nTest < temp; ++k)
+        {
+            nTest <<= 1;
+            if (k > 32)
+                ThrowHelper.ThrowInvalidDataException(ErrorCode.InvalidData);
+        }
+
+        return k;
+    }
+
     internal readonly int ComputeGolombCodingParameter()
     {
-        int temp = _a + ((_n >> 1) * RunInterruptionType);
-        int nTest = _n;
+        uint temp = (uint)(_a + ((_n >> 1) * RunInterruptionType));
+        uint nTest = _n;
         int k = 0;
         for (; nTest < temp; ++k)
         {
